@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>直出相机</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --card-hover: #222;
+    --text: #e0e0e0;
+    --text-dim: #999;
+    --accent: #4ade80;
+    --accent-fire: #f59e0b;
+    --accent-creative: #a78bfa;
+    --border: #2a2a2a;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    background: linear-gradient(135deg, #4ade80, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Upload Area */
+  .upload-area {
+    background: var(--card);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-area:active {
+    background: var(--card-hover);
+    border-color: var(--accent);
+  }
+  .upload-area .icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .upload-area .label {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .upload-area .hint {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+  .upload-area input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* Preview */
+  .preview {
+    display: none;
+    margin: 16px 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+  .preview.show { display: block; }
+  .preview img {
+    width: 100%;
+    display: block;
+    max-height: 300px;
+    object-fit: cover;
+  }
+
+  /* Loading */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 32px 0;
+  }
+  .loading.show { display: block; }
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading .status {
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  .loading .steps {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    opacity: 0.7;
+  }
+
+  /* Results */
+  .results {
+    display: none;
+  }
+  .results.show { display: block; }
+
+  /* Insight Card */
+  .insight-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    margin-bottom: 16px;
+    border-left: 3px solid #22d3ee;
+    box-shadow: var(--shadow);
+  }
+  .insight-card .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #22d3ee;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .insight-card .presence {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    line-height: 1.8;
+    font-style: italic;
+  }
+  .insight-card .insight {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* Direction Card */
+  .dir-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s;
+  }
+  .dir-card:active { transform: scale(0.985); }
+  .dir-card .badge {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .badge-now { background: rgba(74,222,128,0.15); color: var(--accent); }
+  .badge-best { background: rgba(245,158,11,0.15); color: var(--accent-fire); }
+  .badge-creative { background: rgba(167,139,250,0.15); color: var(--accent-creative); }
+
+  .dir-card .style-name {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .dir-card .reason {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+  .dir-card .how {
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .dir-card .source-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    opacity: 0.7;
+    font-style: italic;
+  }
+
+  /* Plan Card */
+  .plans-section {
+    margin-top: 20px;
+  }
+  .plans-section h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .plan-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .plan-card .plan-name {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .plan-card .plan-action {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+  .plan-card .plan-perspective {
+    font-size: 13px;
+    color: var(--accent);
+    padding: 8px 12px;
+    background: rgba(74,222,128,0.08);
+    border-radius: 8px;
+    line-height: 1.5;
+  }
+
+  /* Meta info */
+  .meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 16px 0;
+    opacity: 0.5;
+  }
+  .meta span { margin: 0 8px; }
+
+  /* Error */
+  .error-card {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 16px 0;
+    color: #ef4444;
+    font-size: 14px;
+    text-align: center;
+    display: none;
+  }
+  .error-card.show { display: block; }
+
+  /* Retry button */
+  .retry-btn {
+    display: none;
+    width: 100%;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .retry-btn.show { display: block; }
+  .retry-btn:active { background: var(--card-hover); }
+
+  /* Discovered styles/techniques */
+  .discovery-list {
+    margin-top: 16px;
+  }
+  .discovery-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .discovery-item:last-child { border-bottom: none; }
+  .discovery-item .d-name { font-size: 13px; flex: 1; }
+  .discovery-item .d-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .tag-community { background: rgba(74,222,128,0.12); color: #4ade80; }
+  .tag-tutorial { background: rgba(59,130,246,0.12); color: #3b82f6; }
+  .tag-portfolio { background: rgba(245,158,11,0.12); color: #f59e0b; }
+  .tag-inference { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+  details {
+    margin-top: 16px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  details summary {
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>📷 直出相机</h1>
+    <p>拍照上传 → 即时出方案</p>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-area" id="uploadArea">
+    <span class="icon">📸</span>
+    <div class="label">点击拍照或选照片</div>
+    <div class="hint">支持 HEIC / JPEG / PNG</div>
+    <input type="file" id="fileInput" accept="image/*" capture="environment">
+  </div>
+
+  <!-- Preview -->
+  <div class="preview" id="preview">
+    <img id="previewImg" src="" alt="预览">
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="status" id="loadingStatus">正在分析照片...</div>
+    <div class="steps" id="loadingSteps"></div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-card" id="errorCard"></div>
+  <button class="retry-btn" id="retryBtn" onclick="resetAll()">重新拍摄</button>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="insight-card" id="insightCard"></div>
+    <div id="dirCards"></div>
+    <div class="plans-section" id="plansSection"></div>
+    <details id="discoveryDetails">
+      <summary>📊 风格与技法来源</summary>
+      <div class="discovery-list" id="discoveryList"></div>
+    </details>
+    <div class="meta" id="metaInfo"></div>
+  </div>
+
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+
+const STATUS_TEXTS = [
+  '正在提取 EXIF 数据...',
+  '正在识别场景光线和色彩...',
+  '正在匹配最佳风格方向...',
+  '正在生成拍摄方案...',
+  '马上就好——最后润色中...'
+];
+
+let statusIdx = 0;
+let statusInterval = null;
+
+function startLoading() {
+  $('#loading').classList.add('show');
+  $('#uploadArea').style.display = 'none';
+  $('#results').classList.remove('show');
+  $('#errorCard').classList.remove('show');
+  $('#retryBtn').classList.remove('show');
+  statusIdx = 0;
+  $('#loadingStatus').textContent = STATUS_TEXTS[0];
+  $('#loadingSteps').textContent = '';
+  statusInterval = setInterval(() => {
+    statusIdx = (statusIdx + 1) % STATUS_TEXTS.length;
+    $('#loadingStatus').textContent = STATUS_TEXTS[statusIdx];
+  }, 4000);
+}
+
+function stopLoading() {
+  clearInterval(statusInterval);
+  $('#loading').classList.remove('show');
+}
+
+function showError(msg) {
+  stopLoading();
+  $('#errorCard').textContent = '❌ ' + msg;
+  $('#errorCard').classList.add('show');
+  $('#retryBtn').classList.add('show');
+  $('#uploadArea').style.display = 'block';
+}
+
+function resetAll() {
+  $('#results').classList.remove('show');
+  $('#errorCard').classList.remove('show');
+  $('#retryBtn').classList.remove('show');
+  $('#preview').classList.remove('show');
+  $('#uploadArea').style.display = 'block';
+  $('#fileInput').value = '';
+}
+
+function renderResults(data) {
+  const r = data.result;
+  if (!r || r.parse_error) {
+    showError('AI 推理结果解析失败，请重试');
+    return;
+  }
+
+  // Insight
+  $('#insightCard').innerHTML = `
+    <div class="label">在场感受</div>
+    <div class="presence">${escapeHtml(r.presence || '')}</div>
+    <div class="insight">${escapeHtml(r.insight || '')}</div>
+  `;
+
+  // Direction Cards
+  const dirs = r.directions || {};
+  let dirHtml = '';
+  const dirDefs = [
+    { key: 'now', emoji: '🟢', label: '现在就拍', cls: 'badge-now' },
+    { key: 'best', emoji: '🔥', label: '最出片', cls: 'badge-best' },
+    { key: 'creative', emoji: '✨', label: '脑洞大开', cls: 'badge-creative' }
+  ];
+
+  dirDefs.forEach(d => {
+    const dir = dirs[d.key];
+    if (!dir || !dir.style) return;
+    dirHtml += `
+      <div class="dir-card">
+        <span class="badge ${d.cls}">${d.emoji} ${d.label}</span>
+        <div class="style-name">${escapeHtml(dir.style)}</div>
+        <div class="reason">${escapeHtml(dir.reason || '')}</div>
+        <div class="how">📋 ${escapeHtml(dir.how || '')}</div>
+        ${dir.source_note ? `<div class="source-note">${escapeHtml(dir.source_note)}</div>` : ''}
+      </div>
+    `;
+  });
+  $('#dirCards').innerHTML = dirHtml;
+
+  // Plans
+  const plans = r.plans || [];
+  let plansHtml = plans.length > 0 ? '<h3>📸 拍摄方案</h3>' : '';
+  plans.forEach((p, i) => {
+    plansHtml += `
+      <div class="plan-card">
+        <div class="plan-name">方案 ${i + 1}：${escapeHtml(p.name || '')}</div>
+        <div class="plan-action">${escapeHtml(p.action || '')}</div>
+        ${p.perspective ? `<div class="plan-perspective">🎯 换个思路：${escapeHtml(p.perspective)}</div>` : ''}
+      </div>
+    `;
+  });
+  $('#plansSection').innerHTML = plansHtml;
+
+  // Discoveries
+  const styles = r.discovered_styles || [];
+  const techniques = r.techniques_used || [];
+  const allDiscoveries = [...styles.map(s => ({ ...s, type: '风格' })), ...techniques.map(t => ({ ...t, type: '技法' }))];
+
+  if (allDiscoveries.length > 0) {
+    let discHtml = '';
+    allDiscoveries.forEach(d => {
+      const tagCls = `tag-${d.source_type || 'inference'}`;
+      const tagLabel = {community:'社区分享', tutorial:'专业教程', portfolio:'摄影师作品', inference:'AI推理'}[d.source_type] || '未知';
+      discHtml += `
+        <div class="discovery-item">
+          <span class="d-name">[${escapeHtml(d.type)}] ${escapeHtml(d.name || d.style || '')}</span>
+          <span class="d-tag ${tagCls}">${tagLabel}</span>
+        </div>
+      `;
+    });
+    $('#discoveryList').innerHTML = discHtml;
+    $('#discoveryDetails').style.display = 'block';
+  } else {
+    $('#discoveryDetails').style.display = 'none';
+  }
+
+  // Meta
+  const sq = r.search_quality || {};
+  let metaHtml = `<span>⏱ ${data.elapsed || '?'}s</span><span>🪙 ${data.tokens || '?'} tokens</span>`;
+  if (sq.overall) metaHtml += `<span>📡 搜索质量 ${sq.overall}</span>`;
+  if (sq.honest_note) metaHtml += `<br><span style="opacity:0.7">${escapeHtml(sq.honest_note)}</span>`;
+  $('#metaInfo').innerHTML = metaHtml;
+
+  $('#results').classList.add('show');
+  $('#retryBtn').classList.add('show');
+  $('#retryBtn').textContent = '再拍一张';
+
+  // Scroll to results
+  $('#results').scrollIntoView({ behavior: 'smooth' });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// File input handler
+$('#fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Preview
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    $('#previewImg').src = ev.target.result;
+    $('#preview').classList.add('show');
+  };
+  reader.readAsDataURL(file);
+
+  // Upload & analyze
+  startLoading();
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  try {
+    const resp = await fetch('/analyze', { method: 'POST', body: formData });
+    const data = await resp.json();
+    stopLoading();
+
+    if (data.success) {
+      $('#loadingSteps').textContent = data.log ? data.log.join(' | ') : '';
+      renderResults(data);
+    } else {
+      showError(data.error || '分析失败');
+    }
+  } catch (err) {
+    showError('网络错误：' + err.message);
+  }
+});
+
+// Health check on load
+(async () => {
+  try {
+    const resp = await fetch('/health');
+    const h = await resp.json();
+    if (!h.api_key_configured) {
+      $('#uploadArea').style.opacity = '0.4';
+      $('#uploadArea').querySelector('.label').textContent = '⚠️ API 密钥未配置';
+      $('#uploadArea').querySelector('.hint').textContent = '请设置环境变量 DOUBAO_API_KEY 后重启';
+    }
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
