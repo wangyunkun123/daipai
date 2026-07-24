@@ -1,12 +1,15 @@
 ---
 id: KB-MTC-006
 domain: matching
-tags: [情绪路由, 情绪词库, 视觉参数, 视觉翻译]
-depends: [mood-lexicon/_index.md]
-date: 2026-07-22
+tags: [情绪路由, 情绪词库, 视觉参数, 视觉翻译, one_liner]
+depends: [mood-lexicon/_index.md, style-recipes/_index.md]
+date: 2026-07-24
+version: 2.1
 ---
 
-# 情绪匹配路由
+# 情绪匹配路由 v2.1
+
+> **v2.1 变更**：路由规则表中的风格引用升级为 one_liner——统一使用 `style-recipes/_index.md` 中定义的全局唯一标识。AI 在匹配时不应使用简写风格名，而应引用完整 one_liner。
 
 ## 路由规则表
 
@@ -55,4 +58,4 @@ date: 2026-07-22
 
 ---
 
-> 校验日期：2026-07-22 | 依赖：`mood-lexicon/_index.md` v1.0
+> 校验日期：2026-07-24 | 依赖：`mood-lexicon/_index.md` v1.0, `style-recipes/_index.md` v3（one_liner） | 版本：v2.1 | 变更：风格引用升级为 one_liner 全局唯一标识

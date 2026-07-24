@@ -240,16 +240,23 @@ def parse_exif(raw):
     # 🚨 闪光灯（关键——如果触发，自然光分析需要修正）
     flash = raw.get('Flash')
     if flash is not None:
-        flash_val = int(float(flash)) if flash else 0
-        # Flash 值说明（EXIF 标准）：
-        # 0 = 未触发, 1 = 触发, 5 = 触发但未检测到返回光,
-        # 9 = 强制触发, 13 = 强制触发+未检测到返回光,
-        # 16 = 关闭, 24 = 自动未触发, 25 = 自动触发,
-        # 其他 = 触发（含防红眼等变体）
-        flash_fired = flash_val & 1  # bit 0 = 是否触发
+        # exiftool 可能返回数字字符串，也可能返回 "Off, Did not fire" 等文本
+        try:
+            flash_val = int(float(flash))
+        except (ValueError, TypeError):
+            flash_str = str(flash).lower()
+            flash_fired = 'fired' in flash_str and 'did not fire' not in flash_str and 'off' not in flash_str
+            flash_val = 1 if flash_fired else 0
+        else:
+            # Flash 值说明（EXIF 标准）：
+            # 0 = 未触发, 1 = 触发, 5 = 触发但未检测到返回光,
+            # 9 = 强制触发, 13 = 强制触发+未检测到返回光,
+            # 16 = 关闭, 24 = 自动未触发, 25 = 自动触发,
+            # 其他 = 触发（含防红眼等变体）
+            flash_fired = bool(flash_val & 1)  # bit 0 = 是否触发
         sp['flash'] = {
-            "fired": bool(flash_fired),
-            "raw_value": flash_val,
+            "fired": flash_fired,
+            "raw_value": str(flash),
             "note": "⚠️ 闪光灯触发——光质分析需考虑人工补光" if flash_fired else None
         }
 
