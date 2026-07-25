@@ -8,587 +8,395 @@
 <title>直出相机</title>
 <style>
   :root {
-    --bg: #0d0d0d;
-    --card: #1a1a1a;
-    --card-hover: #222;
-    --text: #e0e0e0;
-    --text-dim: #999;
-    --accent: #4ade80;
-    --accent-fire: #f59e0b;
-    --accent-creative: #a78bfa;
-    --border: #2a2a2a;
-    --radius: 16px;
-    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --bg: #0a0a0a;
+    --card: #141414;
+    --card2: #1a1a1a;
+    --text: #e8e8e8;
+    --dim: #8a8a8a;
+    --dimmer: #555;
+    --green: #4ade80;
+    --fire: #f59e0b;
+    --purple: #a78bfa;
+    --cyan: #22d3ee;
+    --border: #262626;
+    --radius: 18px;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
     min-height: 100dvh;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
-
-  .container {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 16px;
-  }
+  .app { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
 
   /* Header */
-  .header {
-    text-align: center;
-    padding: 24px 0 16px;
-  }
-  .header h1 {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
+  .header { text-align: center; padding: 16px 0 8px; }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
     background: linear-gradient(135deg, #4ade80, #22d3ee);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .header p {
-    font-size: 13px;
-    color: var(--text-dim);
-    margin-top: 4px;
-  }
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { font-size: 12px; color: var(--dim); margin-top: 2px; }
 
-  /* Upload Area */
-  .upload-area {
-    background: var(--card);
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 40px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
+  /* Upload */
+  .upload-zone {
+    background: var(--card); border: 2px dashed var(--border);
+    border-radius: var(--radius); padding: 36px 20px; text-align: center;
+    cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
   }
-  .upload-area:active {
-    background: var(--card-hover);
-    border-color: var(--accent);
-  }
-  .upload-area .icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-    display: block;
-  }
-  .upload-area .label {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .upload-area .hint {
-    font-size: 13px;
-    color: var(--text-dim);
-    margin-top: 6px;
-  }
-  .upload-area input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
+  .upload-zone:active { background: var(--card2); border-color: var(--green); }
+  .upload-zone .icon { font-size: 44px; display: block; margin-bottom: 10px; }
+  .upload-zone .label { font-size: 15px; font-weight: 600; }
+  .upload-zone .hint { font-size: 12px; color: var(--dim); margin-top: 4px; }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-zone.hidden { display: none; }
 
-  /* Preview */
-  .preview {
-    display: none;
-    margin: 16px 0;
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: var(--card);
-    box-shadow: var(--shadow);
-  }
-  .preview.show { display: block; }
-  .preview img {
-    width: 100%;
-    display: block;
-    max-height: 300px;
-    object-fit: cover;
-  }
+  /* Preview thumbnail */
+  .preview-thumb { display: none; margin-bottom: 16px; border-radius: 12px; overflow: hidden; }
+  .preview-thumb.show { display: block; }
+  .preview-thumb img { width: 100%; display: block; max-height: 200px; object-fit: cover; }
 
   /* Loading */
-  .loading {
-    display: none;
-    text-align: center;
-    padding: 32px 0;
-  }
+  .loading { display: none; text-align: center; padding: 40px 0; }
   .loading.show { display: block; }
   .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 16px;
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--green); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 14px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading .status {
-    font-size: 14px;
-    color: var(--text-dim);
-  }
-  .loading .steps {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 8px;
-    opacity: 0.7;
-  }
+  .loading .text { font-size: 14px; color: var(--dim); }
+  .loading .hint { font-size: 12px; color: var(--dimmer); margin-top: 6px; }
 
-  /* Results */
-  .results {
-    display: none;
-  }
-  .results.show { display: block; }
+  /* ── Step 1: Insight ── */
+  .step { display: none; animation: fadeUp 0.3s ease; }
+  .step.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* Insight Card */
-  .insight-card {
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 24px 20px;
-    margin-bottom: 16px;
-    border-left: 3px solid #22d3ee;
-    box-shadow: var(--shadow);
+  .insight-block {
+    background: var(--card); border-radius: var(--radius); padding: 24px 20px;
+    border-left: 3px solid var(--cyan); margin-bottom: 20px;
   }
-  .insight-card .label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: #22d3ee;
-    margin-bottom: 8px;
-    font-weight: 600;
+  .insight-block .tag {
+    font-size: 10px; letter-spacing: 1.5px; color: var(--cyan);
+    text-transform: uppercase; font-weight: 600; margin-bottom: 10px;
   }
-  .insight-card .presence {
-    font-size: 14px;
-    color: var(--text-dim);
-    margin-bottom: 12px;
-    line-height: 1.8;
-    font-style: italic;
+  .insight-block .presence {
+    font-size: 13px; color: var(--dim); line-height: 1.85; margin-bottom: 14px;
   }
-  .insight-card .insight {
-    font-size: 17px;
-    font-weight: 600;
-    color: var(--text);
-    line-height: 1.6;
+  .insight-block .insight {
+    font-size: 16px; font-weight: 600; line-height: 1.65; color: var(--text);
   }
+  .btn-next {
+    display: block; width: 100%; padding: 14px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 14px;
+    color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer;
+    text-align: center; margin-top: 12px; transition: all 0.15s;
+  }
+  .btn-next:active { background: var(--card2); border-color: var(--green); }
 
-  /* Direction Card */
+  /* ── Step 2: Direction cards ── */
   .dir-card {
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 12px;
-    box-shadow: var(--shadow);
-    transition: transform 0.15s;
+    background: var(--card); border-radius: var(--radius); padding: 20px;
+    margin-bottom: 12px; cursor: pointer; transition: all 0.15s;
+    border: 1px solid transparent;
   }
-  .dir-card:active { transform: scale(0.985); }
+  .dir-card:active { transform: scale(0.985); border-color: var(--border); background: var(--card2); }
   .dir-card .badge {
-    display: inline-block;
-    font-size: 13px;
-    font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 20px;
-    margin-bottom: 10px;
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 8px;
   }
-  .badge-now { background: rgba(74,222,128,0.15); color: var(--accent); }
-  .badge-best { background: rgba(245,158,11,0.15); color: var(--accent-fire); }
-  .badge-creative { background: rgba(167,139,250,0.15); color: var(--accent-creative); }
+  .badge-now { background: rgba(74,222,128,0.12); color: var(--green); }
+  .badge-best { background: rgba(245,158,11,0.12); color: var(--fire); }
+  .badge-creative { background: rgba(167,139,250,0.12); color: var(--purple); }
+  .dir-card .style-name { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .dir-card .reason { font-size: 13px; color: var(--dim); line-height: 1.7; }
+  .dir-card .source-tag { font-size: 10px; color: var(--dimmer); margin-top: 8px; }
 
-  .dir-card .style-name {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 8px;
+  /* ── Step 3: Plans ── */
+  .plans-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
   }
-  .dir-card .reason {
-    font-size: 14px;
-    color: var(--text-dim);
-    line-height: 1.7;
-    margin-bottom: 12px;
+  .plans-header .back {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--card);
+    border: 1px solid var(--border); color: var(--text); font-size: 18px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    flex-shrink: 0;
   }
-  .dir-card .how {
-    background: rgba(255,255,255,0.04);
-    border-radius: 10px;
-    padding: 12px;
-    font-size: 14px;
-    line-height: 1.6;
-  }
-  .dir-card .source-note {
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 10px;
-    opacity: 0.7;
-    font-style: italic;
-  }
+  .plans-header .info { flex: 1; }
+  .plans-header .dir-label { font-size: 12px; color: var(--dim); }
+  .plans-header .dir-style { font-size: 16px; font-weight: 700; }
+  .plans-header .plan-count { font-size: 11px; color: var(--dimmer); }
 
-  /* Plan Card */
-  .plans-section {
-    margin-top: 20px;
-  }
-  .plans-section h3 {
-    font-size: 15px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
   .plan-card {
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 18px;
-    margin-bottom: 10px;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
+    background: var(--card); border-radius: var(--radius); padding: 18px;
+    margin-bottom: 10px; border: 1px solid var(--border);
   }
-  .plan-card .plan-name {
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 8px;
+  .plan-card .plan-index {
+    font-size: 10px; color: var(--dimmer); letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 4px;
   }
-  .plan-card .plan-action {
-    font-size: 14px;
-    color: var(--text-dim);
-    line-height: 1.7;
-    margin-bottom: 10px;
-  }
+  .plan-card .plan-name { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .plan-card .plan-action { font-size: 13px; color: var(--dim); line-height: 1.75; }
   .plan-card .plan-perspective {
-    font-size: 13px;
-    color: var(--accent);
-    padding: 8px 12px;
-    background: rgba(74,222,128,0.08);
-    border-radius: 8px;
-    line-height: 1.5;
+    margin-top: 10px; padding: 8px 12px; background: rgba(74,222,128,0.06);
+    border-radius: 10px; font-size: 12px; color: var(--green); line-height: 1.55;
   }
 
-  /* Meta info */
-  .meta {
-    font-size: 11px;
-    color: var(--text-dim);
-    text-align: center;
-    padding: 16px 0;
-    opacity: 0.5;
+  /* Meta */
+  .meta-bar {
+    text-align: center; padding: 20px 0 8px; font-size: 11px; color: var(--dimmer);
+    display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;
   }
-  .meta span { margin: 0 8px; }
+  .reshoot-btn {
+    display: block; width: 100%; padding: 12px; margin-top: 16px;
+    background: transparent; border: 1px solid var(--border); border-radius: 14px;
+    color: var(--dim); font-size: 13px; cursor: pointer; text-align: center;
+  }
+  .reshoot-btn:active { border-color: var(--green); color: var(--text); }
 
   /* Error */
-  .error-card {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin: 16px 0;
-    color: #ef4444;
-    font-size: 14px;
-    text-align: center;
-    display: none;
+  .error-msg {
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 14px; padding: 16px; text-align: center;
+    color: #ef4444; font-size: 13px; display: none; margin-top: 16px;
   }
-  .error-card.show { display: block; }
-
-  /* Retry button */
-  .retry-btn {
-    display: none;
-    width: 100%;
-    padding: 14px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 12px;
-  }
-  .retry-btn.show { display: block; }
-  .retry-btn:active { background: var(--card-hover); }
-
-  /* Discovered styles/techniques */
-  .discovery-list {
-    margin-top: 16px;
-  }
-  .discovery-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-  }
-  .discovery-item:last-child { border-bottom: none; }
-  .discovery-item .d-name { font-size: 13px; flex: 1; }
-  .discovery-item .d-tag {
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 600;
-  }
-  .tag-community { background: rgba(74,222,128,0.12); color: #4ade80; }
-  .tag-tutorial { background: rgba(59,130,246,0.12); color: #3b82f6; }
-  .tag-portfolio { background: rgba(245,158,11,0.12); color: #f59e0b; }
-  .tag-inference { background: rgba(239,68,68,0.12); color: #ef4444; }
-
-  details {
-    margin-top: 16px;
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 16px;
-    box-shadow: var(--shadow);
-  }
-  details summary {
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--text-dim);
-  }
+  .error-msg.show { display: block; }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="app">
 
-  <!-- Header -->
   <div class="header">
     <h1>📷 直出相机</h1>
-    <p>拍照上传 → 即时出方案</p>
+    <p>拍照上传 → 看方案 → 拍出好照片</p>
   </div>
 
   <!-- Upload -->
-  <div class="upload-area" id="uploadArea">
+  <div class="upload-zone" id="uploadZone">
     <span class="icon">📸</span>
     <div class="label">点击拍照或选照片</div>
-    <div class="hint">支持 HEIC / JPEG / PNG</div>
+    <div class="hint">HEIC / JPEG / PNG</div>
     <input type="file" id="fileInput" accept="image/*" capture="environment">
   </div>
 
   <!-- Preview -->
-  <div class="preview" id="preview">
+  <div class="preview-thumb" id="previewThumb">
     <img id="previewImg" src="" alt="预览">
   </div>
 
   <!-- Loading -->
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <div class="status" id="loadingStatus">正在分析照片...</div>
-    <div class="steps" id="loadingSteps"></div>
+    <div class="text" id="loadingText">正在分析照片...</div>
+    <div class="hint" id="loadingHint"></div>
   </div>
 
   <!-- Error -->
-  <div class="error-card" id="errorCard"></div>
-  <button class="retry-btn" id="retryBtn" onclick="resetAll()">重新拍摄</button>
+  <div class="error-msg" id="errorMsg"></div>
 
-  <!-- Results -->
-  <div class="results" id="results">
-    <div class="insight-card" id="insightCard"></div>
-    <div id="dirCards"></div>
-    <div class="plans-section" id="plansSection"></div>
-    <details id="discoveryDetails">
-      <summary>📊 风格与技法来源</summary>
-      <div class="discovery-list" id="discoveryList"></div>
-    </details>
-    <div class="meta" id="metaInfo"></div>
+  <!-- Step 1: Insight -->
+  <div class="step" id="stepInsight">
+    <div class="insight-block" id="insightBlock"></div>
+    <button class="btn-next" onclick="showDirections()">看看怎么拍 →</button>
   </div>
+
+  <!-- Step 2: Directions -->
+  <div class="step" id="stepDirs">
+    <div id="dirCards"></div>
+  </div>
+
+  <!-- Step 3: Plans -->
+  <div class="step" id="stepPlans">
+    <div class="plans-header">
+      <button class="back" onclick="showDirections()">←</button>
+      <div class="info">
+        <div class="dir-label" id="planDirLabel"></div>
+        <div class="dir-style" id="planDirStyle"></div>
+      </div>
+      <div class="plan-count" id="planCount"></div>
+    </div>
+    <div id="planCards"></div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="meta-bar" id="metaBar"></div>
+  <button class="reshoot-btn" id="reshootBtn" onclick="resetAll()">再拍一张</button>
 
 </div>
 
 <script>
-const $ = (s) => document.querySelector(s);
+const $ = s => document.querySelector(s);
+let resultData = null;
+let selectedDir = null;
 
-const STATUS_TEXTS = [
-  '正在提取 EXIF 数据...',
-  '正在识别场景光线和色彩...',
-  '正在匹配最佳风格方向...',
+const LOADING_TEXTS = [
+  '正在识别场景光线...',
+  '正在分析色彩和空间...',
+  '正在匹配最佳风格...',
   '正在生成拍摄方案...',
-  '马上就好——最后润色中...'
+  '马上好——最后润色...'
 ];
+let loadingIdx = 0;
+let loadingTimer = null;
 
-let statusIdx = 0;
-let statusInterval = null;
-
-function startLoading() {
-  $('#loading').classList.add('show');
-  $('#uploadArea').style.display = 'none';
-  $('#results').classList.remove('show');
-  $('#errorCard').classList.remove('show');
-  $('#retryBtn').classList.remove('show');
-  statusIdx = 0;
-  $('#loadingStatus').textContent = STATUS_TEXTS[0];
-  $('#loadingSteps').textContent = '';
-  statusInterval = setInterval(() => {
-    statusIdx = (statusIdx + 1) % STATUS_TEXTS.length;
-    $('#loadingStatus').textContent = STATUS_TEXTS[statusIdx];
-  }, 4000);
-}
-
-function stopLoading() {
-  clearInterval(statusInterval);
-  $('#loading').classList.remove('show');
-}
-
-function showError(msg) {
-  stopLoading();
-  $('#errorCard').textContent = '❌ ' + msg;
-  $('#errorCard').classList.add('show');
-  $('#retryBtn').classList.add('show');
-  $('#uploadArea').style.display = 'block';
-}
-
-function resetAll() {
-  $('#results').classList.remove('show');
-  $('#errorCard').classList.remove('show');
-  $('#retryBtn').classList.remove('show');
-  $('#preview').classList.remove('show');
-  $('#uploadArea').style.display = 'block';
-  $('#fileInput').value = '';
-}
-
-function renderResults(data) {
-  const r = data.result;
-  if (!r || r.parse_error) {
-    showError('AI 推理结果解析失败，请重试');
-    return;
-  }
-
-  // Insight
-  $('#insightCard').innerHTML = `
-    <div class="label">在场感受</div>
-    <div class="presence">${escapeHtml(r.presence || '')}</div>
-    <div class="insight">${escapeHtml(r.insight || '')}</div>
-  `;
-
-  // Direction Cards
-  const dirs = r.directions || {};
-  let dirHtml = '';
-  const dirDefs = [
-    { key: 'now', emoji: '🟢', label: '现在就拍', cls: 'badge-now' },
-    { key: 'best', emoji: '🔥', label: '最出片', cls: 'badge-best' },
-    { key: 'creative', emoji: '✨', label: '脑洞大开', cls: 'badge-creative' }
-  ];
-
-  dirDefs.forEach(d => {
-    const dir = dirs[d.key];
-    if (!dir || !dir.style) return;
-    dirHtml += `
-      <div class="dir-card">
-        <span class="badge ${d.cls}">${d.emoji} ${d.label}</span>
-        <div class="style-name">${escapeHtml(dir.style)}</div>
-        <div class="reason">${escapeHtml(dir.reason || '')}</div>
-        <div class="how">📋 ${escapeHtml(dir.how || '')}</div>
-        ${dir.source_note ? `<div class="source-note">${escapeHtml(dir.source_note)}</div>` : ''}
-      </div>
-    `;
-  });
-  $('#dirCards').innerHTML = dirHtml;
-
-  // Plans
-  const plans = r.plans || [];
-  let plansHtml = plans.length > 0 ? '<h3>📸 拍摄方案</h3>' : '';
-  plans.forEach((p, i) => {
-    plansHtml += `
-      <div class="plan-card">
-        <div class="plan-name">方案 ${i + 1}：${escapeHtml(p.name || '')}</div>
-        <div class="plan-action">${escapeHtml(p.action || '')}</div>
-        ${p.perspective ? `<div class="plan-perspective">🎯 换个思路：${escapeHtml(p.perspective)}</div>` : ''}
-      </div>
-    `;
-  });
-  $('#plansSection').innerHTML = plansHtml;
-
-  // Discoveries
-  const styles = r.discovered_styles || [];
-  const techniques = r.techniques_used || [];
-  const allDiscoveries = [...styles.map(s => ({ ...s, type: '风格' })), ...techniques.map(t => ({ ...t, type: '技法' }))];
-
-  if (allDiscoveries.length > 0) {
-    let discHtml = '';
-    allDiscoveries.forEach(d => {
-      const tagCls = `tag-${d.source_type || 'inference'}`;
-      const tagLabel = {community:'社区分享', tutorial:'专业教程', portfolio:'摄影师作品', inference:'AI推理'}[d.source_type] || '未知';
-      discHtml += `
-        <div class="discovery-item">
-          <span class="d-name">[${escapeHtml(d.type)}] ${escapeHtml(d.name || d.style || '')}</span>
-          <span class="d-tag ${tagCls}">${tagLabel}</span>
-        </div>
-      `;
-    });
-    $('#discoveryList').innerHTML = discHtml;
-    $('#discoveryDetails').style.display = 'block';
-  } else {
-    $('#discoveryDetails').style.display = 'none';
-  }
-
-  // Meta
-  const sq = r.search_quality || {};
-  let metaHtml = `<span>⏱ ${data.elapsed || '?'}s</span><span>🪙 ${data.tokens || '?'} tokens</span>`;
-  if (sq.overall) metaHtml += `<span>📡 搜索质量 ${sq.overall}</span>`;
-  if (sq.honest_note) metaHtml += `<br><span style="opacity:0.7">${escapeHtml(sq.honest_note)}</span>`;
-  $('#metaInfo').innerHTML = metaHtml;
-
-  $('#results').classList.add('show');
-  $('#retryBtn').classList.add('show');
-  $('#retryBtn').textContent = '再拍一张';
-
-  // Scroll to results
-  $('#results').scrollIntoView({ behavior: 'smooth' });
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// File input handler
+// ── Upload ──
 $('#fileInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  // Preview
   const reader = new FileReader();
-  reader.onload = (ev) => {
+  reader.onload = ev => {
     $('#previewImg').src = ev.target.result;
-    $('#preview').classList.add('show');
+    $('#previewThumb').classList.add('show');
   };
   reader.readAsDataURL(file);
 
-  // Upload & analyze
   startLoading();
-  const formData = new FormData();
-  formData.append('photo', file);
+  const fd = new FormData(); fd.append('photo', file);
 
   try {
-    const resp = await fetch('/analyze', { method: 'POST', body: formData });
+    const resp = await fetch('/analyze', { method: 'POST', body: fd });
     const data = await resp.json();
     stopLoading();
 
     if (data.success) {
-      $('#loadingSteps').textContent = data.log ? data.log.join(' | ') : '';
-      renderResults(data);
+      resultData = data;
+      $('#metaBar').innerHTML = `⏱ ${data.elapsed}s · 🪙 ${data.tokens} tokens`;
+      showInsight();
     } else {
       showError(data.error || '分析失败');
     }
   } catch (err) {
+    stopLoading();
     showError('网络错误：' + err.message);
   }
 });
 
-// Health check on load
-(async () => {
-  try {
-    const resp = await fetch('/health');
-    const h = await resp.json();
-    if (!h.api_key_configured) {
-      $('#uploadArea').style.opacity = '0.4';
-      $('#uploadArea').querySelector('.label').textContent = '⚠️ API 密钥未配置';
-      $('#uploadArea').querySelector('.hint').textContent = '请设置环境变量 DOUBAO_API_KEY 后重启';
-    }
-  } catch(e) {}
-})();
+function startLoading() {
+  $('#uploadZone').classList.add('hidden');
+  hideAllSteps();
+  $('#errorMsg').classList.remove('show');
+  $('#loading').classList.add('show');
+  loadingIdx = 0;
+  $('#loadingText').textContent = LOADING_TEXTS[0];
+  $('#loadingHint').textContent = '';
+  loadingTimer = setInterval(() => {
+    loadingIdx = (loadingIdx + 1) % LOADING_TEXTS.length;
+    $('#loadingText').textContent = LOADING_TEXTS[loadingIdx];
+  }, 3500);
+}
+
+function stopLoading() {
+  clearInterval(loadingTimer);
+  $('#loading').classList.remove('show');
+}
+
+function showError(msg) {
+  $('#errorMsg').textContent = '❌ ' + msg;
+  $('#errorMsg').classList.add('show');
+  $('#uploadZone').classList.remove('hidden');
+  $('#reshootBtn').style.display = 'block';
+}
+
+function hideAllSteps() {
+  ['stepInsight', 'stepDirs', 'stepPlans'].forEach(id => {
+    $('#' + id).classList.remove('active');
+  });
+}
+
+// ── Step 1: Insight ──
+function showInsight() {
+  hideAllSteps();
+  const r = resultData.result;
+  if (!r || r.parse_error) { showError('结果解析失败'); return; }
+
+  $('#insightBlock').innerHTML = `
+    <div class="tag">场景洞察</div>
+    <div class="presence">${esc(r.presence || '')}</div>
+    <div class="insight">${esc(r.insight || '')}</div>
+  `;
+  $('#stepInsight').classList.add('active');
+  $('#reshootBtn').style.display = 'block';
+  $('#stepInsight').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Step 2: Directions ──
+function showDirections() {
+  hideAllSteps();
+  const dirs = (resultData.result.directions || []).filter(d => d && d.style);
+  if (dirs.length === 0) { showError('未找到合适的方向'); return; }
+
+  let html = '';
+  dirs.forEach(d => {
+    const cls = d.id === 'now' ? 'badge-now' : d.id === 'best' ? 'badge-best' : 'badge-creative';
+    html += `
+      <div class="dir-card" onclick="selectDirection('${d.id}')">
+        <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
+        <div class="style-name">${esc(d.style)}</div>
+        <div class="reason">${esc(d.reason || '')}</div>
+        ${d.source_note ? `<div class="source-tag">${esc(d.source_note)}</div>` : ''}
+      </div>
+    `;
+  });
+  $('#dirCards').innerHTML = html;
+  $('#stepDirs').classList.add('active');
+  $('#stepDirs').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Step 3: Plans ──
+function selectDirection(id) {
+  const dirs = (resultData.result.directions || []).filter(d => d && d.style);
+  selectedDir = dirs.find(d => d.id === id);
+  if (!selectedDir) return;
+
+  $('#planDirLabel').textContent = `${esc(selectedDir.emoji)} ${esc(selectedDir.label)}`;
+  $('#planDirStyle').textContent = esc(selectedDir.style);
+  const plans = selectedDir.plans || [];
+  $('#planCount').textContent = `${plans.length} 套方案`;
+
+  let html = '';
+  plans.forEach((p, i) => {
+    html += `
+      <div class="plan-card">
+        <div class="plan-index">方案 ${i + 1}</div>
+        <div class="plan-name">${esc(p.name || '')}</div>
+        <div class="plan-action">${esc(p.action || '')}</div>
+        ${p.perspective ? `<div class="plan-perspective">🎯 换个思路：${esc(p.perspective)}</div>` : ''}
+      </div>
+    `;
+  });
+  $('#planCards').innerHTML = html;
+
+  hideAllSteps();
+  $('#stepPlans').classList.add('active');
+  $('#stepPlans').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetAll() {
+  hideAllSteps();
+  resultData = null; selectedDir = null;
+  $('#errorMsg').classList.remove('show');
+  $('#previewThumb').classList.remove('show');
+  $('#uploadZone').classList.remove('hidden');
+  $('#metaBar').innerHTML = '';
+  $('#reshootBtn').style.display = 'none';
+  $('#fileInput').value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function esc(s) {
+  if (!s) return '';
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+// Hide reshoot until first result
+$('#reshootBtn').style.display = 'none';
 </script>
 </body>
 </html>
