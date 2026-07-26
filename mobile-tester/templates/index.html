@@ -18,8 +18,10 @@
     --fire: #f59e0b;
     --purple: #a78bfa;
     --cyan: #22d3ee;
+    --red: #ef4444;
     --border: #262626;
     --radius: 18px;
+    --radius-sm: 12px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -40,25 +42,88 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .header p { font-size: 12px; color: var(--dim); margin-top: 2px; }
 
+  /* Device Bar */
+  .device-bar {
+    background: var(--card); border-radius: var(--radius-sm);
+    margin-bottom: 12px; border: 1px solid var(--border); overflow: hidden;
+  }
+  .device-bar .device-main {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  }
+  .device-bar .device-icon { font-size: 20px; flex-shrink: 0; }
+  .device-bar .device-info { flex: 1; min-width: 0; }
+  .device-bar .device-label { font-size: 10px; color: var(--dimmer); letter-spacing: 0.5px; }
+  .device-bar .device-name { font-size: 14px; font-weight: 600; }
+  .device-bar .device-name.pending { color: var(--dim); font-weight: 400; font-style: italic; }
+  .device-bar .device-detail { font-size: 11px; color: var(--dim); margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .device-bar .device-badge {
+    font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 600; flex-shrink: 0;
+  }
+  .badge-exif { background: rgba(34,211,238,0.12); color: var(--cyan); }
+  .badge-manual { background: rgba(245,158,11,0.12); color: var(--fire); }
+  .badge-none { background: rgba(138,138,138,0.12); color: var(--dimmer); }
+
+  .device-bar .device-override {
+    border-top: 1px solid var(--border); padding: 8px 14px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .device-bar .device-override label { font-size: 11px; color: var(--dimmer); white-space: nowrap; }
+  .device-bar .device-override select {
+    flex: 1; background: var(--card2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; font-size: 12px;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .device-bar .device-override.hidden { display: none; }
+
+  /* Lens Selector */
+  .lens-bar {
+    background: var(--card); border-radius: var(--radius-sm);
+    margin-bottom: 12px; border: 1px solid var(--border);
+    padding: 8px 14px; display: none; align-items: center; gap: 8px;
+  }
+  .lens-bar.show { display: flex; }
+  .lens-bar label { font-size: 11px; color: var(--dimmer); white-space: nowrap; }
+  .lens-bar select {
+    flex: 1; background: var(--card2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; font-size: 12px;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+
   /* Upload */
   .upload-zone {
+    display: block;
     background: var(--card); border: 2px dashed var(--border);
-    border-radius: var(--radius); padding: 36px 20px; text-align: center;
-    cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+    border-radius: var(--radius); padding: 28px 20px; text-align: center;
+    cursor: default; transition: all 0.2s;
   }
-  .upload-zone:active { background: var(--card2); border-color: var(--green); }
   .upload-zone .icon { font-size: 44px; display: block; margin-bottom: 10px; }
   .upload-zone .label { font-size: 15px; font-weight: 600; }
   .upload-zone .hint { font-size: 12px; color: var(--dim); margin-top: 4px; }
-  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .upload-zone.hidden { display: none; }
+
+  .upload-btns {
+    display: flex; gap: 10px; margin-top: 18px; justify-content: center;
+  }
+  .btn-upload {
+    flex: 1; max-width: 160px; padding: 12px 16px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; text-align: center; cursor: pointer;
+    transition: all 0.15s; border: 1px solid var(--border);
+    background: var(--card2); color: var(--text);
+    user-select: none; -webkit-user-select: none;
+  }
+  .btn-upload:active { background: rgba(74,222,128,0.15); border-color: var(--green); }
 
   /* Preview thumbnail */
   .preview-thumb { display: none; margin-bottom: 16px; border-radius: 12px; overflow: hidden; }
   .preview-thumb.show { display: block; }
   .preview-thumb img { width: 100%; display: block; max-height: 200px; object-fit: cover; }
 
-  /* Loading */
+  /* ── Loading ── */
   .loading { display: none; text-align: center; padding: 40px 0; }
   .loading.show { display: block; }
   .spinner {
@@ -67,14 +132,23 @@
     animation: spin 0.8s linear infinite; margin: 0 auto 14px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading .text { font-size: 14px; color: var(--dim); }
-  .loading .hint { font-size: 12px; color: var(--dimmer); margin-top: 6px; }
+  .loading .phase-text { font-size: 14px; color: var(--dim); margin-bottom: 12px; }
+  .loading .phase-timer { font-size: 12px; color: var(--dimmer); }
+  .progress-bar {
+    width: 100%; height: 3px; background: var(--border); border-radius: 2px;
+    margin-top: 16px; overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%; background: linear-gradient(90deg, var(--green), var(--cyan));
+    border-radius: 2px; width: 0%; transition: width 0.5s ease;
+  }
+
+  /* ── Steps (shared) ── */
+  .step { display: none; animation: fadeUp 0.35s ease; }
+  .step.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
   /* ── Step 1: Insight ── */
-  .step { display: none; animation: fadeUp 0.3s ease; }
-  .step.active { display: block; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-
   .insight-block {
     background: var(--card); border-radius: var(--radius); padding: 24px 20px;
     border-left: 3px solid var(--cyan); margin-bottom: 20px;
@@ -89,31 +163,53 @@
   .insight-block .insight {
     font-size: 16px; font-weight: 600; line-height: 1.65; color: var(--text);
   }
-  .btn-next {
-    display: block; width: 100%; padding: 14px; background: var(--card);
-    border: 1px solid var(--border); border-radius: 14px;
-    color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer;
-    text-align: center; margin-top: 12px; transition: all 0.15s;
+  .insight-block .still-loading {
+    margin-top: 14px; padding: 8px 12px; background: rgba(34,211,238,0.06);
+    border-radius: 10px; font-size: 12px; color: var(--cyan);
+    display: flex; align-items: center; gap: 8px;
   }
-  .btn-next:active { background: var(--card2); border-color: var(--green); }
+  .insight-block .still-loading .mini-spin {
+    width: 14px; height: 14px; border: 2px solid rgba(34,211,238,0.2);
+    border-top-color: var(--cyan); border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
 
-  /* ── Step 2: Direction cards ── */
-  .dir-card {
-    background: var(--card); border-radius: var(--radius); padding: 20px;
-    margin-bottom: 12px; cursor: pointer; transition: all 0.15s;
-    border: 1px solid transparent;
+  /* ── Step 2: Direction Cards (single at a time) ── */
+  .dir-progress {
+    text-align: center; font-size: 11px; color: var(--dimmer);
+    margin-bottom: 10px; letter-spacing: 0.5px;
   }
-  .dir-card:active { transform: scale(0.985); border-color: var(--border); background: var(--card2); }
-  .dir-card .badge {
+  .dir-card-single {
+    background: var(--card); border-radius: var(--radius); padding: 24px 20px;
+    margin-bottom: 12px; border: 1px solid transparent; transition: all 0.2s;
+  }
+  .dir-card-single .badge {
     display: inline-block; font-size: 12px; font-weight: 700;
-    padding: 4px 12px; border-radius: 20px; margin-bottom: 8px;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
   }
   .badge-now { background: rgba(74,222,128,0.12); color: var(--green); }
   .badge-best { background: rgba(245,158,11,0.12); color: var(--fire); }
   .badge-creative { background: rgba(167,139,250,0.12); color: var(--purple); }
-  .dir-card .style-name { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-  .dir-card .reason { font-size: 13px; color: var(--dim); line-height: 1.7; }
-  .dir-card .source-tag { font-size: 10px; color: var(--dimmer); margin-top: 8px; }
+  .dir-card-single .style-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .dir-card-single .style-promise { font-size: 13px; color: var(--dim); margin-bottom: 10px; }
+  .dir-card-single .reason { font-size: 14px; color: var(--dim); line-height: 1.75; margin-bottom: 4px; }
+  .dir-card-single .source-tag { font-size: 10px; color: var(--dimmer); }
+
+  .dir-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-select {
+    flex: 1; padding: 14px; border-radius: 14px;
+    font-size: 15px; font-weight: 600; cursor: pointer; text-align: center;
+    transition: all 0.15s; border: none;
+  }
+  .btn-select.primary {
+    background: linear-gradient(135deg, rgba(74,222,128,0.2), rgba(34,211,238,0.2));
+    color: var(--green); border: 1px solid rgba(74,222,128,0.3);
+  }
+  .btn-select.primary:active { background: rgba(74,222,128,0.3); }
+  .btn-select.secondary {
+    background: var(--card); color: var(--dim); border: 1px solid var(--border);
+  }
+  .btn-select.secondary:active { border-color: var(--dim); color: var(--text); }
 
   /* ── Step 3: Plans ── */
   .plans-header {
@@ -131,22 +227,103 @@
   .plans-header .dir-style { font-size: 16px; font-weight: 700; }
   .plans-header .plan-count { font-size: 11px; color: var(--dimmer); }
 
+  /* Plan Card v3.4: 7-section */
   .plan-card {
     background: var(--card); border-radius: var(--radius); padding: 18px;
-    margin-bottom: 10px; border: 1px solid var(--border);
+    margin-bottom: 12px; border: 1px solid var(--border);
   }
-  .plan-card .plan-index {
-    font-size: 10px; color: var(--dimmer); letter-spacing: 1px;
-    text-transform: uppercase; margin-bottom: 4px;
+  .plan-card .plan-name {
+    font-size: 16px; font-weight: 700; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
   }
-  .plan-card .plan-name { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
-  .plan-card .plan-action { font-size: 13px; color: var(--dim); line-height: 1.75; }
-  .plan-card .plan-perspective {
-    margin-top: 10px; padding: 8px 12px; background: rgba(74,222,128,0.06);
-    border-radius: 10px; font-size: 12px; color: var(--green); line-height: 1.55;
+  .plan-card .plan-name .idx {
+    width: 22px; height: 22px; border-radius: 50%; font-size: 11px;
+    font-weight: 700; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .plan-name .idx { background: rgba(74,222,128,0.12); color: var(--green); }
+
+  /* Annotated photo */
+  .annotated-photo {
+    position: relative; border-radius: var(--radius-sm); overflow: hidden;
+    margin-bottom: 14px; background: #000; line-height: 0;
+  }
+  .annotated-photo canvas { width: 100%; display: block; }
+  .annotated-photo .anno-tooltip {
+    position: absolute; background: rgba(0,0,0,0.85); color: #fff;
+    padding: 4px 10px; border-radius: 6px; font-size: 11px;
+    pointer-events: none; white-space: nowrap; display: none;
+    border: 1px solid rgba(255,255,255,0.15); z-index: 5;
   }
 
-  /* Meta */
+  /* Plan sections */
+  .plan-section {
+    margin-bottom: 10px; font-size: 13px; line-height: 1.75;
+    display: flex; gap: 8px;
+  }
+  .plan-section .sec-icon { flex-shrink: 0; font-size: 14px; width: 20px; }
+  .plan-section .sec-text { flex: 1; }
+  .sec-prep .sec-text { color: var(--dim); }
+  .sec-where .sec-text { color: var(--green); font-weight: 500; }
+  .sec-do .sec-text { color: var(--text); }
+  .sec-result .sec-text { color: var(--fire); }
+  .sec-posture .sec-text { color: #c084fc; }
+
+  /* Why fold */
+  .why-toggle {
+    display: flex; align-items: center; gap: 6px; padding: 8px 0;
+    font-size: 12px; color: var(--dimmer); cursor: pointer;
+    border-top: 1px solid var(--border); margin-top: 4px;
+    user-select: none;
+  }
+  .why-toggle .arrow { transition: transform 0.2s; font-size: 10px; }
+  .why-toggle.open .arrow { transform: rotate(90deg); }
+  .why-content {
+    display: none; padding: 10px 14px; margin-bottom: 8px;
+    background: rgba(167,139,250,0.05); border-radius: 10px;
+    font-size: 13px; color: var(--purple); line-height: 1.7;
+  }
+  .why-content.open { display: block; }
+
+  /* Perspective */
+  .plan-perspective {
+    margin-top: 8px; padding: 8px 12px; background: rgba(74,222,128,0.05);
+    border-radius: 10px; font-size: 12px; color: var(--green); line-height: 1.6;
+  }
+
+  /* Foldable data sections */
+  .data-sections { margin-top: 20px; }
+  .fold-section {
+    background: var(--card); border-radius: var(--radius-sm);
+    margin-bottom: 8px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .fold-header {
+    padding: 12px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    user-select: none;
+  }
+  .fold-header .arrow { font-size: 10px; transition: transform 0.2s; color: var(--dimmer); }
+  .fold-header.open .arrow { transform: rotate(90deg); }
+  .fold-body { display: none; padding: 0 16px 14px; font-size: 12px; color: var(--dim); line-height: 1.7; }
+  .fold-body.open { display: block; }
+  .fold-body .item {
+    padding: 6px 0; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; gap: 12px;
+  }
+  .fold-body .item:last-child { border-bottom: none; }
+  .fold-body .item-name { font-weight: 500; color: var(--text); }
+  .fold-body .item-meta { font-size: 11px; color: var(--dimmer); text-align: right; }
+
+  /* Quality badge */
+  .quality-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 600;
+  }
+  .quality-green { background: rgba(74,222,128,0.12); color: var(--green); }
+  .quality-yellow { background: rgba(245,158,11,0.12); color: var(--fire); }
+  .quality-red { background: rgba(239,68,68,0.12); color: var(--red); }
+
+  /* Meta bar */
   .meta-bar {
     text-align: center; padding: 20px 0 8px; font-size: 11px; color: var(--dimmer);
     display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;
@@ -175,13 +352,62 @@
     <p>拍照上传 → 看方案 → 拍出好照片</p>
   </div>
 
+  <!-- Device Bar -->
+  <div class="device-bar" id="deviceBar">
+    <div class="device-main">
+      <span class="device-icon" id="deviceIcon">📱</span>
+      <div class="device-info">
+        <div class="device-label">拍摄设备</div>
+        <div class="device-name pending" id="deviceName">待选择 — 上传照片后自动识别</div>
+        <div class="device-detail" id="deviceDetail"></div>
+      </div>
+      <span class="device-badge badge-none" id="deviceBadge">待识别</span>
+    </div>
+    <div class="device-override" id="deviceOverride">
+      <label>切换为：</label>
+      <select id="deviceSelect">
+        <option value="">不覆盖（使用识别结果）</option>
+        <option value="iphone-17-pro">iPhone 17 Pro</option>
+        <option value="iphone-17">iPhone 17</option>
+        <option value="iphone-pro-13-16">iPhone Pro (13-16)</option>
+        <option value="iphone-standard-13-16">iPhone (13-16)</option>
+        <option value="android-flagship">安卓旗舰</option>
+        <option value="dslr-mirrorless">单反/微单相机</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Lens Selector (only for cameras) -->
+  <div class="lens-bar" id="lensBar">
+    <label>🔍 镜头：</label>
+    <select id="lensSelect">
+      <option value="">自动（未知镜头）</option>
+      <option value="24-70-f2.8">24-70mm f/2.8 标准变焦</option>
+      <option value="70-200-f2.8">70-200mm f/2.8 长焦变焦</option>
+      <option value="16-35-f2.8">16-35mm f/2.8 广角变焦</option>
+      <option value="24-105-f4">24-105mm f/4 标准变焦</option>
+      <option value="50-f1.8">50mm f/1.8 定焦</option>
+      <option value="50-f1.2">50mm f/1.2 定焦</option>
+      <option value="85-f1.4">85mm f/1.4 人像定焦</option>
+      <option value="85-f1.8">85mm f/1.8 人像定焦</option>
+      <option value="35-f1.4">35mm f/1.4 广角定焦</option>
+      <option value="28-f2.8">28mm f/2.8 广角定焦</option>
+      <option value="kit-lens">套机镜头 (18-55mm)</option>
+    </select>
+  </div>
+
   <!-- Upload -->
   <div class="upload-zone" id="uploadZone">
     <span class="icon">📸</span>
-    <div class="label">点击拍照或选照片</div>
-    <div class="hint">HEIC / JPEG / PNG</div>
-    <input type="file" id="fileInput" accept="image/*" capture="environment">
+    <div class="label">拍照或选照片</div>
+    <div class="hint">HEIC / JPEG / PNG · 最大 20MB</div>
+    <div class="upload-btns">
+      <label class="btn-upload" for="cameraInput">📷 拍照</label>
+      <label class="btn-upload" for="galleryInput">🖼️ 相册</label>
+    </div>
   </div>
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+  <input type="file" id="galleryInput" accept="image/*" style="display:none">
 
   <!-- Preview -->
   <div class="preview-thumb" id="previewThumb">
@@ -191,8 +417,9 @@
   <!-- Loading -->
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <div class="text" id="loadingText">正在分析照片...</div>
-    <div class="hint" id="loadingHint"></div>
+    <div class="phase-text" id="loadingText">正在分析照片...</div>
+    <div class="phase-timer" id="loadingTimer"></div>
+    <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
   </div>
 
   <!-- Error -->
@@ -201,12 +428,16 @@
   <!-- Step 1: Insight -->
   <div class="step" id="stepInsight">
     <div class="insight-block" id="insightBlock"></div>
-    <button class="btn-next" onclick="showDirections()">看看怎么拍 →</button>
+    <div class="still-loading" id="insightLoading" style="display:none">
+      <div class="mini-spin"></div> 正在生成拍摄方案...
+    </div>
   </div>
 
   <!-- Step 2: Directions -->
   <div class="step" id="stepDirs">
-    <div id="dirCards"></div>
+    <div class="dir-progress" id="dirProgress"></div>
+    <div id="dirCardSingle"></div>
+    <div class="dir-actions" id="dirActions"></div>
   </div>
 
   <!-- Step 3: Plans -->
@@ -220,6 +451,7 @@
       <div class="plan-count" id="planCount"></div>
     </div>
     <div id="planCards"></div>
+    <div class="data-sections" id="dataSections"></div>
   </div>
 
   <!-- Bottom bar -->
@@ -229,75 +461,76 @@
 </div>
 
 <script>
+// ============================================================
+// Utilities
+// ============================================================
 const $ = s => document.querySelector(s);
+function esc(s) {
+  if (!s) return '';
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+// ============================================================
+// State
+// ============================================================
 let resultData = null;
 let selectedDir = null;
+let allDirs = [];
+let currentDirIdx = 0;
+let photoDataUrl = null;
+let timerInterval = null;
+let startTime = 0;
+let detectedDevice = null;  // {device_key, device_name, is_camera, source}
 
-const LOADING_TEXTS = [
-  '正在识别场景光线...',
-  '正在分析色彩和空间...',
-  '正在匹配最佳风格...',
-  '正在生成拍摄方案...',
-  '马上好——最后润色...'
-];
-let loadingIdx = 0;
-let loadingTimer = null;
-
-// ── Upload ──
-$('#fileInput').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = ev => {
-    $('#previewImg').src = ev.target.result;
-    $('#previewThumb').classList.add('show');
-  };
-  reader.readAsDataURL(file);
-
-  startLoading();
-  const fd = new FormData(); fd.append('photo', file);
-
-  try {
-    const resp = await fetch('/analyze', { method: 'POST', body: fd });
-    const data = await resp.json();
-    stopLoading();
-
-    if (data.success) {
-      resultData = data;
-      $('#metaBar').innerHTML = `⏱ ${data.elapsed}s · 🪙 ${data.tokens} tokens`;
-      showInsight();
-    } else {
-      showError(data.error || '分析失败');
-    }
-  } catch (err) {
-    stopLoading();
-    showError('网络错误：' + err.message);
-  }
-});
+// ============================================================
+// Loading UI
+// ============================================================
+const LOADING_PHASES = {
+  'exif': '正在读取照片信息...',
+  'vision': '正在识别场景光线和色彩...',
+  'creative': '正在为你设计拍摄方案...',
+  'final': '马上好——最后检查方案...'
+};
 
 function startLoading() {
   $('#uploadZone').classList.add('hidden');
   hideAllSteps();
   $('#errorMsg').classList.remove('show');
   $('#loading').classList.add('show');
-  loadingIdx = 0;
-  $('#loadingText').textContent = LOADING_TEXTS[0];
-  $('#loadingHint').textContent = '';
-  loadingTimer = setInterval(() => {
-    loadingIdx = (loadingIdx + 1) % LOADING_TEXTS.length;
-    $('#loadingText').textContent = LOADING_TEXTS[loadingIdx];
-  }, 3500);
+  $('#loadingText').textContent = '正在分析照片...';
+  $('#loadingTimer').textContent = '';
+  $('#progressFill').style.width = '0%';
+  startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+function updateLoadingPhase(phase) {
+  const text = LOADING_PHASES[phase] || phase;
+  $('#loadingText').textContent = text;
+  // Progress bar
+  const phases = { 'exif': 10, 'vision': 40, 'creative': 75, 'final': 90 };
+  $('#progressFill').style.width = (phases[phase] || 50) + '%';
+}
+
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  $('#loadingTimer').textContent = `已等待 ${elapsed} 秒`;
 }
 
 function stopLoading() {
-  clearInterval(loadingTimer);
+  clearInterval(timerInterval);
   $('#loading').classList.remove('show');
 }
 
+// ============================================================
+// Error
+// ============================================================
 function showError(msg) {
   $('#errorMsg').textContent = '❌ ' + msg;
   $('#errorMsg').classList.add('show');
+  stopLoading();
   $('#uploadZone').classList.remove('hidden');
   $('#reshootBtn').style.display = 'block';
 }
@@ -308,95 +541,716 @@ function hideAllSteps() {
   });
 }
 
-// ── Step 1: Insight ──
+// ============================================================
+// Upload & SSE
+// ============================================================
+// Attach to both camera and gallery inputs
+['#cameraInput', '#galleryInput'].forEach(sel => {
+  $(sel).addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = ev => {
+      photoDataUrl = ev.target.result;
+      $('#previewImg').src = photoDataUrl;
+      $('#previewThumb').classList.add('show');
+    };
+    reader.readAsDataURL(file);
+
+    startLoading();
+
+    const fd = new FormData();
+    fd.append('photo', file);
+    const device = $('#deviceSelect').value;
+    if (device) fd.append('device', device);
+    const lens = $('#lensSelect').value;
+    if (lens) fd.append('lens', lens);
+
+    try {
+      const resp = await fetch('/analyze', { method: 'POST', body: fd });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        stopLoading();
+        showError(errData.error || `服务器错误 (${resp.status})`);
+        return;
+      }
+
+      // Read SSE stream
+      const reader2 = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let sseDebug = [];
+      let eventType = '';  // Moved OUTSIDE while loop — survives across chunks
+
+      try {
+        while (true) {
+          const { done, value } = await reader2.read();
+          if (done) {
+            sseDebug.push('stream done');
+            break;
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          sseDebug.push('chunk:' + chunk.length);
+          buffer += chunk;
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line) continue;
+            if (line.startsWith('event: ')) {
+              eventType = line.slice(7).trim();
+              sseDebug.push('evt:' + eventType);
+            } else if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6);
+              if (!dataStr || dataStr === 'null') continue;
+              const trimmed = dataStr.trim();
+              const looksComplete = (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+                                    (trimmed.startsWith('[') && trimmed.endsWith(']'));
+              if (!looksComplete) continue;
+              const curEvent = eventType;
+              try {
+                const data = JSON.parse(trimmed);
+                handleSSEEvent(curEvent, data);
+                sseDebug.push('ok:' + curEvent);
+                eventType = '';
+              } catch (err) {
+                sseDebug.push('PARSE_ERR:' + curEvent + ':' + err.message.substring(0, 50) + ' dataLen=' + trimmed.length);
+                console.error('SSE parse error:', err.message, 'data:', trimmed.substring(0, 200));
+              }
+            }
+          }
+        }
+      } catch (streamErr) {
+        sseDebug.push('STREAM_ERR:' + streamErr.message);
+        console.error('SSE stream error:', streamErr);
+      }
+
+      if (!resultData && !document.querySelector('#errorMsg.show')) {
+        stopLoading();
+        showError('响应结束但未收到完整数据。调试: ' + sseDebug.join(' | '));
+      }
+    } catch (err) {
+      stopLoading();
+      showError('网络错误：' + err.message);
+    }
+  });
+});
+
+function handleSSEEvent(event, data) {
+  switch (event) {
+    case 'progress':
+      updateLoadingPhase(data.phase);
+      break;
+
+    case 'device_detected':
+      // EXIF 自动识别到设备 → 更新设备栏
+      updateDeviceBar(data);
+      break;
+
+    case 'vision':
+      updateLoadingPhase('creative');
+      window._pendingInsight = data;
+      break;
+
+    case 'complete':
+      stopLoading();
+      if (!data.success) {
+        showError(data.error || '分析失败');
+        return;
+      }
+      resultData = data;
+      $('#metaBar').innerHTML = `⏱ ${data.elapsed}s · 🪙 ${data.tokens} tokens`;
+      showInsight();
+      break;
+
+    case 'error':
+      stopLoading();
+      showError(data.message || '分析过程出错');
+      break;
+  }
+}
+
+// ============================================================
+// Device Bar Update
+// ============================================================
+function updateDeviceBar(info) {
+  detectedDevice = info;
+
+  // Device name and icon
+  const isCamera = info.is_camera;
+  const iconEl = $('#deviceIcon');
+  const nameEl = $('#deviceName');
+  const detailEl = $('#deviceDetail');
+  const badgeEl = $('#deviceBadge');
+  const overrideEl = $('#deviceOverride');
+  const lensBar = $('#lensBar');
+
+  iconEl.textContent = isCamera ? '📷' : '📱';
+  nameEl.textContent = info.device_name || '待选择';
+  nameEl.classList.remove('pending');
+
+  // Detail line: EXIF raw device or lens info
+  if (info.exif_device && info.source === 'exif') {
+    detailEl.textContent = 'EXIF: ' + info.exif_device;
+  } else if (info.source === 'manual') {
+    detailEl.textContent = '手动选择';
+  } else {
+    detailEl.textContent = '未检测到 EXIF 信息';
+  }
+
+  // Badge
+  if (info.source === 'exif') {
+    badgeEl.textContent = '已识别';
+    badgeEl.className = 'device-badge badge-exif';
+  } else if (info.source === 'manual') {
+    badgeEl.textContent = '手动';
+    badgeEl.className = 'device-badge badge-manual';
+  } else {
+    badgeEl.textContent = '待识别';
+    badgeEl.className = 'device-badge badge-none';
+    nameEl.classList.add('pending');
+  }
+
+  // Override row: always visible, but default option reflects current
+  overrideEl.classList.remove('hidden');
+
+  // Lens selector: show only for cameras
+  if (isCamera) {
+    lensBar.classList.add('show');
+  } else {
+    lensBar.classList.remove('show');
+  }
+}
+
+// ============================================================
+// Step 1: Insight
+// ============================================================
 function showInsight() {
   hideAllSteps();
   const r = resultData.result;
   if (!r || r.parse_error) { showError('结果解析失败'); return; }
 
   $('#insightBlock').innerHTML = `
-    <div class="tag">场景洞察</div>
+    <div class="tag">📷 场景洞察</div>
     <div class="presence">${esc(r.presence || '')}</div>
-    <div class="insight">${esc(r.insight || '')}</div>
+    <div class="insight">💡 ${esc(r.insight || '')}</div>
   `;
+
+  // Show format warning if any
+  if (r._format_warning) {
+    $('#insightBlock').innerHTML += `<div style="font-size:11px;color:var(--fire);margin-top:8px;">⚠️ ${esc(r._format_warning)}</div>`;
+  }
+
   $('#stepInsight').classList.add('active');
   $('#reshootBtn').style.display = 'block';
+
+  // Auto-advance to directions after a brief moment
+  // (user can read insight then tap button)
+  const btnNext = document.createElement('button');
+  btnNext.className = 'btn-next';
+  btnNext.textContent = '看看怎么拍 →';
+  btnNext.onclick = () => {
+    showDirections();
+    btnNext.remove();
+  };
+  // Remove old btn-next if exists
+  const oldBtn = $('#stepInsight').querySelector('.btn-next');
+  if (oldBtn) oldBtn.remove();
+  $('#stepInsight').appendChild(btnNext);
+
   $('#stepInsight').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ── Step 2: Directions ──
+// ============================================================
+// Step 2: Directions (sequential, one at a time)
+// ============================================================
 function showDirections() {
   hideAllSteps();
-  const dirs = (resultData.result.directions || []).filter(d => d && d.style);
-  if (dirs.length === 0) { showError('未找到合适的方向'); return; }
+  allDirs = (resultData.result.directions || []).filter(d => d && (d.style || d.plans?.length > 0));
+  if (allDirs.length === 0) { showError('未找到合适的方向'); return; }
 
-  let html = '';
-  dirs.forEach(d => {
-    const cls = d.id === 'now' ? 'badge-now' : d.id === 'best' ? 'badge-best' : 'badge-creative';
-    html += `
-      <div class="dir-card" onclick="selectDirection('${d.id}')">
-        <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
-        <div class="style-name">${esc(d.style)}</div>
-        <div class="reason">${esc(d.reason || '')}</div>
-        ${d.source_note ? `<div class="source-tag">${esc(d.source_note)}</div>` : ''}
-      </div>
-    `;
-  });
-  $('#dirCards').innerHTML = html;
+  currentDirIdx = 0;
+  renderCurrentDirection();
   $('#stepDirs').classList.add('active');
   $('#stepDirs').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ── Step 3: Plans ──
-function selectDirection(id) {
-  const dirs = (resultData.result.directions || []).filter(d => d && d.style);
-  selectedDir = dirs.find(d => d.id === id);
+function renderCurrentDirection() {
+  const d = allDirs[currentDirIdx];
+  if (!d) return;
+
+  const cls = d.id === 'now' ? 'badge-now' : d.id === 'best' ? 'badge-best' : 'badge-creative';
+  const total = allDirs.length;
+
+  $('#dirProgress').textContent = `${currentDirIdx + 1} / ${total}`;
+
+  $('#dirCardSingle').innerHTML = `
+    <div class="dir-card-single">
+      <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
+      <div class="style-name">${esc(d.style)}</div>
+      ${d.style_promise ? `<div class="style-promise">✨ ${esc(d.style_promise)}</div>` : ''}
+      <div class="reason">${esc(d.reason || '')}</div>
+      ${d.source_note ? `<div class="source-tag">📎 ${esc(d.source_note)}</div>` : ''}
+    </div>
+  `;
+
+  // Action buttons
+  const hasMore = currentDirIdx < total - 1;
+  const nextLabel = currentDirIdx < total - 1
+    ? (allDirs[currentDirIdx + 1].emoji + ' ' + allDirs[currentDirIdx + 1].label + ' →')
+    : '';
+
+  $('#dirActions').innerHTML = `
+    <button class="btn-select secondary" id="btnNextDir" ${!hasMore ? 'disabled style="opacity:0.3"' : ''}>
+      ${hasMore ? nextLabel : '没有更多了'}
+    </button>
+    <button class="btn-select primary" id="btnSelectDir">
+      📸 就选这个 → 出方案
+    </button>
+  `;
+
+  $('#btnNextDir').addEventListener('click', () => {
+    if (currentDirIdx < total - 1) {
+      currentDirIdx++;
+      renderCurrentDirection();
+      $('#stepDirs').scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  $('#btnSelectDir').addEventListener('click', () => {
+    selectDirection(allDirs[currentDirIdx]);
+  });
+}
+
+// ============================================================
+// Step 3: Plans with 7-section cards + Canvas annotations
+// ============================================================
+function selectDirection(d) {
+  selectedDir = d;
   if (!selectedDir) return;
 
-  $('#planDirLabel').textContent = `${esc(selectedDir.emoji)} ${esc(selectedDir.label)}`;
-  $('#planDirStyle').textContent = esc(selectedDir.style);
-  const plans = selectedDir.plans || [];
+  const labelEmoji = d.id === 'now' ? '🟢' : d.id === 'best' ? '🔥' : '✨';
+  $('#planDirLabel').textContent = `${labelEmoji} ${esc(d.label)}`;
+  $('#planDirStyle').textContent = esc(d.style);
+  const plans = d.plans || [];
   $('#planCount').textContent = `${plans.length} 套方案`;
 
   let html = '';
   plans.forEach((p, i) => {
-    html += `
-      <div class="plan-card">
-        <div class="plan-index">方案 ${i + 1}</div>
-        <div class="plan-name">${esc(p.name || '')}</div>
-        <div class="plan-action">${esc(p.action || '')}</div>
-        ${p.perspective ? `<div class="plan-perspective">🎯 换个思路：${esc(p.perspective)}</div>` : ''}
-      </div>
-    `;
+    html += renderPlanCard(p, i, d);
   });
   $('#planCards').innerHTML = html;
+
+  // Render Canvas annotations for each plan
+  plans.forEach((p, i) => {
+    if (p.annotations && p.annotations.length > 0 && photoDataUrl) {
+      renderAnnotations(`annoCanvas${i}`, p.annotations);
+    }
+  });
+
+  // Bind why-toggle clicks
+  plans.forEach((p, i) => {
+    if (p.why) {
+      const toggle = document.getElementById(`whyToggle${i}`);
+      const content = document.getElementById(`whyContent${i}`);
+      if (toggle && content) {
+        toggle.addEventListener('click', () => {
+          toggle.classList.toggle('open');
+          content.classList.toggle('open');
+        });
+      }
+    }
+  });
+
+  // Render data sections
+  renderDataSections();
 
   hideAllSteps();
   $('#stepPlans').classList.add('active');
   $('#stepPlans').scrollIntoView({ behavior: 'smooth' });
 }
 
+function renderPlanCard(p, i, d) {
+  const colorVar = d.id === 'now' ? 'var(--green)' : d.id === 'best' ? 'var(--fire)' : 'var(--purple)';
+  const colorBg = d.id === 'now' ? 'rgba(74,222,128,0.08)' : d.id === 'best' ? 'rgba(245,158,11,0.08)' : 'rgba(167,139,250,0.08)';
+
+  let card = `
+    <div class="plan-card">
+      <div class="plan-name">
+        <span class="idx" style="background:${colorBg};color:${colorVar}">${i + 1}</span>
+        ${esc(p.name || '方案 ' + (i+1))}
+      </div>`;
+
+  // Annotated photo section
+  if (p.annotations && p.annotations.length > 0) {
+    card += `
+      <div class="annotated-photo" id="annoContainer${i}">
+        <canvas id="annoCanvas${i}"></canvas>
+      </div>`;
+  }
+
+  // Prep
+  if (p.prep) {
+    card += `
+      <div class="plan-section sec-prep">
+        <span class="sec-icon">📋</span>
+        <span class="sec-text">${esc(p.prep)}</span>
+      </div>`;
+  }
+
+  // Where
+  if (p.where) {
+    card += `
+      <div class="plan-section sec-where">
+        <span class="sec-icon">📍</span>
+        <span class="sec-text">${esc(p.where)}</span>
+      </div>`;
+  }
+
+  // Do
+  if (p.do) {
+    card += `
+      <div class="plan-section sec-do">
+        <span class="sec-icon">🎬</span>
+        <span class="sec-text">${esc(p.do)}</span>
+      </div>`;
+  }
+
+  // Posture (only if there are people in the scene)
+  if (p.posture) {
+    card += `
+      <div class="plan-section sec-posture">
+        <span class="sec-icon">🧍</span>
+        <span class="sec-text">${esc(p.posture)}</span>
+      </div>`;
+  }
+
+  // Result
+  if (p.result) {
+    card += `
+      <div class="plan-section sec-result">
+        <span class="sec-icon">✨</span>
+        <span class="sec-text">${esc(p.result)}</span>
+      </div>`;
+  }
+
+  // Why (foldable)
+  if (p.why) {
+    card += `
+      <div class="why-toggle" id="whyToggle${i}">
+        <span class="arrow">▶</span> 💡 为什么这样好看？
+      </div>
+      <div class="why-content" id="whyContent${i}">${esc(p.why)}</div>`;
+  }
+
+  // Perspective
+  if (p.perspective) {
+    card += `
+      <div class="plan-perspective">🎯 ${esc(p.perspective)}</div>`;
+  }
+
+  card += '</div>';
+  return card;
+}
+
+// ============================================================
+// Canvas Annotation Engine
+// ============================================================
+function renderAnnotations(canvasId, annotations) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  const container = canvas.parentElement;
+  const img = new Image();
+  img.onload = () => {
+    // Set canvas size to match container width while preserving aspect ratio
+    const containerWidth = container.clientWidth;
+    const scale = containerWidth / img.width;
+    canvas.width = containerWidth;
+    canvas.height = img.height * scale;
+
+    const ctx = canvas.getContext('2d');
+
+    // Draw photo
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Draw each annotation
+    annotations.forEach(anno => {
+      drawAnnotation(ctx, anno, canvas.width, canvas.height);
+    });
+  };
+  img.src = photoDataUrl;
+}
+
+function drawAnnotation(ctx, anno, cw, ch) {
+  const color = anno.color || '#4ade80';
+  const alpha = '99';
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(1.5, cw * 0.004);
+  ctx.font = `bold ${Math.max(11, cw * 0.032)}px -apple-system, "PingFang SC", sans-serif`;
+  ctx.textBaseline = 'bottom';
+
+  switch (anno.type) {
+    // ── subject: 被摄者在画面内的精确位置 ──
+    case 'subject':
+    case 'position': {  // backward compat
+      const cx = anno.x * cw;
+      const cy = anno.y * ch;
+      const r = Math.max(8, cw * 0.025);
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
+      ctx.fillStyle = color + '26';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = color + alpha;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.lineWidth = Math.max(1.5, cw * 0.004);
+
+      if (anno.label) {
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(anno.label, cx + r + 6, cy + 5);
+        ctx.fillText(anno.label, cx + r + 6, cy + 5);
+      }
+      break;
+    }
+
+    // ── shooter: 拍摄者站位（画面外）+ 引导线 + 角度弧 ──
+    case 'shooter': {
+      const fromX = (anno.from?.x ?? 0.05) * cw;
+      const fromY = (anno.from?.y ?? 0.85) * ch;
+      const toX = (anno.to?.x ?? 0.4) * cw;
+      const toY = (anno.to?.y ?? 0.5) * ch;
+
+      // Dashed guide line from shooter to target
+      ctx.beginPath();
+      ctx.strokeStyle = color + '88';
+      ctx.lineWidth = Math.max(2, cw * 0.005);
+      ctx.setLineDash([6, 4]);
+      const midX = (fromX + toX) / 2;
+      const midY = Math.min(fromY, toY) - Math.abs(toX - fromX) * 0.25;
+      ctx.moveTo(fromX, fromY);
+      ctx.quadraticCurveTo(midX, midY, toX, toY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Arrowhead at target
+      const tipAngle = Math.atan2(toY - midY, toX - midX);
+      const arrowLen = Math.max(8, cw * 0.025);
+      ctx.beginPath();
+      ctx.fillStyle = color + alpha;
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - arrowLen * Math.cos(tipAngle - 0.6), toY - arrowLen * Math.sin(tipAngle - 0.6));
+      ctx.lineTo(toX - arrowLen * Math.cos(tipAngle + 0.6), toY - arrowLen * Math.sin(tipAngle + 0.6));
+      ctx.closePath();
+      ctx.fill();
+
+      // Camera icon at shooter position
+      ctx.font = `${Math.max(18, cw * 0.06)}px -apple-system, "PingFang SC", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('📷', fromX, fromY);
+
+      // Angle arc near shooter
+      if (anno.angle) {
+        ctx.font = `bold ${Math.max(11, cw * 0.032)}px -apple-system, "PingFang SC", sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.lineWidth = 3;
+        const labelX = fromX + (fromX < cw/2 ? 20 : -80);
+        const labelY = fromY - 12;
+        ctx.strokeText(anno.angle, labelX, labelY);
+        ctx.fillText(anno.angle, labelX, labelY);
+      }
+      break;
+    }
+
+    // ── frame: 取景范围虚线框 ──
+    case 'frame': {
+      const x = anno.x * cw;
+      const y = anno.y * ch;
+      const w = (anno.w || 0.5) * cw;
+      const h = (anno.h || 0.5) * ch;
+
+      ctx.setLineDash([8, 4]);
+      ctx.strokeStyle = color + alpha;
+      ctx.lineWidth = Math.max(2, cw * 0.005);
+      ctx.strokeRect(x, y, w, h);
+      ctx.setLineDash([]);
+
+      if (anno.label) {
+        ctx.fillStyle = color + alpha;
+        ctx.fillText(anno.label, x + 6, y - 6);
+      }
+      break;
+    }
+
+    // ── crop: 裁剪引导（半透明遮罩 + 边框） ──
+    case 'crop': {
+      const x = (anno.x || 0) * cw;
+      const y = (anno.y || 0) * ch;
+      const w = (anno.w || 1) * cw;
+      const h = (anno.h || 1) * ch;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(0, 0, cw, y);           // top
+      ctx.fillRect(0, y + h, cw, ch - y - h); // bottom
+      ctx.fillRect(0, y, x, h);            // left
+      ctx.fillRect(x + w, y, cw - x - w, h); // right
+
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.setLineDash([]);
+
+      if (anno.label) {
+        ctx.fillStyle = '#fff';
+        ctx.fillText(anno.label, x + 6, y - 8);
+      }
+      break;
+    }
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+// Data Sections (foldable)
+// ============================================================
+function renderDataSections() {
+  const r = resultData.result;
+  let html = '';
+
+  // Search quality
+  if (r.search_quality) {
+    const sq = r.search_quality;
+    const qCls = sq.overall === '🟢' ? 'quality-green' : sq.overall === '🟡' ? 'quality-yellow' : 'quality-red';
+    html += `
+      <div class="fold-section">
+        <div class="fold-header" onclick="toggleFold(this)">
+          🔍 搜索质量 <span class="quality-badge ${qCls}">${esc(sq.overall)}</span>
+          <span class="arrow">▶</span>
+        </div>
+        <div class="fold-body">${esc(sq.honest_note || '')}</div>
+      </div>`;
+  }
+
+  // Discovered styles
+  if (r.discovered_styles && r.discovered_styles.length > 0) {
+    html += `<div class="fold-section">
+      <div class="fold-header" onclick="toggleFold(this)">
+        🎨 发现的风格 <span style="font-size:11px;color:var(--dimmer)">${r.discovered_styles.length} 个</span>
+        <span class="arrow">▶</span>
+      </div>
+      <div class="fold-body">`;
+    r.discovered_styles.forEach(s => {
+      if (!s) return;
+      html += `<div class="item">
+        <div>
+          <div class="item-name">${esc(s.name || '')}</div>
+          <div style="font-size:11px;color:var(--dim)">${esc(s.fit_rationale || '')}</div>
+        </div>
+        <div class="item-meta">
+          <div>${esc(s.light_annotation || '')}</div>
+          <div>${esc(s.device_annotation || '')}</div>
+          <div>${esc(s.source_type || '')}</div>
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  // Techniques used
+  if (r.techniques_used && r.techniques_used.length > 0) {
+    html += `<div class="fold-section">
+      <div class="fold-header" onclick="toggleFold(this)">
+        🔧 使用的技法 <span style="font-size:11px;color:var(--dimmer)">${r.techniques_used.length} 个</span>
+        <span class="arrow">▶</span>
+      </div>
+      <div class="fold-body">`;
+    r.techniques_used.forEach(t => {
+      if (!t) return;
+      html += `<div class="item">
+        <div>
+          <div class="item-name">${esc(t.name || '')}</div>
+          <div style="font-size:11px;color:var(--dim)">${esc(t.description || '')}</div>
+        </div>
+        <div class="item-meta">${esc(t.source_type || '')}</div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  $('#dataSections').innerHTML = html;
+}
+
+function toggleFold(header) {
+  header.classList.toggle('open');
+  const body = header.nextElementSibling;
+  if (body) body.classList.toggle('open');
+}
+
+// ============================================================
+// Reset
+// ============================================================
 function resetAll() {
   hideAllSteps();
-  resultData = null; selectedDir = null;
+  resultData = null; selectedDir = null; detectedDevice = null;
+  allDirs = []; currentDirIdx = 0; photoDataUrl = null;
   $('#errorMsg').classList.remove('show');
   $('#previewThumb').classList.remove('show');
   $('#uploadZone').classList.remove('hidden');
   $('#metaBar').innerHTML = '';
+  $('#dataSections').innerHTML = '';
   $('#reshootBtn').style.display = 'none';
-  $('#fileInput').value = '';
+  $('#cameraInput').value = '';
+  $('#galleryInput').value = '';
+
+  // Reset device bar
+  $('#deviceIcon').textContent = '📱';
+  $('#deviceName').textContent = '待选择 — 上传照片后自动识别';
+  $('#deviceName').classList.add('pending');
+  $('#deviceDetail').textContent = '';
+  $('#deviceBadge').textContent = '待识别';
+  $('#deviceBadge').className = 'device-badge badge-none';
+  $('#deviceOverride').classList.add('hidden');
+  $('#deviceSelect').value = '';
+  $('#lensBar').classList.remove('show');
+  $('#lensSelect').value = '';
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function esc(s) {
-  if (!s) return '';
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
-}
-
-// Hide reshoot until first result
+// Init
 $('#reshootBtn').style.display = 'none';
+
+// Device override change → show/hide lens bar
+$('#deviceSelect').addEventListener('change', () => {
+  const val = $('#deviceSelect').value;
+  if (val === 'dslr-mirrorless') {
+    $('#lensBar').classList.add('show');
+  } else {
+    $('#lensBar').classList.remove('show');
+    $('#lensSelect').value = '';
+  }
+});
 </script>
 </body>
 </html>
