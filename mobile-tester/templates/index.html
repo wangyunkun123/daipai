@@ -1085,18 +1085,17 @@ function renderDirectionCarousel() {
   // 滚动到当前 active
   scrollCarouselTo('dirCarouselTrack', activeDirIdx);
 
-  // 底部按钮
+  // 底部按钮——去掉啰嗦的"就选这个"，只保留方向标签
   const d = allDirs[activeDirIdx];
-  const cls2 = d.id==='now'?'badge-now':d.id==='best'?'badge-best':'badge-creative';
   $('#dirActions').innerHTML = `
-    <button class="btn-select primary" id="btnSelectDir" style="width:100%">📸 就选这个（${esc(d.emoji)} ${esc(d.label)}）→ 出方案</button>`;
+    <button class="btn-select primary" id="btnSelectDir" style="width:100%">📸 ${esc(d.emoji)} ${esc(d.label)} → 出方案</button>`;
   $('#btnSelectDir').addEventListener('click', ()=>{ loadPlans(allDirs[activeDirIdx]); });
 
   // 滑动时更新按钮文字
   track.addEventListener('scroll', () => {
     const d2 = allDirs[activeDirIdx];
     if (d2 && $('#btnSelectDir')) {
-      $('#btnSelectDir').textContent = `📸 就选这个（${esc(d2.emoji)} ${esc(d2.label)}）→ 出方案`;
+      $('#btnSelectDir').textContent = `📸 ${d2.emoji} ${d2.label} → 出方案`;
     }
   }, {passive: true});
 }
