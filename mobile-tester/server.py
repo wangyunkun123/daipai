@@ -23,6 +23,9 @@ from dotenv import load_dotenv
 load_dotenv()
 from PIL import Image
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation
+from search_web import search_style_inspiration, search_location_intel
+from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync
 
 app = Flask(__name__)
 
@@ -35,7 +38,8 @@ DOUBAO_MODEL = "doubao-seed-2.0-pro"
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
 STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
-REQUEST_TIMEOUT = 240
+MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
+REQUEST_TIMEOUT = 300  # 含大图上传时间
 SESSION_TTL = 1800  # 30分钟
 
 # 并发控制
@@ -267,7 +271,7 @@ def get_lens_context(lens_key):
 # ============================================================
 # 视觉分析 Prompt（保留核心逻辑）
 # ============================================================
-VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。必须包含以下8个字段，缺一不可。
+VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。必须包含以下6个字段，缺一不可。
 
 ## 核心原则：区分[观察]与[推测]
 
@@ -278,24 +282,18 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
 每个字段的值中，请用[观察]或[推测]标注每条信息的性质。
 
 {
-  "scene_type": "[观察]室外/室内/半室外 — [推测]具体场景类型及依据",
+  "scene_type": "[观察]室外/室内/半室外 — [推测]具体场景类型及依据（1-2句）",
   "people": "人物数量、每人位置/衣着/动作/表情/姿态。如果没有人，写'无人物'。衣着用[观察]标注具体颜色和款式",
   "light": {
     "direction": "[推测]顺光/侧光/逆光/顶光/漫射 — 判断依据",
     "quality": "[推测]硬光/软光/混合 — 判断依据（阴影边缘锐利还是柔和）",
     "color_temp": "[推测]暖/中/冷 — 估算色温K值及依据",
-    "special": "[观察]遮阳阴影区/斑驳树影/窗边漫射/混合色温/无特殊",
-    "uncertainty": "不确定的字段名，确定就写'none'"
+    "special": "[观察]遮阳阴影区/斑驳树影/窗边漫射/混合色温/无特殊"
   },
   "color": {
     "primary": "[观察]最主导的颜色及位置",
     "secondary": "[观察]次要色及位置",
-    "accent": "[观察]强调色及位置",
-    "mood_axes": {
-      "warmth": "0.0=全冷色, 0.5=中性, 1.0=全暖色。给一位小数。",
-      "energy": "0.0=全低饱和暗沉, 0.5=中等, 1.0=全高饱和高明度。给一位小数。",
-      "complexity": "0.0=单色, 0.5=2-3色系, 1.0=4+色系。给一位小数。"
-    }
+    "accent": "[观察]强调色及位置"
   },
   "space": {
     "foreground": "[观察]前景有什么",
@@ -304,9 +302,7 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
     "depth": "[观察]浅/中/深 — 判断依据",
     "anchors": "[观察]列出场景中可作为空间锚点的具体物体——门口盆栽、窗边沙发、路边消防栓、树荫边缘等。至少3个。这些将用于下游生成空间化拍摄指令。"
   },
-  "composition": "[观察]当前构图方式 + [观察]画面中可利用的构图元素",
-  "perspective": "[观察]拍摄视角（平视/俯视/仰视）+ [推测]机位高度",
-  "weather_env": "[推测]天气状况及依据 + [观察]环境中可见的具体细节"
+  "composition": "[观察]当前构图方式 + [观察]画面中可利用的构图元素（线条/框架/光影区域）"
 }
 
 只输出JSON，不要任何额外文字。不要markdown代码块包裹。"""
@@ -322,10 +318,18 @@ DIRECTIONS_PROMPT = """你是带拍的摄影知识引擎。用户是普通人，
 ## EXIF数据
 {exif_summary}
 
+{exif_cross_check}
 ## 设备信息
 {device_context}
 
 {style_context}
+
+## 📚 带拍专业知识库
+{knowledge_context}
+
+{search_context}
+
+{fast_path_note}
 
 ## 工作流程
 
@@ -354,9 +358,9 @@ DIRECTIONS_PROMPT = """你是带拍的摄影知识引擎。用户是普通人，
 ### Step 3: 方向卡片
 
 三个方向：
-🟢 不会出错 — 可执行性最高，不需要技巧，拍出来一定好看
-🔥 朋友圈会问在哪拍的 — 辨识度最高，社交验证加分
-✨ 还能这样拍？ — 用户想不到的视角，不像游客照
+🟢 现在就拍 — 零门槛，站在这就能拍。每个场景必有
+🔥 最出片 — 高辨识度，社交验证加分。有才出
+✨ 脑洞大开 — 摄影的可能性，最酷的视角。有才出
 
 ## 🚨 重要：本次只生成方向卡片
 每个方向的 plans 必须是空数组 []。具体方案将在用户选择方向后另行生成。
@@ -370,7 +374,7 @@ reason 字段应该足够详细，让用户理解为什么推荐这个方向（8
 ## 🚨 约束
 - EXIF交叉：ISO≥800但视觉说"明亮"→采信EXIF；闪光灯触发→修正光质；快门<1/60→标注稳定支撑
 - 口吻：朋友分享观察，❌摄影术语 ❌"我"第一人称 ✅"你"视角
-- 风格翻译：style保留内部名，style_promise翻译为效果语言（"干净透亮，像日剧里的画面"）
+- 风格翻译：style必须使用中文风格名（如"安静真实""日系清新""胶片复古"），style_promise翻译为效果语言（"干净透亮，像日剧里的画面"）。禁止英文风格名如"casual_pet_daily""minimal_warm"。
 - 长度：presence≤80字 insight≤30字 reason≤120字 how≤50字
 
 ## 输出格式
@@ -383,7 +387,7 @@ reason 字段应该足够详细，让用户理解为什么推荐这个方向（8
   "scene_tier": "🥉/🥈/🥇",
   "directions": [
     {{
-      "id": "now", "emoji": "🟢", "label": "不会出错", "subtitle": "拍出来一定好看",
+      "id": "now", "emoji": "🟢", "label": "现在就拍", "subtitle": "零门槛，站在这就能拍",
       "style": "内部风格名", "style_promise": "效果语言翻译",
       "reason": "推荐理由（80-120字，说明为什么匹配这个场景和设备）",
       "how": "一句话操作概述",
@@ -395,13 +399,13 @@ reason 字段应该足够详细，让用户理解为什么推荐这个方向（8
       "plans": []
     }},
     {{
-      "id": "best", "emoji": "🔥", "label": "朋友圈会问在哪拍的", "subtitle": "发出去会被赞的那种",
+      "id": "best", "emoji": "🔥", "label": "最出片", "subtitle": "发出去会被赞的那种",
       "style": "", "style_promise": "", "reason": "", "how": "", "source_note": "",
       "fit_rationale": "", "light_annotation": "", "device_annotation": "", "source_type": "",
       "plans": []
     }},
     {{
-      "id": "creative", "emoji": "✨", "label": "还能这样拍？", "subtitle": "不像游客照的视角",
+      "id": "creative", "emoji": "✨", "label": "脑洞大开", "subtitle": "不像游客照的视角",
       "style": "", "style_promise": "", "reason": "", "how": "", "source_note": "",
       "fit_rationale": "", "light_annotation": "", "device_annotation": "", "source_type": "",
       "plans": []
@@ -426,6 +430,12 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。为已选定的风格�
 
 ## 设备信息
 {device_context}
+
+## 📚 风格知识参考
+{style_knowledge}
+
+## 📚 设备适配参考
+{device_knowledge}
 
 ## 已选方向
 {emoji} {label}
@@ -1117,9 +1127,9 @@ def normalize_creative_output(data):
 
     # v2 object 格式 → 转换为 array
     if isinstance(directions, dict):
-        dir_ids = {'now': {'emoji': '🟢', 'label': '不会出错', 'subtitle': '拍出来一定好看'},
-                    'best': {'emoji': '🔥', 'label': '朋友圈会问在哪拍的', 'subtitle': '发出去会被赞的那种'},
-                    'creative': {'emoji': '✨', 'label': '还能这样拍？', 'subtitle': '不像游客照的视角'}}
+        dir_ids = {'now': {'emoji': '🟢', 'label': '现在就拍', 'subtitle': '零门槛，站在这就能拍'},
+                    'best': {'emoji': '🔥', 'label': '最出片', 'subtitle': '发出去会被赞的那种'},
+                    'creative': {'emoji': '✨', 'label': '脑洞大开', 'subtitle': '不像游客照的视角'}}
         array_dirs = []
         for key, defaults in dir_ids.items():
             d = directions.get(key, {})
@@ -1383,8 +1393,14 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             img = Image.open(image_path)
             if img.mode in ('RGBA', 'P', 'LA'):
                 img = img.convert('RGB')
+            # 压缩大图：最长边限制在MAX_IMAGE_DIM，减少上传时间
+            w, h = img.size
+            max_dim = max(w, h)
+            if max_dim > MAX_IMAGE_DIM:
+                ratio = MAX_IMAGE_DIM / max_dim
+                img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
             buf = io.BytesIO()
-            img.save(buf, format='JPEG', quality=92)
+            img.save(buf, format='JPEG', quality=85)
             img_b64 = base64.b64encode(buf.getvalue()).decode()
             mime_type = "image/jpeg"
             print(f"[SSE] Image loaded: {img.size}, {len(img_b64)} chars base64", file=sys.stderr, flush=True)
@@ -1540,23 +1556,113 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             "light": vision_json.get('light', {}),
             "color": vision_json.get('color', {}),
             "space": vision_json.get('space', {}),
-            "composition": vision_json.get('composition', ''),
-            "perspective": vision_json.get('perspective', ''),
-            "weather_env": vision_json.get('weather_env', '')
+            "composition": vision_json.get('composition', '')
         })
 
         # ── Phase 2: 方向生成（不含方案）──
-        yield emit_progress("directions", "正在生成风格方向...")
+        yield emit_progress("directions", "正在搜索社区灵感 + 生成风格方向...")
 
         # 风格积累上下文
         scene_type = vision_json.get('scene_type', '')
-        style_context = get_style_context(scene_type)
+        style_context = query_scene_context(scene_type)
+
+        # ── EXIF 交叉验证（v4.0）──
+        exif_cross_check = ""
+        if isinstance(exif_result, dict) and 'error' not in exif_result:
+            sp = exif_result.get('shooting_params', {})
+            checks = []
+            iso = sp.get('iso', 0)
+            shutter = sp.get('exposure_time', '')
+            flash = sp.get('flash', {})
+            brightness = sp.get('brightness', None)
+
+            # ISO 交叉验证
+            if isinstance(iso, (int, float)) and iso >= 800:
+                light_quality = vision_json.get('light', {}).get('quality', '')
+                if '硬' in str(light_quality) or '明亮' in str(vision_json.get('light', {})):
+                    checks.append(f"⚠️ EXIF交叉验证：ISO={iso}（低光环境的硬证据），但视觉分析判断光线充足——采信EXIF。此场景实际光线偏暗，需注意噪点和稳定性。")
+
+            # 闪光灯修正
+            if isinstance(flash, dict) and flash.get('fired'):
+                checks.append("⚠️ 闪光灯已触发！视觉分析中的'自然光'判断需修正——实际拍摄有人工补光。光质分析需考虑闪光灯影响。")
+
+            # 快门稳定性
+            if isinstance(shutter, str) and '/' in shutter:
+                try:
+                    num, den = shutter.split('/')
+                    speed = float(num) / float(den)
+                    if speed < 1/60 and speed > 0:
+                        checks.append(f"💡 EXIF：快门={shutter}（慢于1/60s），建议稳定支撑或利用防抖。")
+                except (ValueError, ZeroDivisionError):
+                    pass
+
+            # 白平衡
+            wb = sp.get('white_balance', '')
+            if wb and 'Manual' in str(wb):
+                checks.append("💡 白平衡设为手动——用户在主动控制色彩，可推荐更进阶的风格方向。")
+
+            if checks:
+                exif_cross_check = "## 🚨 EXIF 交叉验证\n" + "\n".join(checks) + "\n"
+
+        # ── 知识库注入（v4.0 统一知识源）──
+        knowledge_context = get_all_knowledge_for_prompt(
+            scene_type=scene_type,
+            device_key=final_device_key,
+            light_condition=json.dumps(vision_json.get('light', {}), ensure_ascii=False)
+        )
+        print(f"[SSE] Knowledge context: {len(knowledge_context)} chars", file=sys.stderr, flush=True)
+
+        # ── 🌐 Web 搜索（社区验证，v4.0）──
+        search_context = ""
+        search_quality_web = "🔴"
+        people_info = vision_json.get('people', '')
+        try:
+            # 风格搜索（最多 6 秒）
+            search_text, search_quality_web, search_meta = search_style_inspiration(
+                scene_type, people_info
+            )
+            if search_text:
+                search_context = search_text
+                print(f"[Search] Style search: {len(search_text)} chars, quality={search_quality_web}", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"[Search] Style search failed: {e}", file=sys.stderr, flush=True)
+
+        # 位置搜索（如果有 GPS）
+        if location_weather and location_weather.get('place'):
+            try:
+                loc_text, loc_quality = search_location_intel(
+                    location_weather['place'], scene_type
+                )
+                if loc_text:
+                    search_context += "\n" + loc_text
+                    print(f"[Search] Location search: {len(loc_text)} chars, quality={loc_quality}", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"[Search] Location search failed: {e}", file=sys.stderr, flush=True)
+
+        # ── 快速路径判断（v4.0）──
+        fast_path_note = ""
+        if not location_weather:
+            fast_path_note += "- 无GPS数据 → 跳过了位置/天气/光照时段分析\n"
+        indoor_keywords = ["室内", "地铁", "商场", "咖啡", "餐厅", "家", "卧室", "客厅", "办公室"]
+        if any(kw in scene_type for kw in indoor_keywords):
+            fast_path_note += "- 室内场景 → 天气策略不适用，聚焦室内光线利用\n"
+        if "无" in str(people_info) or "无人" in str(people_info):
+            fast_path_note += "- 无人物 → 跳过姿势引导，聚焦空间/静物/氛围\n"
+        if fast_path_note:
+            fast_path_note = "## ⚡ 快速路径（本次跳过的分析）\n" + fast_path_note + "\n"
+
+        if not search_context:
+            search_context = "（本次未触发社区搜索——场景匹配主要基于专业知识库推理。）\n"
 
         directions_prompt = DIRECTIONS_PROMPT.format(
             vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
             exif_summary=exif_summary,
+            exif_cross_check=exif_cross_check,
             device_context=device_text,
-            style_context=style_context
+            style_context=style_context,
+            knowledge_context=knowledge_context,
+            search_context=search_context,
+            fast_path_note=fast_path_note
         )
         print(f"[SSE] Directions prompt: {len(directions_prompt)} chars", file=sys.stderr, flush=True)
         directions_content, directions_usage = call_doubao([
@@ -1602,7 +1708,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
 
         # ── 风格积累（异步不影响响应）──
         try:
-            accumulate_styles(scene_type, discovered_styles, techniques_used)
+            accumulate(scene_type, discovered_styles, techniques_used)
         except Exception as e:
             print(f"[StyleCache] Accumulate error: {e}", file=sys.stderr, flush=True)
 
@@ -1682,9 +1788,14 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     tier_constraint = get_tier_constraint(session['scene_tier'])
 
     # 构建 prompt
+    style_knowledge = get_style_detail(direction.get('style', '')) or ""
+    device_knowledge = get_device_adaptation(device_key) or ""
+
     plans_prompt = PLANS_PROMPT.format(
         vision_json=json.dumps(session['vision_json'], ensure_ascii=False, indent=2),
         device_context=device_text,
+        style_knowledge=style_knowledge,
+        device_knowledge=device_knowledge,
         emoji=direction.get('emoji', ''),
         label=direction.get('label', ''),
         style=direction.get('style', ''),
@@ -1825,15 +1936,76 @@ def analyze_plans():
     })
 
 
+@app.route('/deploy', methods=['POST'])
+def deploy_webhook():
+    """
+    GitHub Webhook 端点——代码 push 后自动部署。
+    在 GitHub 仓库 Settings → Webhooks → Payload URL = https://guidepic.cn/deploy
+    Content type: application/json
+    Secret: 与 .env 中的 DEPLOY_SECRET 匹配
+    """
+    import hmac
+    import hashlib
+
+    secret = os.environ.get("DEPLOY_SECRET", "")
+    if secret:
+        signature = request.headers.get("X-Hub-Signature-256", "")
+        expected = "sha256=" + hmac.new(secret.encode(), request.data, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            return jsonify({"success": False, "error": "签名验证失败"}), 403
+
+    # 异步执行部署（不阻塞 webhook 响应）
+    def do_deploy():
+        import subprocess
+        deploy_script = os.path.join(os.path.dirname(__file__), "deploy.sh")
+        if os.path.exists(deploy_script):
+            try:
+                subprocess.run(["bash", deploy_script, "--auto"], timeout=120)
+            except Exception as e:
+                print(f"[Deploy] Error: {e}", file=sys.stderr, flush=True)
+
+    t = threading.Thread(target=do_deploy)
+    t.start()
+
+    return jsonify({"success": True, "message": "部署已触发"}), 200
+
+
+@app.route('/sync', methods=['GET', 'POST'])
+def sync_knowledge():
+    """
+    Claude ↔ 服务器知识同步端点。
+    POST: 接收 Claude 端导出的知识数据
+    GET: 导出服务器端积累的数据供 Claude 端读取
+    """
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        direction = data.get('direction', 'import')  # 'import' or 'export'
+
+        if direction == 'import':
+            count = import_from_claude(data.get('data', {}))
+            applied = apply_pending_sync()
+            return jsonify({"success": True, "imported": count, "applied": applied})
+        else:
+            exported = export_for_claude()
+            return jsonify({"success": True, "data": exported})
+
+    # GET
+    exported = export_for_claude()
+    return jsonify({"success": True, "data": exported})
+
+
 @app.route('/health')
 def health():
     """健康检查"""
+    try:
+        stats = get_db_stats()
+    except Exception:
+        stats = {}
     return jsonify({
         "status": "ok",
         "api_key_configured": bool(DOUBAO_API_KEY),
         "exif_script_exists": os.path.exists(EXIF_SCRIPT),
-        "style_cache_exists": os.path.exists(STYLE_CACHE_FILE),
-        "style_cache_size": len(load_style_cache()) if os.path.exists(STYLE_CACHE_FILE) else 0,
+        "db_stats": stats,
         "sessions_active": len(_sessions),
         "processing": _processing
     })
@@ -1841,6 +2013,19 @@ def health():
 
 if __name__ == '__main__':
     import socket
+
+    # ── 启动时自动迁移 JSON→SQLite + 应用 Claude 端同步数据 ──
+    try:
+        json_path = os.path.join(os.path.dirname(__file__), "style_cache.json")
+        if os.path.exists(json_path) and not os.path.exists(DB_PATH):
+            print("[Init] Migrating style_cache.json → SQLite...", file=sys.stderr, flush=True)
+            migrate_from_json(json_path)
+        applied = apply_pending_sync()
+        if applied:
+            print(f"[Init] Applied {applied} pending sync items from Claude", file=sys.stderr, flush=True)
+    except Exception as e:
+        print(f"[Init] Migration/sync error (non-fatal): {e}", file=sys.stderr, flush=True)
+
     hostname = socket.gethostname()
     try:
         local_ip = socket.gethostbyname(hostname)
@@ -1849,7 +2034,7 @@ if __name__ == '__main__':
 
     print(f"""
 ╔══════════════════════════════════════════╗
-║       带拍 · 移动端测试工具 v3.5      ║
+║       带拍 · 移动端测试工具 v4.0      ║
 ║                                          ║
 ║  手机浏览器访问:                          ║
 ║  → http://{local_ip}:8888          ║
@@ -1857,7 +2042,7 @@ if __name__ == '__main__':
 ║  确保手机和电脑在同一 WiFi 网络            ║
 ║  按 Ctrl+C 停止服务器                     ║
 ║                                          ║
-║  v3.5: 渐进式展示 + 方案按需生成 + 缓存   ║
+║  v4.0: 知识库统一 + WebSearch + SQLite  ║
 ╚══════════════════════════════════════════╝
     """)
 

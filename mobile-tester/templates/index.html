@@ -1047,7 +1047,7 @@ function renderDirectionCarousel() {
       <div class="carousel-card">
         <div class="dir-card-single">
           <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
-          <div class="style-name">${esc(d.style||'未命名风格')}</div>
+          <div class="style-name">${esc((d.style&&!/^[a-z_]+$/.test(d.style))?d.style:(d.style_promise||'未命名风格'))}</div>
           ${d.style_promise?`<div class="style-promise">✨ ${esc(d.style_promise)}</div>`:''}
           <div class="reason">${esc(d.reason||'')}</div>
           ${meta?`<div class="dir-meta">${meta}</div>`:''}
