@@ -1,10 +1,10 @@
-# 直出相机 (zhichu) 安全审查报告
+# 带拍 (daipai) 安全审查报告
 
 **日期**: 2026-07-24 | **版本**: v3.2 | **审查人**: Claude Code
 
 ## 项目概况
 
-zhichu 是一个 Claude Code 的摄影知识引擎 skill，包含 4 个 Python 脚本和约 80 个 Markdown 知识文件。威胁模型以 AI pipeline 注入、脚本安全、数据隐私为主。
+daipai 是一个 Claude Code 的摄影知识引擎 skill，包含 4 个 Python 脚本和约 80 个 Markdown 知识文件。威胁模型以 AI pipeline 注入、脚本安全、数据隐私为主。
 
 ---
 
@@ -110,7 +110,7 @@ lon = float(sys.argv[2])
 
 SKILL.md 描述了 24 小时位置缓存策略（阶段 0E-5），但这是 AI 记忆层面的逻辑。`reverse-geocode.py` 脚本层每次调用都发 HTTP 请求。Nominatim 免费层有严格频率限制（1 req/s），密集使用可能被封。
 
-**修复建议**: 脚本层加简单的文件缓存（如 `/tmp/zhichu_geocode_cache.json`，按坐标哈希 key）。
+**修复建议**: 脚本层加简单的文件缓存（如 `/tmp/daipai_geocode_cache.json`，按坐标哈希 key）。
 
 ---
 

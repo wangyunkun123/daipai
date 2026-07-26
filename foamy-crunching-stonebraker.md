@@ -310,7 +310,7 @@
 
 **类型**：📋 产品 | **优先级**：🔴
 
-新建 `.claude/skills/zhichu/knowledge/social-media-patterns/`，包含 7 个文件：
+新建 `.claude/skills/daipai/knowledge/social-media-patterns/`，包含 7 个文件：
 
 - [ ] `xiaohongshu-hot.md`：小红书爆款拍照规律（什么类型照片最容易获得互动）
 - [ ] `couple-posing.md`：情侣拍照——男朋友视角万能公式（显高/显瘦/氛围感）

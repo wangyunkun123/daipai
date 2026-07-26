@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-直出相机 · 移动端测试工具 v3.5
+带拍 · 移动端测试工具 v3.5
 在电脑上启动后，手机浏览器访问 http://<电脑IP>:8888
 拍照上传 → 渐进式展示（EXIF→场景→方向→方案按需生成）→ Canvas 标注 → 生图提示词
 """
@@ -32,7 +32,7 @@ app = Flask(__name__)
 DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "")
 DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
 DOUBAO_MODEL = "doubao-seed-2.0-pro"
-EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/zhichu/scripts/exif-extract.py")
+EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
 STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 REQUEST_TIMEOUT = 240
@@ -314,7 +314,7 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
 # ============================================================
 # 方向生成 Prompt（不含方案，方案按需另行生成）
 # ============================================================
-DIRECTIONS_PROMPT = """你是直出相机的摄影知识引擎。用户是普通人，想要"发朋友圈好看"的照片。
+DIRECTIONS_PROMPT = """你是带拍的摄影知识引擎。用户是普通人，想要"发朋友圈好看"的照片。
 
 ## 视觉分析
 {vision_json}
@@ -419,7 +419,7 @@ directions 必须是数组 []，不是对象 {{}}——v2 OBJECT格式会崩溃�
 # ============================================================
 # 方案生成 Prompt（按需调用，用户选完方向后）
 # ============================================================
-PLANS_PROMPT = """你是直出相机的摄影知识工程师。为已选定的风格方向生成具体拍摄方案。
+PLANS_PROMPT = """你是带拍的摄影知识工程师。为已选定的风格方向生成具体拍摄方案。
 
 ## 场景信息
 {vision_json}
@@ -811,7 +811,7 @@ def _get_place_name(lat, lon):
             f"https://nominatim.openstreetmap.org/reverse?"
             f"format=json&lat={lat}&lon={lon}&zoom=12&addressdetails=1&accept-language=zh"
         )
-        req = urllib.request.Request(url, headers={"User-Agent": "ZhichuCamera/1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "GuidePic/1.0"})
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode())
         addr = data.get("address", {})
@@ -1770,7 +1770,7 @@ def analyze():
 
     # 保存临时文件
     fext = os.path.splitext(photo.filename)[1] or '.jpg'
-    tmp_path = f"/tmp/zhichu_{int(time.time())}_{os.getpid()}{fext}"
+    tmp_path = f"/tmp/daipai_{int(time.time())}_{os.getpid()}{fext}"
     photo.save(tmp_path)
 
     # 读取设备参数
@@ -1849,7 +1849,7 @@ if __name__ == '__main__':
 
     print(f"""
 ╔══════════════════════════════════════════╗
-║       直出相机 · 移动端测试工具 v3.5      ║
+║       带拍 · 移动端测试工具 v3.5      ║
 ║                                          ║
 ║  手机浏览器访问:                          ║
 ║  → http://{local_ip}:8888          ║

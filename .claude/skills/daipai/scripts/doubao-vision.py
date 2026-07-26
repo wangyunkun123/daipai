@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""保存每张照片的完整视觉 JSON 到独立文件"""
-import base64, json, os, sys, time, urllib.request
+"""豆包视觉 API 调用脚本 - 用于 /daipai 管道的阶段 1A"""
+import base64, json, sys, os
 
-PHOTO_DIR = "/Users/rabbit/Downloads/带拍测试"
-OUT_DIR = "/Users/rabbit/Downloads/带拍测试/vision_results"
 API_KEY = os.environ.get("DOUBAO_API_KEY", "")
 API_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
 MODEL = "doubao-seed-2.0-pro"
@@ -52,32 +50,17 @@ PROMPT = """请详细分析这张照片，输出严格的结构化JSON。必须�
 
 只输出JSON，不要任何额外文字。不要markdown代码块包裹。"""
 
-os.makedirs(OUT_DIR, exist_ok=True)
-
-photos = sorted([f for f in os.listdir(PHOTO_DIR) if f.lower().endswith(('.heic', '.heif', '.jpg', '.jpeg', '.png'))])
-
-for i, photo in enumerate(photos, 1):
-    out_path = os.path.join(OUT_DIR, f"{os.path.splitext(photo)[0]}_vision.json")
-
-    # Skip if already exists
-    if os.path.exists(out_path):
-        print(f"[{i}/10] {photo} → 已存在，跳过")
-        continue
-
-    image_path = os.path.join(PHOTO_DIR, photo)
-    ext = os.path.splitext(image_path)[1].lower()
-    mime_type = "image/heic" if ext in ('.heic', '.heif') else "image/jpeg"
-
-    t0 = time.time()
+def analyze_image(image_path):
     with open(image_path, 'rb') as f:
         img_b64 = base64.b64encode(f.read()).decode()
 
+    import urllib.request
     payload = {
         "model": MODEL,
         "messages": [{
             "role": "user",
             "content": [
-                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{img_b64}"}},
+                {"type": "image_url", "image_url": {"url": f"data:image/heic;base64,{img_b64}"}},
                 {"type": "text", "text": PROMPT}
             ]
         }],
@@ -87,37 +70,32 @@ for i, photo in enumerate(photos, 1):
     req = urllib.request.Request(
         API_URL,
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_KEY}"
+        }
     )
 
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=60) as resp:
         result = json.loads(resp.read().decode())
 
-    elapsed = time.time() - t0
-    usage = result.get('usage', {})
-
-    content = result['choices'][0]['message']['content'].strip()
+    content = result['choices'][0]['message']['content']
+    # Try to parse JSON from response (sometimes wrapped in ```json)
+    content = content.strip()
     if content.startswith('```'):
-        lines = content.split('\n')
-        content = '\n'.join(lines[1:])
+        content = content.split('\n', 1)[1]
         if content.endswith('```'):
             content = content[:-3]
+    return json.loads(content)
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "用法: python3 doubao-vision.py <image_path>"}))
+        sys.exit(1)
 
     try:
-        parsed = json.loads(content)
-    except json.JSONDecodeError:
-        parsed = {"raw": content, "parse_error": "JSON解析失败"}
-
-    with open(out_path, 'w', encoding='utf-8') as f:
-        json.dump({
-            "filename": photo,
-            "model": MODEL,
-            "elapsed_s": round(elapsed, 2),
-            "tokens": usage,
-            "vision_result": parsed
-        }, f, ensure_ascii=False, indent=2)
-
-    print(f"[{i}/10] {photo} → ✅ {elapsed:.1f}s | tokens={usage.get('total_tokens', '?')} | {out_path}")
-    time.sleep(1)
-
-print("\n全部完成！")
+        result = analyze_image(sys.argv[1])
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    except Exception as e:
+        print(json.dumps({"error": str(e)}, ensure_ascii=False))
+        sys.exit(1)
