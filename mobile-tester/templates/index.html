@@ -251,6 +251,7 @@
   .meta-light { background: rgba(74,222,128,0.08); color: var(--green); }
   .meta-device { background: rgba(245,158,11,0.08); color: var(--fire); }
   .meta-source { background: rgba(167,139,250,0.08); color: var(--purple); }
+  .ai-badge { font-size: 11px; font-weight: 500; background: rgba(251,191,36,0.15); color: #f59e0b; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
 
   .dir-actions { display: flex; gap: 10px; margin-top: 4px; }
   .btn-select {
@@ -560,6 +561,8 @@ function esc(s) {
   div.textContent = s;
   return div.innerHTML;
 }
+const SOURCE_LABELS = {community:'👥 社区验证', tutorial:'📚 专业教程', portfolio:'🎨 作品集', inference:'🤖 AI推理'};
+function sourceLabel(st) { return SOURCE_LABELS[st] || st || ''; }
 
 // State
 let sessionId = null;
@@ -1042,12 +1045,12 @@ function renderDirectionCarousel() {
     if (d.fit_rationale) meta += `<span class="meta-fit">${esc(d.fit_rationale)}</span>`;
     if (d.light_annotation) meta += `<span class="meta-light">光线 ${esc(d.light_annotation)}</span>`;
     if (d.device_annotation) meta += `<span class="meta-device">设备 ${esc(d.device_annotation)}</span>`;
-    if (d.source_type) meta += `<span class="meta-source">📎 ${esc(d.source_type)}</span>`;
+    if (d.source_type) meta += `<span class="meta-source">${sourceLabel(d.source_type)}</span>`;
     cardsHtml += `
       <div class="carousel-card">
         <div class="dir-card-single">
           <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
-          <div class="style-name">${esc((d.style&&!/^[a-z_]+$/.test(d.style))?d.style:(d.style_promise||'未命名风格'))}</div>
+          <div class="style-name">${esc((d.style&&!/^[a-z_]+$/.test(d.style))?d.style:(d.style_promise||'未命名风格'))}${d.source_type==='inference'?' <span class="ai-badge">🤖 AI总结</span>':''}</div>
           ${d.style_promise?`<div class="style-promise">✨ ${esc(d.style_promise)}</div>`:''}
           <div class="reason">${esc(d.reason||'')}</div>
           ${meta?`<div class="dir-meta">${meta}</div>`:''}
@@ -1514,12 +1517,12 @@ function renderDataSections() {
   }
   if (discoveredStyles.length>0) {
     h+=`<div class="fold-section"><div class="fold-header" onclick="tf(this)">🎨 发现的风格 <span style="font-size:11px;color:var(--dimmer)">${discoveredStyles.length}个</span><span class="arrow">▶</span></div><div class="fold-body">`;
-    discoveredStyles.forEach(s=>{ if(!s)return; h+=`<div class="item"><div><div class="item-name">${esc(s.name||'')}</div><div style="font-size:11px;color:var(--dim)">${esc(s.fit_rationale||'')}</div></div><div class="item-meta"><div>${esc(s.light_annotation||'')}</div><div>${esc(s.device_annotation||'')}</div><div>${esc(s.source_type||'')}</div></div></div>`; });
+    discoveredStyles.forEach(s=>{ if(!s)return; h+=`<div class="item"><div><div class="item-name">${esc(s.name||'')}</div><div style="font-size:11px;color:var(--dim)">${esc(s.fit_rationale||'')}</div></div><div class="item-meta"><div>${esc(s.light_annotation||'')}</div><div>${esc(s.device_annotation||'')}</div><div>${esc(sourceLabel(s.source_type))}</div></div></div>`; });
     h+='</div></div>';
   }
   if (techniquesUsed.length>0) {
     h+=`<div class="fold-section"><div class="fold-header" onclick="tf(this)">🔧 使用的技法 <span style="font-size:11px;color:var(--dimmer)">${techniquesUsed.length}个</span><span class="arrow">▶</span></div><div class="fold-body">`;
-    techniquesUsed.forEach(t=>{ if(!t)return; h+=`<div class="item"><div><div class="item-name">${esc(t.name||'')}</div><div style="font-size:11px;color:var(--dim)">${esc(t.description||'')}</div></div><div class="item-meta">${esc(t.source_type||'')}</div></div>`; });
+    techniquesUsed.forEach(t=>{ if(!t)return; h+=`<div class="item"><div><div class="item-name">${esc(t.name||'')}</div><div style="font-size:11px;color:var(--dim)">${esc(t.description||'')}</div></div><div class="item-meta">${esc(sourceLabel(t.source_type))}</div></div>`; });
     h+='</div></div>';
   }
   $('#dataSections').innerHTML = h;
