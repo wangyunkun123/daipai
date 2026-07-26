@@ -39,6 +39,7 @@ EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daip
 STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
+VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
 REQUEST_TIMEOUT = 300  # 含大图上传时间
 SESSION_TTL = 1800  # 30分钟
 
@@ -1155,7 +1156,7 @@ def normalize_creative_output(data):
                 d.setdefault('light_annotation', '')
                 d.setdefault('device_annotation', '')
                 d.setdefault('source_type', '')
-            d.setdefault('name_source', '')
+                d.setdefault('name_source', '')
                 for p in d.get('plans', []):
                     if isinstance(p, dict):
                         p.setdefault('posture', '')
@@ -1182,7 +1183,7 @@ def normalize_creative_output(data):
                 d.setdefault('light_annotation', '')
                 d.setdefault('device_annotation', '')
                 d.setdefault('source_type', '')
-            d.setdefault('name_source', '')
+                d.setdefault('name_source', '')
                 for p in d.get('plans', []):
                     if isinstance(p, dict):
                         p.setdefault('posture', '')
@@ -1403,17 +1404,29 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             img = Image.open(image_path)
             if img.mode in ('RGBA', 'P', 'LA'):
                 img = img.convert('RGB')
-            # 压缩大图：最长边限制在MAX_IMAGE_DIM，减少上传时间
             w, h = img.size
             max_dim = max(w, h)
+
+            # ── 主图：2048px 用于展示/EXIF ──
+            main_img = img
             if max_dim > MAX_IMAGE_DIM:
                 ratio = MAX_IMAGE_DIM / max_dim
-                img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
-            buf = io.BytesIO()
-            img.save(buf, format='JPEG', quality=85)
-            img_b64 = base64.b64encode(buf.getvalue()).decode()
+                main_img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+            main_buf = io.BytesIO()
+            main_img.save(main_buf, format='JPEG', quality=85)
+            img_b64 = base64.b64encode(main_buf.getvalue()).decode()
+
+            # ── 视觉图：1024px 给豆包 API——场景分析不需要高分辨率，省一半时间 ──
+            vision_img = img
+            if max_dim > VISION_IMAGE_DIM:
+                ratio_v = VISION_IMAGE_DIM / max_dim
+                vision_img = img.resize((int(w * ratio_v), int(h * ratio_v)), Image.LANCZOS)
+            vision_buf = io.BytesIO()
+            vision_img.save(vision_buf, format='JPEG', quality=80)
+            vision_b64 = base64.b64encode(vision_buf.getvalue()).decode()
+
             mime_type = "image/jpeg"
-            print(f"[SSE] Image loaded: {img.size}, {len(img_b64)} chars base64", file=sys.stderr, flush=True)
+            print(f"[SSE] Image loaded: main={main_img.size} ({len(img_b64)}b64), vision={vision_img.size} ({len(vision_b64)}b64)", file=sys.stderr, flush=True)
         except Exception as imgerr:
             print(f"[SSE] Image open error: {imgerr}", file=sys.stderr, flush=True)
             yield emit("error", {"message": f"无法读取照片: {str(imgerr)}"})
@@ -1437,7 +1450,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
                 print("[SSE] Vision API starting...", file=sys.stderr, flush=True)
                 result, usage = call_doubao([
                     {"role": "user", "content": [
-                        {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{img_b64}"}},
+                        {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{vision_b64}"}},
                         {"type": "text", "text": VISION_PROMPT}
                     ]}
                 ], max_tokens=2000)
@@ -1822,7 +1835,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     try:
         plans_content, plans_usage = call_doubao([
             {"role": "user", "content": plans_prompt}
-        ], max_tokens=6000)
+        ], max_tokens=4000)  # v4.1: 6000→4000，实际输出很少超4000
 
         plans_json, plans_error = parse_json_safe(
             plans_content,
