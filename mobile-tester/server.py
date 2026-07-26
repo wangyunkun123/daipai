@@ -375,6 +375,10 @@ reason 字段应该足够详细，让用户理解为什么推荐这个方向（8
 - EXIF交叉：ISO≥800但视觉说"明亮"→采信EXIF；闪光灯触发→修正光质；快门<1/60→标注稳定支撑
 - 口吻：朋友分享观察，❌摄影术语 ❌"我"第一人称 ✅"你"视角
 - 风格翻译：style必须使用中文风格名（如"安静真实""日系清新""胶片复古"），style_promise翻译为效果语言（"干净透亮，像日剧里的画面"）。禁止英文风格名如"casual_pet_daily""minimal_warm"。
+- name_source 诚实标注风格名的来源：
+  · discovered = 中文名直接从搜索结果中获得（如实记录，不需翻译）
+  · translated = 搜索到的是英文风格名，由AI翻译为中文
+  · generated = 搜索结果为空或source_type=inference，AI基于摄影原理生成风格名
 - 长度：presence≤80字 insight≤30字 reason≤120字 how≤50字
 
 ## 输出格式
@@ -396,18 +400,19 @@ reason 字段应该足够详细，让用户理解为什么推荐这个方向（8
       "light_annotation": "🟢/🟡/🔴",
       "device_annotation": "🟢直接拍/🟡微调/🟠替代方案",
       "source_type": "community/tutorial/portfolio/inference",
+      "name_source": "discovered/translated/generated",
       "plans": []
     }},
     {{
       "id": "best", "emoji": "🔥", "label": "最出片", "subtitle": "发出去会被赞的那种",
       "style": "", "style_promise": "", "reason": "", "how": "", "source_note": "",
-      "fit_rationale": "", "light_annotation": "", "device_annotation": "", "source_type": "",
+      "fit_rationale": "", "light_annotation": "", "device_annotation": "", "source_type": "", "name_source": "",
       "plans": []
     }},
     {{
       "id": "creative", "emoji": "✨", "label": "脑洞大开", "subtitle": "不像游客照的视角",
       "style": "", "style_promise": "", "reason": "", "how": "", "source_note": "",
-      "fit_rationale": "", "light_annotation": "", "device_annotation": "", "source_type": "",
+      "fit_rationale": "", "light_annotation": "", "device_annotation": "", "source_type": "", "name_source": "",
       "plans": []
     }}
   ],
@@ -1119,6 +1124,7 @@ def normalize_creative_output(data):
             d.setdefault('light_annotation', '')
             d.setdefault('device_annotation', '')
             d.setdefault('source_type', '')
+            d.setdefault('name_source', '')
             for p in d.get('plans', []):
                 if isinstance(p, dict):
                     p.setdefault('posture', '')
@@ -1147,6 +1153,7 @@ def normalize_creative_output(data):
                 d.setdefault('light_annotation', '')
                 d.setdefault('device_annotation', '')
                 d.setdefault('source_type', '')
+            d.setdefault('name_source', '')
                 for p in d.get('plans', []):
                     if isinstance(p, dict):
                         p.setdefault('posture', '')
@@ -1173,6 +1180,7 @@ def normalize_creative_output(data):
                 d.setdefault('light_annotation', '')
                 d.setdefault('device_annotation', '')
                 d.setdefault('source_type', '')
+            d.setdefault('name_source', '')
                 for p in d.get('plans', []):
                     if isinstance(p, dict):
                         p.setdefault('posture', '')

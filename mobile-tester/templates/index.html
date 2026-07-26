@@ -563,6 +563,11 @@ function esc(s) {
 }
 const SOURCE_LABELS = {community:'👥 社区验证', tutorial:'📚 专业教程', portfolio:'🎨 作品集', inference:'🤖 AI推理'};
 function sourceLabel(st) { return SOURCE_LABELS[st] || st || ''; }
+function nameSourceBadge(ns) {
+  if (ns === 'translated') return ' <span class="ai-badge">🤖 AI翻译</span>';
+  if (ns === 'generated') return ' <span class="ai-badge">🤖 AI总结</span>';
+  return '';
+}
 
 // State
 let sessionId = null;
@@ -1045,12 +1050,12 @@ function renderDirectionCarousel() {
     if (d.fit_rationale) meta += `<span class="meta-fit">${esc(d.fit_rationale)}</span>`;
     if (d.light_annotation) meta += `<span class="meta-light">光线 ${esc(d.light_annotation)}</span>`;
     if (d.device_annotation) meta += `<span class="meta-device">设备 ${esc(d.device_annotation)}</span>`;
-    if (d.source_type) meta += `<span class="meta-source">${sourceLabel(d.source_type)}</span>`;
+    if (d.source_type === 'inference') meta += `<span class="meta-source">🤖 AI推理</span>`;
     cardsHtml += `
       <div class="carousel-card">
         <div class="dir-card-single">
           <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
-          <div class="style-name">${esc((d.style&&!/^[a-z_]+$/.test(d.style))?d.style:(d.style_promise||'未命名风格'))}${d.source_type==='inference'?' <span class="ai-badge">🤖 AI总结</span>':''}</div>
+          <div class="style-name">${esc((d.style&&!/^[a-z_]+$/.test(d.style))?d.style:(d.style_promise||'未命名风格'))}${nameSourceBadge(d.name_source)}</div>
           ${d.style_promise?`<div class="style-promise">✨ ${esc(d.style_promise)}</div>`:''}
           <div class="reason">${esc(d.reason||'')}</div>
           ${meta?`<div class="dir-meta">${meta}</div>`:''}
