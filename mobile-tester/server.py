@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 """
-直出相机 · 移动端测试工具 v3.4
+直出相机 · 移动端测试工具 v3.5
 在电脑上启动后，手机浏览器访问 http://<电脑IP>:8888
-拍照上传 → 流式分析 → 渐进式展示 → Canvas 标注引导
+拍照上传 → 渐进式展示（EXIF→场景→方向→方案按需生成）→ Canvas 标注 → 生图提示词
 """
 
 import base64
 import io
 import json
+import math
 import os
+import re
 import subprocess
 import sys
 import time
 import threading
 import urllib.request
+import urllib.parse
+import uuid
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 load_dotenv()
 from PIL import Image
@@ -28,12 +33,17 @@ DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "")
 DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
 DOUBAO_MODEL = "doubao-seed-2.0-pro"
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/zhichu/scripts/exif-extract.py")
+STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 REQUEST_TIMEOUT = 240
+SESSION_TTL = 1800  # 30分钟
 
 # 并发控制
 _processing_lock = threading.Lock()
 _processing = False
+
+# Session 存储
+_sessions: dict[str, dict] = {}
 
 # 设备档案（精简版）
 DEVICE_CONTEXTS = {
@@ -72,12 +82,69 @@ DEVICE_CONTEXTS = {
         "limits": "焦段切换不如 iPhone 平滑, 人像虚化各品牌差异大, 色彩一致性弱于 iPhone",
         "capability": "🟢 主摄场景, 🟡 焦段一致性, 🔴 无"
     },
-    "dslr-mirrorless": {
-        "name": "单反/微单相机",
+    # ── 小红书热门相机 ──
+    "sony-a7m4": {
+        "name": "Sony A7M4",
+        "lenses": "全画幅可换镜头（常用：24-70 f/2.8, 85 f/1.4, 35 f/1.4）",
+        "strengths": "3300万像素全画幅, 对焦快准, 色彩讨喜, 高感优秀, 4K视频",
+        "limits": "机身+镜头约1.5kg不便携, 需选对镜头, 直出色彩不如富士",
+        "capability": "🟢 人像/风光全场景, 🟡 需搭配镜头, 🔴 无"
+    },
+    "sony-a7c2": {
+        "name": "Sony A7C2",
+        "lenses": "全画幅可换镜头（常用：28-60 套头, 40 f/2.5, 24-70 f/2.8）",
+        "strengths": "轻便全画幅, 侧翻屏自拍方便, 对焦好, 3300万像素",
+        "limits": "取景器小, 握持感一般, 需选对镜头",
+        "capability": "🟢 旅行/人像/日常, 🟡 需搭配镜头, 🔴 无"
+    },
+    "sony-a6400": {
+        "name": "Sony A6400 / ZV-E10",
+        "lenses": "APS-C 可换镜头（常用：16-50 套头, 适马30 f/1.4, 适马56 f/1.4）",
+        "strengths": "轻便入门, 镜头群丰富便宜, 翻转屏, 对焦快",
+        "limits": "APS-C高感一般, 无机身防抖(A6400), 直出色彩偏冷",
+        "capability": "🟢 日常/人像入门, 🟡 暗光需大光圈镜头, 🔴 无"
+    },
+    "fujifilm-xt5": {
+        "name": "Fujifilm X-T5",
+        "lenses": "APS-C 可换镜头（常用：18-55 f/2.8-4, 35 f/1.4, 56 f/1.2）",
+        "strengths": "4000万像素, 经典胶片模拟直出色彩无敌, 复古外观, 防抖好",
+        "limits": "APS-C画幅, 对焦弱于索尼佳能, 价格偏高, 续航一般",
+        "capability": "🟢 街拍/人像/生活, 🟡 运动/体育, 🔴 无"
+    },
+    "fujifilm-xt50": {
+        "name": "Fujifilm X-T50 / X-T30 II",
+        "lenses": "APS-C 可换镜头（常用：15-45 套头, XC35 f/2, 适马 30 f/1.4）",
+        "strengths": "小巧复古, 胶片模拟丰富直出不用修图, 价格友好, 颜值高",
+        "limits": "无机身防抖(X-T30), 续航一般, 对焦中等",
+        "capability": "🟢 街拍/日常/旅行, 🟡 暗光需大光圈, 🔴 运动"
+    },
+    "fujifilm-x100vi": {
+        "name": "Fujifilm X100VI",
+        "lenses": "固定镜头 23mm f/2（35mm等效）",
+        "strengths": "口袋大小, 经典负片模拟直出, 镜间快门, 街拍神器, 颜值天花板",
+        "limits": "定焦不可换镜头, 近摄偏软, 溢价严重难买到",
+        "capability": "🟢 街拍/旅行/生活记录, 🟡 远摄/大场面, 🔴 人像特写"
+    },
+    "ricoh-gr3": {
+        "name": "Ricoh GR III / GR IIIx",
+        "lenses": "固定镜头 28mm f/2.8 (GR3) / 40mm f/2.8 (GR3x)",
+        "strengths": "真口袋机, 快拍模式秒拍, 森山大道高对比黑白模式, APS-C画质, 色彩独特",
+        "limits": "定焦不可换, 电池小续航差, 对焦慢, 无取景器",
+        "capability": "🟢 街拍/快拍/黑白, 🟡 远摄/人像, 🔴 视频"
+    },
+    "canon-r6ii": {
+        "name": "Canon EOS R6 II",
+        "lenses": "全画幅可换镜头（常用：24-105 f/4, 50 f/1.8, 85 f/2）",
+        "strengths": "肤色色彩科学讨喜, 防抖强, 对焦快, 2400万像素全画幅",
+        "limits": "RF镜头群偏贵, 机身偏大, 像素略低于同级",
+        "capability": "🟢 人像/活动/视频, 🟡 高像素风光, 🔴 无"
+    },
+    "other-camera": {
+        "name": "其他相机",
         "lenses": "取决于镜头选择",
-        "strengths": "大尺寸传感器, 画质优秀, 可换镜头灵活性强, 景深控制好",
-        "limits": "需选择正确镜头, 体积大不便携, 部分机型无防抖",
-        "capability": "🟢 全焦段（取决于镜头）, 🟡 需用户选镜头, 🔴 无自动场景优化"
+        "strengths": "可换镜头灵活性, 传感器大于手机, 景深控制好",
+        "limits": "需选择正确镜头, 体积大不便携",
+        "capability": "🟢 取决于镜头, 🟡 需用户选镜头, 🔴 无自动场景优化"
     },
     "unknown": {
         "name": "待选择",
@@ -121,7 +188,6 @@ def detect_device_from_exif(exif_result):
 
     # ── iPhone 检测 ──
     if 'iphone' in dl:
-        import re
         match = re.search(r'iphone\s*(\d+)', dl)
         if match:
             model_num = int(match.group(1))
@@ -146,10 +212,43 @@ def detect_device_from_exif(exif_result):
     if any(kw in dl for kw in ['android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'huawei', 'oneplus', 'honor', 'redmi', 'poco', 'realme']):
         return 'android-flagship', device_str, False
 
-    # ── 单反/微单检测 ──
+    # ── 相机品牌精细检测 ──
     camera_brands = ['canon', 'sony', 'nikon', 'fujifilm', 'leica', 'panasonic', 'olympus', 'pentax', 'hasselblad', 'ricoh', 'sigma', 'lumix', 'fuji']
+
     if any(brand in dl for brand in camera_brands):
-        return 'dslr-mirrorless', device_str, True
+        # Sony
+        if 'sony' in dl:
+            if any(m in dl for m in ['a7m4', 'a7r5', 'a7r4', 'a7r3', 'a7m3', 'a7c2', 'a7c', 'a7cr', 'a7s3', 'a9']):
+                return 'sony-a7m4', device_str, True
+            if any(m in dl for m in ['a6', 'a5', 'zve10', 'zve1', 'zv-e10', 'zv-e1', 'nex']):
+                return 'sony-a6400', device_str, True
+            return 'sony-a7m4', device_str, True
+        # Fujifilm
+        if 'fujifilm' in dl or 'fuji' in dl:
+            if any(m in dl for m in ['xt5', 'xt-5', 'x-t5', 'xh2', 'x-h2', 'xh2s', 'gfx']):
+                return 'fujifilm-xt5', device_str, True
+            if any(m in dl for m in ['xt50', 'xt-50', 'x-t50', 'xt30', 'xt-30', 'x-t30', 'xe4', 'x-e4', 'xs20', 'x-s20', 'xs10', 'x-s10', 'xt200', 'xt-200']):
+                return 'fujifilm-xt50', device_str, True
+            if any(m in dl for m in ['x100', 'x-100']):
+                return 'fujifilm-x100vi', device_str, True
+            return 'fujifilm-xt5', device_str, True
+        # Ricoh
+        if 'ricoh' in dl:
+            return 'ricoh-gr3', device_str, True
+        # Canon
+        if 'canon' in dl:
+            if any(m in dl for m in ['r6', 'r5', 'r3', 'r8', 'r7', 'r10', '5d', '6d', '1d']):
+                return 'canon-r6ii', device_str, True
+            return 'other-camera', device_str, True
+        # Nikon
+        if 'nikon' in dl:
+            if any(m in dl for m in ['z6', 'z7', 'z8', 'z9', 'zf', 'z5', 'z50', 'zfc', 'z30']):
+                return 'canon-r6ii', device_str, True  # 用 canon-r6ii 同级配置
+            return 'other-camera', device_str, True
+        # Leica / Hasselblad / Others
+        if any(b in dl for b in ['leica', 'hasselblad', 'pentax', 'olympus', 'panasonic', 'lumix', 'sigma']):
+            return 'other-camera', device_str, True
+        return 'other-camera', device_str, True
 
     return None, device_str, False
 
@@ -166,7 +265,7 @@ def get_lens_context(lens_key):
 
 
 # ============================================================
-# 视觉分析 Prompt（保留核心逻辑，增强 EXIF 交叉验证提示）
+# 视觉分析 Prompt（保留核心逻辑）
 # ============================================================
 VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。必须包含以下8个字段，缺一不可。
 
@@ -213,11 +312,9 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
 只输出JSON，不要任何额外文字。不要markdown代码块包裹。"""
 
 # ============================================================
-# 创意推理 Prompt（统一输出架构：摄影骨架 + 社媒包装）
+# 方向生成 Prompt（不含方案，方案按需另行生成）
 # ============================================================
-CREATIVE_PROMPT_TEMPLATE = """你是直出相机的摄影知识引擎。你的用户是普通大众——不是摄影师，甚至可能完全不懂拍照。他们想要的是"世俗意义上的好照片"：发朋友圈会有人点赞，看起来精致有美感，愿意分享出去。
-
-根据以下视觉分析结果和EXIF数据，为这张照片生成拍摄指导。
+DIRECTIONS_PROMPT = """你是直出相机的摄影知识引擎。用户是普通人，想要"发朋友圈好看"的照片。
 
 ## 视觉分析
 {vision_json}
@@ -228,283 +325,691 @@ CREATIVE_PROMPT_TEMPLATE = """你是直出相机的摄影知识引擎。你的�
 ## 设备信息
 {device_context}
 
-## 你的任务
+{style_context}
 
-### Step 1: 场景沉浸
-读视觉分析中的场景描述。想象你站在这个场景里——不要分类，去感受。
-问自己：如果我是现场的人，我会被什么打动？这个场景里最安静的角落在哪里？
+## 工作流程
 
-输出：2-3句"在场感受"（口语化、有画面感），然后提炼一句话洞察。
-洞察必须有视觉锚点——一个能在照片里指出的具体东西（一束光、一个弧度、一个颜色）。
-❌ 禁止模板句式："最动人的不是X——是Y"
-❌ 禁止空洞话："刚好经过，阳光正好"
+### Step 1: 场景沉浸 + 等级评估
+读视觉分析，沉浸进去。问自己：这个场景最动人的地方在哪？有什么具体的东西可以指着说"你看这里"？
+
+输出：
+- presence: 2-3句在场感受（口语化，有画面感）
+- insight: 一句话洞察——必须有视觉锚点（一束光、一个弧度、一个颜色）
+- scene_tier: 🥉一般 / 🥈不错 / 🥇丰富
+
+场景等级判定：
+🥉 一般场景（普通客厅/随手拍/信息量少/光线平淡/空间浅）
+🥈 不错场景（有光线/构图/情绪亮点/空间层次中）
+🥇 丰富场景（空间深/光线有戏剧性/人物状态好/元素密集）
 
 ### Step 2: 风格发现
-基于场景特征，从以下知识库中匹配最佳风格方向。
+基于光线（软/硬/方向）×题材（人像/环境/静物）×情绪（从场景色彩和人物状态推断），匹配最佳风格方向。从摄影风格知识中选择匹配度最高的，诚实标注光线和设备可执行性。
 
-**风格匹配参考：**
-- 室内弱暖光+人物 → 安静真实/胶片复古/电影感单光源
-- 户外硬光+人物+运动 → 胶片复古/杂志时尚/负空间剪影
-- 户外软光+人物+自然 → 森系/日系清新/安静真实
-- 夜景暖光+建筑 → 新中式/电影感/极简建筑
-- 户外漫射冷光+建筑/古村 → 中国水墨/极简建筑
-- 户外硬光+旅行/环境 → 旅行纪实/风光大片
-- 半室外混合光+热带/廊桥 → 旅行纪实/电影感·热带/建筑几何
-- 户外漫射冷光+反季节景观 → 纪实景观/极简风光/新地形摄影
-- 室内漫射晨光+居家 → 安静真实/日系清新·居家/玻璃叠影
-- 户外漫射冷光+绿化 → 森系/日系清新/时尚对比
-- 窗边软光+人物 → 日系清新/胶片复古/安静真实
-- 夜景混合光+街拍 → 电影感/便利店美学/纪实粗粝
-
-每个匹配风格标注：
+每个风格标注：
 - fit_rationale: 为什么适合
-- light_annotation: 🟢完美/🟡可模拟/🔴需等待 + 说明
-- device_annotation: 🟢直接拍/🟡微调/🟠替代方案 + 当前设备能做什么
+- light_annotation: 🟢完美/🟡可模拟/🔴需等待
+- device_annotation: 🟢直接拍/🟡微调/🟠替代方案
 - source_type: community/tutorial/portfolio/inference
-- is_new_discovery: 是否在以上缓存中找不到
 
-### Step 3: 技法选择
-从以下技法池中匹配可用的拍摄技巧：
+### Step 3: 方向卡片
 
-**技法池：**
-- 降到宠物/儿童高度 → 改变视角，拍出新鲜感
-- 人只占画面10% → 环境叙事
-- 前景虚化做层次 → 花/叶/框做前景
-- 蹲下让天空做背景 → 避开地面杂乱
-- 只拍局部不拍脸 → 川内伦子式观看
-- 等人物走过光带 → 动静对比
-- 栏杆/窗框做框内框 → 框架构图
-- 树冠做天然拱门 → 森系仰拍
-- 侧身45°面朝光源 → 硬光面部轮廓
-- 只拍影子不拍人 → 硬光剪影
-- 退到暗处用负空间 → 暗调氛围
-- 只拍手/道具特写 → 局部神圣化
+三个方向：
+🟢 不会出错 — 可执行性最高，不需要技巧，拍出来一定好看
+🔥 朋友圈会问在哪拍的 — 辨识度最高，社交验证加分
+✨ 还能这样拍？ — 用户想不到的视角，不像游客照
 
-### Step 4: 方向卡片 + 方案
+## 🚨 重要：本次只生成方向卡片
+每个方向的 plans 必须是空数组 []。具体方案将在用户选择方向后另行生成。
+reason 字段应该足够详细，让用户理解为什么推荐这个方向（80-120字）。
 
-按以下格式输出三个方向。每个方向自带 1-9 套拍摄方案：
+## 🚨 两道追问（每个方向生成后立刻自问）
+□ 叙事完整性：这个方向有清晰的视觉叙事吗？
+□ 调性统一度：色调/影调/质感在风格框架内吗？
+不通过 → 修正后再输出。
 
-🟢 **不会出错**：可执行性最高，拍出来一定好看，不需要任何技巧。焦虑型用户的 default choice。
-🔥 **朋友圈会问在哪拍的**：辨识度最高，发出去会被赞的那种。社交驱动型用户的首选。
-✨ **还能这样拍？**：用户想不到的视角，拍出来不像游客照。好奇心驱动型用户。
-
-## 🚨 方案变化层次（防单调）
-
-同一个方向下的多套方案必须有变化层次，不能让用户觉得"三套方案都在说同一件事"。变化手段按优先级：
-
-**主要变化手段（摄影基础支撑）：**
-1. **姿态变化**：站→坐→蹲→靠→走→回头。身体几何关系改变 = 照片结构改变。参考：重心转移、脊柱线方向、手部任务变化。
-2. **景别变化**：远景（人物+环境关系）→ 中景（姿态+表情）→ 近景（表情+细节）→ 特写（纹理+光线）。不同景别=不同叙事重点。
-3. **角度变化**：平视→俯拍（显脸小/地面图案感）→ 仰拍（显高/天空做背景）→ 侧拍（展示身体 S 曲线）。机位高度和方向的变化带来全新的画面结构。
-
-**次要变化手段（辅助丰富）：**
-4. **构图变化**：三分法→居中→负空间→对角线→框架构图。
-5. **光线利用变化**：顺光→侧光→逆光→利用阴影/剪影。
-
-**变化层次要求：**
-- 1 套方案 = 最佳建议即可
-- 2-3 套 = 必须使用不同的主要变化手段（如方案1姿态变化、方案2景别变化、方案3角度变化）
-- 4+ 套 = 主要+次要变化手段组合使用
-- 在原图基础上微调可以作为一个方案（如"站在原地不动，只是换个角度"），但不能所有方案都是微调
-- 如果场景简单（如"安静真实""旅行纪实"等不依赖特殊光线/色彩的风格），更要多给姿态/景别/角度的变化——让用户感到"原来还能这样拍"
-- 所有变化必须有摄影理论基础支撑（透视、景深、身体线条、视觉重量），不是 AI 随意发挥
-
-每个方向包含：
-- style: 内部风格名（如"日系清新"）
-- style_promise: 风格翻译为效果语言（如"干净透亮，像日剧里的画面"）
-- subtitle: 这个方向的效果承诺（如"拍出来一定好看"）
-- reason: 推荐理由——朋友分享口吻，像拍过很多照片的人指着画面说话
-- how: 一句话操作概述
-- source_note: 来源标注
-- plans: 1-9 套具体方案。数量按场景灵活决定——变化丰富的场景给 5-9 套，简单的给 2-4 套。不凑数。
-
-每套方案的字段：
-
-① **name**: 方案名——能让人记住的，不是"方案1""方案2"。如"让阳光给你打光"。
-
-② **prep**（要准备什么）：降低心理门槛。能写"什么都不用准备，站过去就行"就不要写"准备三脚架和反光板"。
-
-③ **where**（你站这）：空间锚点指令。必须引用视觉分析中[观察]到的具体场景元素（🚨 见下方场景锚点约束）。❌ 禁止写"距门3米"之类的距离数字——用"退到门口大盆栽旁边"这种空间参照。
-
-④ **do**（这样做）：动作指令。❌ 禁止摄影术语（光圈、ISO、快门、焦距）。用"蹲下来""手机举到胸口""竖着拿""连拍"这种任何人一听就懂的动作语言。
-
-⑤ **result**（拍出来）：效果预览。用效果语言描述拍出来会是什么感觉。如"窗边的光会打到侧脸，背景自然虚掉——整张照片像在巴黎街头咖啡馆，没人看得出是楼下瑞幸。"
-
-⑥ **why**（为什么好看）：摄影原理。解释为什么这样拍好看——如"低机位改变了透视关系，地面线条向远处延伸，人物在环境中的比例被衬托得刚好。侧光让面部轮廓立体但不生硬。"这段话是给想深入了解的用户看的，用摄影知识但不堆术语。
-
-⑦ **posture**（姿态与表情引导）：如果场景有人物，必须写。如果没有人物，设为空字符串""。
-  不给"摆造型"指令——给"做一件事"的指令。
-  引导框架：
-  - 脊柱与重心：侧身还是正面？重心在哪条腿？（"重心放右腿，左腿微曲——像等公交车不是站军姿"）
-  - 手部任务：手在做什么？不给空手（"手搭在栏杆上，拇指自然松开""一手插口袋，拇指露在外面"）
-  - 眼神方向：看哪？（看镜头/看远方/看手中的东西/回头看）
-  - 表情触发：不说"笑"——给动作或回忆触发（"想一件刚才发生的搞笑的事，忍住不笑""叹一口大气，叹气完那一瞬间"）
-  三层指令优先级：
-  L1 叙事："靠在栏杆上，像在等一个人"
-  L2 感受："叹一口大气——叹气完肩膀自然下沉那一瞬间"
-  L3 物理："重心放右腿，左腿微曲，下巴收一点，肩膀往后展开"
-  如果被拍者紧张 → 给一个具体任务转移注意力（"你转头看看那边有什么"）。
-  如果场景无人物 → posture 为空字符串 ""。
-
-⑧ **annotations**（视觉标注）：只标注文字说不精确的内容。不是每个方案都需要标注——通常 1-2 个，最多 3 个。标注太多会遮挡照片。
-  仅使用以下 4 种类型：
-  - subject: 被摄者在画面内的精确位置——实心圆点。如画面1/3处，靠嘴说不准。
-  - shooter: 拍摄者在画面外的站位和拍摄方向——📷图标在画面边缘 + 虚线引导线穿过画面指向目标 + 角度弧线。如"站左侧退三步蹲下朝右上方拍"。
-  - frame: 取景范围——虚线矩形。如"把人和窗边绿植都框进去"，说不准边界。
-  - crop: 裁剪建议——半透明遮罩 + 裁剪边框。如"裁掉上方1/4"，说不准比例。
-
-  标注格式：{{"type": "subject", "x": 0.35, "y": 0.72, "label": "站这", "color": "#4ade80"}}
-  - subject: x,y 为被摄者位置（0-1 相对坐标，0=左/上，1=右/下）
-  - shooter: from={{x,y}} 为📷拍摄者位置（画面外边缘坐标），to={{x,y}} 为拍摄目标方向，另有 angle 字段标注角度文字
-  - frame: 额外需要 w, h 字段
-  - crop: 额外需要 w, h 字段
-  - color 用 #4ade80（绿）/ #f59e0b（金）/ #a78bfa（紫），对应方向颜色
-  - 一个方案通常只需 1-2 个标注，最多 3 个。不要为了标注而标注。
-
-⑨ **perspective**（换个思路）：这套方案"看见的方式"和其他方案的本质不同。有真正差异才写，没差异不硬凑。
-
-## 🚨 场景锚点强制约束
-
-每个方案 where 和 do 中的空间指令，**必须**引用视觉分析 space.anchors 字段中 [观察] 到的具体场景元素。
-不得使用任何不依赖具体场景就能执行的通用建议。
-
-❌ 模板式（拒绝）："低角度仰拍，让人物显得修长"（任何场景通用）
-✅ 场景锚点（通过）："站到左边那棵树的树荫边缘，让阳光从树叶间漏下来正好打在肩膀上"（只有这个场景能做到）
-
-## 🚨 EXIF 交叉验证
-
-- ISO≥800 但视觉识别为"明亮" → 采信 EXIF，修正光线分析。标注"光线实际较暗，建议稳定支撑"
-- 闪光灯触发 → 自然光分析需整体修正
-- 快门<1/60s → 方案中标注"手持可能糊片，建议找支撑点或连拍"
-- 无 EXIF → 完全依赖视觉分析，不标注设备参数相关建议
-
-## 🚨 风格翻译规则
-
-输出中 style 保留内部风格名（供前端选择性展示），但 style_promise 必须翻译为效果语言：
-- "日系清新" → "干净透亮，像日剧里的画面"
-- "胶片复古" → "像胶片相机拍的，有颗粒感和怀旧色调"
-- "电影感" → "像电影截图，有故事氛围"
-- "森系" → "像森林里自然生长出来的画面"
-- "安静真实" → "自然到像没拍过，但就是好看"
-- "极简建筑" → "干净利落，像建筑杂志封面"
-- "中国水墨" → "像一幅水墨画，留白有意境"
-- "旅行纪实" → "像国家地理的旅行照片，有现场感"
-- "杂志时尚" → "像时尚杂志的内页大片"
-- "便利店美学" → "像王家卫电影里的深夜便利店"
-- "新地形摄影" → "冷静客观，像在记录这个时代的风景"
-- "负空间剪影" → "人物是剪影，环境讲故事"
-
-## 🚨 口吻约束
-- 像朋友分享观察，不像策展人写说明
-- ❌ 禁止摄影术语直接出现（光圈、ISO、快门、焦距、焦段、曝光值、白平衡、景深）
-- ❌ 禁止第一人称"我"
-- ✅ 用"你"视角——"你没叫她看镜头""你站在这儿就能拍到"
-- ✅ 允许意外："拍完才发现最好看的不是表情"
-- 有话则长无话则短。平淡场景一句话真诚推荐比三句话空洞套路有价值
-
-## 🚨 长度控制
-- presence: 2-3句，不超过80字
-- insight: 1句话，不超过30字
-- reason: 2-3句，不超过100字
-- where: 1-2句
-- do: 2-4句
-- result: 2-3句
-- why: 2-3句
-- style_promise: 1句，不超过25字
+## 🚨 约束
+- EXIF交叉：ISO≥800但视觉说"明亮"→采信EXIF；闪光灯触发→修正光质；快门<1/60→标注稳定支撑
+- 口吻：朋友分享观察，❌摄影术语 ❌"我"第一人称 ✅"你"视角
+- 风格翻译：style保留内部名，style_promise翻译为效果语言（"干净透亮，像日剧里的画面"）
+- 长度：presence≤80字 insight≤30字 reason≤120字 how≤50字
 
 ## 输出格式
 
-严格输出以下 JSON（不要markdown包裹）。directions 必须是 ARRAY 格式，不是 OBJECT：
+严格JSON，不要markdown包裹。directions 必须是 ARRAY 不是 OBJECT：
 
 {{
-  "presence": "在场感受——2-3句，口语化",
-  "insight": "一句话洞察——最动人的视觉锚点，不超过30字",
+  "presence": "2-3句在场感受",
+  "insight": "一句话洞察",
+  "scene_tier": "🥉/🥈/🥇",
   "directions": [
     {{
-      "id": "now",
-      "emoji": "🟢",
-      "label": "不会出错",
-      "subtitle": "拍出来一定好看",
-      "style": "内部风格名",
-      "style_promise": "风格翻译为效果语言",
-      "reason": "推荐理由——朋友分享口吻，不超过100字",
+      "id": "now", "emoji": "🟢", "label": "不会出错", "subtitle": "拍出来一定好看",
+      "style": "内部风格名", "style_promise": "效果语言翻译",
+      "reason": "推荐理由（80-120字，说明为什么匹配这个场景和设备）",
       "how": "一句话操作概述",
       "source_note": "来源标注",
-      "plans": [
-        {{
-          "name": "方案名，能让人记住的",
-          "prep": "什么都不用准备" 或具体准备项,
-          "where": "空间锚点——引用视觉分析中[观察]到的具体物体位置",
-          "do": "动作指令——零术语，纯动词",
-          "result": "效果预览——用效果语言描述拍出来是什么感觉",
-          "why": "摄影原理——为什么这样好看，2-3句，不堆术语",
-          "posture": "姿态与表情引导——有人物必写，无人物为空字符串",
-          "annotations": [
-            {{"type": "subject", "x": 0.35, "y": 0.72, "label": "站这", "color": "#4ade80"}},
-            {{"type": "shooter", "from": {{"x": 0.05, "y": 0.85}}, "to": {{"x": 0.4, "y": 0.5}}, "angle": "蹲下·45°仰拍", "color": "#4ade80"}},
-            {{"type": "frame", "x": 0.1, "y": 0.05, "w": 0.8, "h": 0.6, "label": "取景范围", "color": "#4ade80"}},
-            {{"type": "crop", "x": 0, "y": 0, "w": 1, "h": 0.75, "label": "裁掉上方1/4", "color": "#f59e0b"}}
-          ],
-          "perspective": "🎯 换个思路——有真正差异才写，可选"
-        }}
-      ]
-    }},
-    {{
-      "id": "best",
-      "emoji": "🔥",
-      "label": "朋友圈会问在哪拍的",
-      "subtitle": "发出去会被赞的那种",
-      "style": "内部风格名",
-      "style_promise": "风格翻译为效果语言",
-      "reason": "推荐理由",
-      "how": "一句话操作概述",
-      "source_note": "来源标注",
+      "fit_rationale": "为什么适合这个场景",
+      "light_annotation": "🟢/🟡/🔴",
+      "device_annotation": "🟢直接拍/🟡微调/🟠替代方案",
+      "source_type": "community/tutorial/portfolio/inference",
       "plans": []
     }},
     {{
-      "id": "creative",
-      "emoji": "✨",
-      "label": "还能这样拍？",
-      "subtitle": "不像游客照的视角",
-      "style": "内部风格名",
-      "style_promise": "风格翻译为效果语言",
-      "reason": "推荐理由",
-      "how": "一句话操作概述",
-      "source_note": "来源标注",
+      "id": "best", "emoji": "🔥", "label": "朋友圈会问在哪拍的", "subtitle": "发出去会被赞的那种",
+      "style": "", "style_promise": "", "reason": "", "how": "", "source_note": "",
+      "fit_rationale": "", "light_annotation": "", "device_annotation": "", "source_type": "",
+      "plans": []
+    }},
+    {{
+      "id": "creative", "emoji": "✨", "label": "还能这样拍？", "subtitle": "不像游客照的视角",
+      "style": "", "style_promise": "", "reason": "", "how": "", "source_note": "",
+      "fit_rationale": "", "light_annotation": "", "device_annotation": "", "source_type": "",
       "plans": []
     }}
   ],
-  "search_quality": {{
-    "overall": "🟢/🟡/🔴",
-    "honest_note": "如有需要诚实告知的内容"
-  }},
-  "discovered_styles": [
-    {{
-      "name": "风格名",
-      "source_type": "community/tutorial/portfolio/inference",
-      "fit_rationale": "为什么适合",
-      "light_annotation": "🟢/🟡/🔴 + 说明",
-      "device_annotation": "🟢/🟡/🟠 + 当前设备说明"
-    }}
-  ],
-  "techniques_used": [
-    {{
-      "name": "技法名",
-      "source_type": "community/tutorial/portfolio/inference",
-      "description": "如何融入方案"
-    }}
-  ]
+  "search_quality": {{"overall": "🟢/🟡/🔴", "honest_note": ""}},
+  "discovered_styles": [{{"name":"","source_type":"","fit_rationale":"","light_annotation":"","device_annotation":""}}],
+  "techniques_used": [{{"name":"","source_type":"","description":""}}]
 }}
 
-如果一个方向没有合适的内容（如🔥没有高辨识度方向），把该方向除了 id/emoji/label/subtitle 外的所有字段设为 null。plans 设空数组。
-🔥 和 ✨ 至少有一个有实质内容（不能两个都是 null）。
-plans 按需给 1-9 套，不凑数。
+🔥和✨没有实质内容时，除id/emoji/label/subtitle外全为null，plans为空数组。至少一个有实质内容。
+directions 必须是数组 []，不是对象 {{}}——v2 OBJECT格式会崩溃！"""
 
-## 🚨 格式警告
-❌ WRONG: "directions": {{"now": {{...}}, "best": {{...}}}}  ← v2 OBJECT 格式，会崩溃
-✅ CORRECT: "directions": [{{"id": "now", ...}}, {{"id": "best", ...}}]  ← v3 ARRAY 格式
 
-🚨 IMPORTANT: directions 必须是数组 []，不是对象 {{}}。必须遵守！"""
+# ============================================================
+# 方案生成 Prompt（按需调用，用户选完方向后）
+# ============================================================
+PLANS_PROMPT = """你是直出相机的摄影知识工程师。为已选定的风格方向生成具体拍摄方案。
+
+## 场景信息
+{vision_json}
+
+## 设备信息
+{device_context}
+
+## 已选方向
+{emoji} {label}
+风格：{style}
+效果承诺：{style_promise}
+推荐理由：{reason}
+操作概述：{how}
+
+## 场景等级：{scene_tier}
+
+## 方案数量硬约束（严格执行，不准超过）
+{tier_constraint}
+
+## 方案差异变化层次
+- 2-3套：必须用不同的主要变化手段（姿态变化 / 景别变化 / 角度变化）
+- 4+套：主要+次要（构图变化 / 光线利用变化）组合使用
+- 不强凑——场景给不出那么多就诚实少给
+
+## 🚨 设备约束（最高优先级——每套方案的 where/do 必须遵守）
+{device_constraints}
+
+在写 where 和 do 时，必须逐一检查：
+- 如果设备没有长焦镜头 → 不能写"用长焦压缩空间""拉近拍"
+- 如果设备没有超广角 → 不能写"超广角低角度仰拍"
+- 如果设备是定焦 → 所有方案用同一焦段思考，靠走位变化
+- iPhone 人像模式可用时 → 可以写"用人像模式虚化背景"，但要标注
+- 发挥设备优势，规避设备限制——这才是真正可执行的方案
+
+## 每套方案的字段
+
+① name: 方案名——能让人记住的，"让阳光给你打光"不是"方案1"
+② prep: 要准备什么——"什么都不用准备，站过去就行"
+③ where: 你站这——必须引用视觉分析中[观察]到的具体场景元素。❌ 禁止距离数字。必须考虑设备焦段
+④ do: 这样做——零摄影术语，纯动作语言。必须基于设备实际能力
+⑤ result: 拍出来——效果预览，用效果语言
+⑥ why: 为什么好看——摄影原理，2-3句
+⑦ posture: 有人物必写，无人物为空。给"做一件事"的指令不说"摆造型"：
+   - 脊柱与重心 / 手部任务 / 眼神方向 / 表情触发（不说"笑"，给动作触发）
+   - L1叙事→L2感受→L3物理，三层递进
+⑧ annotations: 视觉标注——只标注文字说不精确的，1-2个，最多3个：
+   - subject: 被摄者位置 {{"type":"subject","x":0.35,"y":0.72,"label":"站这","color":"#4ade80"}}
+   - shooter: 拍摄者站位 {{"type":"shooter","from":{{"x":0.05,"y":0.85}},"to":{{"x":0.4,"y":0.5}},"angle":"蹲下·45°仰拍","color":"#4ade80"}}
+   - frame: 取景范围，加w/h字段
+   - crop: 裁剪建议，加w/h字段
+   - color: #4ade80(绿)/#f59e0b(金)/#a78bfa(紫)
+⑨ perspective: 换个思路——有真正差异才写，可选
+
+## 🚨 两道追问（每套方案生成后立刻自问——不通过不输出）
+□ 叙事完整性：这套方案有清晰的视觉叙事吗？→ 不是机械指令
+□ 调性统一度：色调/影调/质感在风格框架内吗？→ 森系不能配高反差黑白
+不通过 → 修正后再输出。修不了 → 诚实跳过这套。
+
+## 🚨 约束
+- 场景锚点：where/do 必须引用视觉分析 space.anchors 中的具体元素，不得使用通用描述
+- 口吻：朋友分享观察，❌摄影术语 ❌"我"第一人称 ✅"你"视角
+- 长度：prep≤50字 where 1-2句 do 2-4句 result 2-3句 why 2-3句
+
+## 输出格式
+
+严格JSON，只输出 plans 数组。不要markdown包裹。
+
+{{
+  "plans": [
+    {{
+      "name": "", "prep": "", "where": "", "do": "", "result": "",
+      "why": "", "posture": "", "annotations": [], "perspective": ""
+    }}
+  ]
+}}"""
+
+
+# ============================================================
+# 风格缓存（本地 JSON 积累，越用越聪明）
+# ============================================================
+
+def load_style_cache():
+    """加载风格积累缓存"""
+    if os.path.exists(STYLE_CACHE_FILE):
+        try:
+            with open(STYLE_CACHE_FILE, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {}
+    return {}
+
+
+def save_style_cache(cache):
+    """保存风格积累缓存"""
+    try:
+        with open(STYLE_CACHE_FILE, 'w') as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except IOError as e:
+        print(f"[StyleCache] Save failed: {e}", file=sys.stderr, flush=True)
+
+
+def accumulate_styles(scene_type, discovered_styles, techniques_used):
+    """积累发现的风格和技法到本地缓存"""
+    if not scene_type:
+        return
+
+    cache = load_style_cache()
+    if scene_type not in cache:
+        cache[scene_type] = {'styles': [], 'techniques': [], 'count': 0}
+
+    entry = cache[scene_type]
+
+    for s in (discovered_styles or []):
+        name = s.get('name', '').strip()
+        if not name:
+            continue
+        existing = next((x for x in entry['styles'] if x['name'] == name), None)
+        if existing:
+            existing['count'] = existing.get('count', 1) + 1
+            existing['source_type'] = s.get('source_type', existing.get('source_type', ''))
+        else:
+            entry['styles'].append({
+                'name': name,
+                'source_type': s.get('source_type', ''),
+                'fit_rationale': s.get('fit_rationale', '')[:200],
+                'count': 1
+            })
+
+    for t in (techniques_used or []):
+        name = t.get('name', '').strip()
+        if not name:
+            continue
+        existing = next((x for x in entry['techniques'] if x['name'] == name), None)
+        if existing:
+            existing['count'] = existing.get('count', 1) + 1
+            existing['source_type'] = t.get('source_type', existing.get('source_type', ''))
+        else:
+            entry['techniques'].append({
+                'name': name,
+                'source_type': t.get('source_type', ''),
+                'description': t.get('description', '')[:200],
+                'count': 1
+            })
+
+    entry['count'] += 1
+    save_style_cache(cache)
+    print(f"[StyleCache] Accumulated to '{scene_type}': {len(entry['styles'])} styles, {len(entry['techniques'])} techniques (total {entry['count']} sessions)",
+          file=sys.stderr, flush=True)
+
+
+def get_style_context(scene_type):
+    """获取同类型场景的历史积累，注入 prompt"""
+    if not scene_type:
+        return ""
+
+    cache = load_style_cache()
+    # 模糊匹配：找最相似的 scene_type
+    best_key = None
+    for key in cache:
+        # 简单关键词重叠匹配
+        if scene_type in key or key in scene_type:
+            best_key = key
+            break
+    if not best_key:
+        # 尝试匹配第一个词（如 "室外" 匹配 "室外公园"）
+        first_word = scene_type.split('·')[0].split('—')[0].strip()
+        for key in cache:
+            if first_word and first_word in key:
+                best_key = key
+                break
+
+    if not best_key:
+        return ""
+
+    entry = cache[best_key]
+    top_styles = sorted(entry['styles'], key=lambda x: x['count'], reverse=True)[:5]
+    top_techniques = sorted(entry['techniques'], key=lambda x: x['count'], reverse=True)[:5]
+
+    if not top_styles and not top_techniques:
+        return ""
+
+    ctx = f"\n## 📚 历史积累（同类型场景「{best_key}」的风格发现，共{entry['count']}次分析）\n"
+    if top_styles:
+        ctx += "### 过往匹配的风格\n"
+        for s in top_styles:
+            ctx += f"- {s['name']}（{s['source_type']}, 使用{s['count']}次）\n"
+    if top_techniques:
+        ctx += "### 过往使用的技法\n"
+        for t in top_techniques:
+            ctx += f"- {t['name']}（{t['source_type']}, 使用{t['count']}次）\n"
+    ctx += "\n可以参考以上积累，但不强制使用。如果场景特征不匹配，忽略即可。\n"
+
+    return ctx
+
+
+# ============================================================
+# 天气 + 地名 + 光照时段（Open-Meteo 免费 API）
+# ============================================================
+
+# WMO Weather Code → 中文 + emoji
+WMO_CODES = {
+    0:  ("☀️", "晴"),
+    1:  ("🌤", "大部晴"),
+    2:  ("⛅", "多云"),
+    3:  ("☁️", "阴"),
+    45: ("🌫", "有雾"),
+    48: ("🌫", "霜雾"),
+    51: ("🌦", "小毛毛雨"),
+    53: ("🌦", "毛毛雨"),
+    55: ("🌦", "大毛毛雨"),
+    56: ("🌧", "冻毛毛雨"),
+    57: ("🌧", "冻毛毛雨"),
+    61: ("🌦", "小雨"),
+    63: ("🌧", "中雨"),
+    65: ("🌧", "大雨"),
+    66: ("🌧", "冻雨"),
+    67: ("🌧", "冻雨"),
+    71: ("🌨", "小雪"),
+    73: ("🌨", "中雪"),
+    75: ("❄️", "大雪"),
+    77: ("🌨", "雪粒"),
+    80: ("🌦", "阵雨"),
+    81: ("🌧", "中阵雨"),
+    82: ("🌧", "大阵雨"),
+    85: ("🌨", "小阵雪"),
+    86: ("🌨", "大阵雪"),
+    95: ("⛈", "雷阵雨"),
+    96: ("⛈", "冰雹雷雨"),
+    99: ("⛈", "大冰雹雷雨"),
+}
+
+# 光照时段标签
+LIGHT_PERIODS = [
+    # (start_minutes_before_sunrise, end_minutes_after_sunrise, label, emoji, desc)
+    # 从日出前开始排
+    (-60, -40, "天文晨光", "🌌", "天刚蒙蒙亮"),
+    (-40, -20, "蓝调时刻", "💙", "天空纯蓝，最佳氛围光"),
+    (-20, 0,   "黄金时刻", "🌟", "日出金光，所有方向都好看"),
+    (0,   60,  "黄金时刻", "🌟", "日出后暖光，立体感最强"),
+    (60,  180, "上午光", "☀️", "光线通透，适合顺光拍摄"),
+    (180, 360, "正午光", "☀️", "顶光较强，找阴影或漫射"),
+    (360, 480, "下午光", "☀️", "光线开始变暖"),
+    (480, 560, "黄金时刻", "🌅", "日落前暖光，拉长阴影"),
+    (560, 580, "蓝调时刻", "💙", "日落后天空变蓝"),
+    (580, 620, "天文暮光", "🌌", "天色渐暗，适合夜景"),
+]
+
+# 日出日落本地计算（不需要网络，精度 ±2 分钟）
+def _calc_sun_times(lat, lon, date_dt):
+    """返回 (sunrise_dt, sunset_dt)，本地时间"""
+    # Julian day
+    def to_jd(dt):
+        a = (14 - dt.month) // 12
+        y = dt.year + 4800 - a
+        m = dt.month + 12 * a - 3
+        jdn = dt.day + (153 * m + 2) // 5 + 365 * y + y // 4 - y // 100 + y // 400 - 32045
+        return jdn + (dt.hour - 12) / 24 + dt.minute / 1440 + dt.second / 86400
+
+    jd = to_jd(date_dt)
+    n = jd - 2451545.0 - 0.0009
+
+    # Solar mean anomaly
+    M = (357.5291 + 0.98560028 * n) % 360
+    M_rad = math.radians(M)
+
+    # Equation of center
+    C = 1.9148 * math.sin(M_rad) + 0.02 * math.sin(2 * M_rad) + 0.0003 * math.sin(3 * M_rad)
+
+    # Ecliptic longitude
+    lam = (M + C + 180 + 102.9372) % 360
+    lam_rad = math.radians(lam)
+
+    # Solar declination
+    sin_dec = math.sin(math.radians(23.44)) * math.sin(lam_rad)
+    cos_dec = math.sqrt(1 - sin_dec * sin_dec)
+    dec_rad = math.asin(sin_dec)
+
+    # Hour angle
+    lat_rad = math.radians(lat)
+    cos_ha = (math.sin(math.radians(-0.833)) - math.sin(lat_rad) * sin_dec) / (math.cos(lat_rad) * cos_dec)
+    cos_ha = max(-1, min(1, cos_ha))
+    ha_rad = math.acos(cos_ha)
+    ha_deg = math.degrees(ha_rad)
+
+    # Solar transit (noon)
+    jd_noon = 2451545.0 + 0.0009 + n - lon / 360
+    jd_noon = round(jd_noon) + (jd_noon - round(jd_noon))
+
+    # Sunrise / Sunset
+    jd_rise = jd_noon - ha_deg / 360
+    jd_set = jd_noon + ha_deg / 360
+
+    def jd_to_dt(jd_val):
+        jd_val += 0.5
+        z = int(jd_val)
+        f = jd_val - z
+        if f < 0:
+            f += 1
+            z -= 1
+        if z >= 2299161:
+            a = int((z - 1867216.25) / 36524.25)
+            z += 1 + a - a // 4
+        b = z + 1524
+        c = int((b - 122.1) / 365.25)
+        d = int(365.25 * c)
+        e = int((b - d) / 30.6001)
+        day = b - d - int(30.6001 * e)
+        month = e - 1 if e < 14 else e - 13
+        year = c - 4716 if month > 2 else c - 4715
+        frac = f * 24
+        hour = int(frac)
+        minute = int((frac - hour) * 60)
+        second = int(((frac - hour) * 60 - minute) * 60)
+        return datetime(year, month, day, hour, minute, second)
+
+    return jd_to_dt(jd_rise), jd_to_dt(jd_set)
+
+
+def _classify_light_period(photo_dt, lat, lon):
+    """根据拍摄时间和本地日出日落，判断光照时段"""
+    date_dt = photo_dt.replace(hour=12, minute=0, second=0, microsecond=0)
+    try:
+        sunrise_utc, sunset_utc = _calc_sun_times(lat, lon, date_dt)
+    except Exception:
+        return None, None, None
+
+    # _calc_sun_times 返回 UTC 时间，需转换为本地时间
+    # 用经度估算时区偏移（每 15° 一小时）
+    tz_offset_hours = round(lon / 15)
+    sunrise = sunrise_utc + timedelta(hours=tz_offset_hours)
+    sunset = sunset_utc + timedelta(hours=tz_offset_hours)
+
+    # 以日出/日落为参考，计算拍摄时刻的偏移（分钟）
+    mins_from_sunrise = (photo_dt - sunrise).total_seconds() / 60
+    mins_from_sunset = (photo_dt - sunset).total_seconds() / 60
+
+    # 先用相对日出判断
+    period_label = None
+    period_emoji = None
+    period_desc = None
+
+    for start_m, end_m, label, emoji, desc in LIGHT_PERIODS:
+        if start_m <= mins_from_sunrise < end_m:
+            period_label = label
+            period_emoji = emoji
+            period_desc = desc
+            break
+
+    # 如果日出侧没匹配到（可能在日落侧），用日落判断
+    if period_label is None:
+        sunset_offsets = [
+            (-60, -40, "日落黄金", "🌅", "日落前暖光，拉长阴影"),
+            (-40, -20, "日落蓝调", "💙", "日落后天空纯蓝"),
+            (-20, 0,   "日落黄金", "🌅", "最后一道金光"),
+            (0,   20,  "日落蓝调", "💙", "天空变蓝，城市灯亮"),
+            (20,  60,  "天文暮光", "🌌", "天色渐暗"),
+        ]
+        for start_m, end_m, label, emoji, desc in sunset_offsets:
+            if start_m <= mins_from_sunset < end_m:
+                period_label = label
+                period_emoji = emoji
+                period_desc = desc
+                break
+
+    if period_label is None:
+        # 夜间（日出前>60min 或 日落后>60min）
+        if mins_from_sunrise < -60 or mins_from_sunset > 60:
+            period_label = "夜间"
+            period_emoji = "🌙"
+            period_desc = "夜间拍摄"
+        else:
+            period_label = "白天"
+            period_emoji = "☀️"
+            period_desc = ""
+
+    return sunrise, sunset, {
+        "label": period_label,
+        "emoji": period_emoji,
+        "desc": period_desc,
+        "sunrise": sunrise.strftime("%H:%M"),
+        "sunset": sunset.strftime("%H:%M"),
+    }
+
+
+def _get_place_name(lat, lon):
+    """OpenStreetMap Nominatim 逆地理编码 → 中文地名"""
+    try:
+        url = (
+            f"https://nominatim.openstreetmap.org/reverse?"
+            f"format=json&lat={lat}&lon={lon}&zoom=12&addressdetails=1&accept-language=zh"
+        )
+        req = urllib.request.Request(url, headers={"User-Agent": "ZhichuCamera/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+        addr = data.get("address", {})
+        # 构建层级地名：国家·省·市·区·具体地点
+        parts = []
+        for key in ["country", "state", "city", "town", "village", "county", "suburb", "hamlet"]:
+            v = addr.get(key, "")
+            if v and v not in parts:
+                parts.append(v)
+        # 加上显示名称中的具体地点名
+        display = data.get("display_name", "").split(",")[0].strip()
+        if display and display not in parts:
+            parts.append(display)
+        # 知名地标（山、湖、公园等）
+        named = data.get("name", "")
+        if named and named != display and named not in parts:
+            parts.append(named)
+
+        return " · ".join(parts[-4:]) if len(parts) > 4 else " · ".join(parts) if parts else None
+    except Exception as e:
+        print(f"[Weather] Nominatim reverse geocode failed: {e}", file=sys.stderr, flush=True)
+        return None
+
+
+def _get_weather(lat, lon, photo_dt):
+    """Open-Meteo：历史天气 + 预报（完全免费）"""
+    date_str = photo_dt.strftime("%Y-%m-%d")
+    now = datetime.now()
+    hours_ago = (now - photo_dt).total_seconds() / 3600
+
+    result = {
+        "historical": None,   # {emoji, desc, temp, cloud, wind, precip}
+        "forecast": None,     # {next_hours: [{time, emoji, desc, temp, precip_prob, cloud}]}
+        "sun_times": None,    # {sunrise, sunset, period_label, period_emoji, period_desc}
+    }
+
+    # ── 计算光照时段 ──
+    sunrise, sunset, period = _classify_light_period(photo_dt, lat, lon)
+    result["sun_times"] = period if period else {"label": "未知", "emoji": "", "desc": "", "sunrise": "", "sunset": ""}
+
+    # ── 历史天气（拍摄时的气象站记录）──
+    try:
+        params = urllib.parse.urlencode({
+            "latitude": lat,
+            "longitude": lon,
+            "start_date": date_str,
+            "end_date": date_str,
+            "hourly": "temperature_2m,weather_code,cloud_cover,wind_speed_10m,precipitation",
+            "timezone": "Asia/Shanghai",
+        })
+        url = f"https://archive-api.open-meteo.com/v1/archive?{params}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+        hourly = data.get("hourly", {})
+        times = hourly.get("time", [])
+        if times:
+            # 找最接近拍摄时刻的小时
+            target_hour = photo_dt.strftime("%Y-%m-%dT%H:00")
+            idx = None
+            for i, t in enumerate(times):
+                if t == target_hour:
+                    idx = i
+                    break
+            if idx is None and times:
+                idx = min(range(len(times)), key=lambda i: abs(i - photo_dt.hour))
+
+            if idx is not None:
+                wmo = hourly.get("weather_code", [0] * len(times))[idx]
+                emoji, desc = WMO_CODES.get(wmo, ("☁️", "未知"))
+                temp = hourly.get("temperature_2m", [None])[idx]
+                cloud = hourly.get("cloud_cover", [None])[idx]
+                wind = hourly.get("wind_speed_10m", [None])[idx]
+                precip = hourly.get("precipitation", [None])[idx]
+
+                result["historical"] = {
+                    "emoji": emoji,
+                    "desc": desc,
+                    "temp": round(temp, 1) if temp is not None else None,
+                    "cloud": round(cloud) if cloud is not None else None,
+                    "wind": round(wind, 1) if wind is not None else None,
+                    "precip": round(precip, 1) if precip is not None else None,
+                }
+    except Exception as e:
+        print(f"[Weather] Historical fetch failed: {e}", file=sys.stderr, flush=True)
+
+    # ── 预报（仅最近 48 小时内的照片有意义）──
+    if hours_ago < 48:
+        try:
+            params = urllib.parse.urlencode({
+                "latitude": lat,
+                "longitude": lon,
+                "hourly": "temperature_2m,precipitation_probability,weather_code,cloud_cover,wind_speed_10m",
+                "timezone": "Asia/Shanghai",
+                "forecast_hours": 6,
+            })
+            url = f"https://api.open-meteo.com/v1/forecast?{params}"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+            hourly = data.get("hourly", {})
+            times = hourly.get("time", [])
+            if times:
+                forecast_items = []
+                for i, t in enumerate(times[:6]):
+                    wmo = hourly.get("weather_code", [0] * len(times))[i]
+                    emoji, desc = WMO_CODES.get(wmo, ("☁️", "未知"))
+                    forecast_items.append({
+                        "time": t.split("T")[1][:5] if "T" in t else t,
+                        "emoji": emoji,
+                        "desc": desc,
+                        "temp": hourly.get("temperature_2m", [None])[i],
+                        "precip_prob": hourly.get("precipitation_probability", [None])[i],
+                        "cloud": hourly.get("cloud_cover", [None])[i],
+                    })
+                result["forecast"] = forecast_items
+        except Exception as e:
+            print(f"[Weather] Forecast fetch failed: {e}", file=sys.stderr, flush=True)
+
+    return result
+
+
+def get_location_weather(exif_result):
+    """从 EXIF 结果提取 GPS+时间，获取完整天气/地名/光照信息"""
+    if not isinstance(exif_result, dict) or 'error' in exif_result:
+        return None
+
+    gps = exif_result.get('gps')
+    dt_str = exif_result.get('datetime')
+
+    if not gps or not dt_str:
+        return None
+
+    lat = gps.get('lat')
+    lon = gps.get('lon')
+    if lat is None or lon is None:
+        return None
+
+    # 解析时间
+    try:
+        photo_dt = datetime.fromisoformat(dt_str)
+    except (ValueError, TypeError):
+        return None
+
+    result = {
+        "gps": {"lat": round(lat, 4), "lon": round(lon, 4)},
+    }
+
+    # 地名（异步不阻塞——有就有没有就跳过）
+    place = _get_place_name(lat, lon)
+    if place:
+        result["place"] = place
+
+    # 天气 + 光照时段
+    weather = _get_weather(lat, lon, photo_dt)
+    result.update(weather)
+
+    return result
+
+
+# ============================================================
+# Session 管理
+# ============================================================
+
+def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier):
+    """创建分析会话"""
+    session_id = uuid.uuid4().hex[:12]
+    _sessions[session_id] = {
+        'vision_json': vision_json,
+        'exif_summary': exif_summary,
+        'device_key': device_key,
+        'device_context': device_context,
+        'directions': directions,
+        'scene_tier': scene_tier,
+        'plan_cache': {},   # key: f"{direction_id}:{device_key}"
+        'created_at': time.time()
+    }
+    _cleanup_old_sessions()
+    return session_id
+
+
+def get_session(session_id):
+    """获取会话，自动清理过期"""
+    sess = _sessions.get(session_id)
+    if not sess:
+        return None
+    if time.time() - sess['created_at'] > SESSION_TTL:
+        del _sessions[session_id]
+        return None
+    return sess
+
+
+def _cleanup_old_sessions():
+    """清理过期会话"""
+    now = time.time()
+    expired = [sid for sid, s in _sessions.items() if now - s['created_at'] > SESSION_TTL]
+    for sid in expired:
+        del _sessions[sid]
 
 
 # ============================================================
@@ -545,16 +1050,12 @@ def call_doubao(messages, max_tokens=2000):
     content = result['choices'][0]['message']['content'].strip()
 
     # ── 健壮的 JSON 提取 ──
-    import re
-
     # 策略 1: 提取 ```json ... ``` 或 ``` ... ``` 之间的内容
     m = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', content, re.DOTALL)
     if m:
         content = m.group(1).strip()
     elif content.startswith('```'):
-        # 策略 1b: 开头有 ``` 但没匹配到闭合（可能 ``` 在行尾）
         lines = content.split('\n')
-        # 去掉第一行（``` 或 ```json）
         content = '\n'.join(lines[1:])
         if content.endswith('```'):
             content = content[:-3].strip()
@@ -567,12 +1068,11 @@ def call_doubao(messages, max_tokens=2000):
         end = content.rfind('}')
         if start >= 0 and end > start:
             extracted = content[start:end+1]
-            # 验证提取后的是否有效
             try:
                 json.loads(extracted)
                 content = extracted
             except (json.JSONDecodeError, ValueError):
-                pass  # 保持原 content，后续 parse_json_safe 会处理
+                pass
 
     return content, result.get('usage', {})
 
@@ -584,7 +1084,6 @@ def normalize_creative_output(data):
 
     directions = data.get('directions')
     if directions is None:
-        # directions 缺失——可能是 parse_error 对象
         if data.get('parse_error'):
             return data
         data['directions'] = []
@@ -593,7 +1092,7 @@ def normalize_creative_output(data):
 
     # 已经是 array 格式
     if isinstance(directions, list):
-        # 补齐缺失字段
+        data.setdefault('scene_tier', '🥈')
         for d in directions:
             if not isinstance(d, dict):
                 continue
@@ -606,13 +1105,17 @@ def normalize_creative_output(data):
             d.setdefault('plans', [])
             d.setdefault('subtitle', '')
             d.setdefault('style_promise', '')
-            # Ensure posture default on each plan
+            d.setdefault('fit_rationale', '')
+            d.setdefault('light_annotation', '')
+            d.setdefault('device_annotation', '')
+            d.setdefault('source_type', '')
             for p in d.get('plans', []):
                 if isinstance(p, dict):
                     p.setdefault('posture', '')
+                    p.setdefault('annotations', [])
         return data
 
-    # v2 object 格式（{"now": {...}, "best": {...}}） → 转换为 array
+    # v2 object 格式 → 转换为 array
     if isinstance(directions, dict):
         dir_ids = {'now': {'emoji': '🟢', 'label': '不会出错', 'subtitle': '拍出来一定好看'},
                     'best': {'emoji': '🔥', 'label': '朋友圈会问在哪拍的', 'subtitle': '发出去会被赞的那种'},
@@ -622,23 +1125,27 @@ def normalize_creative_output(data):
             d = directions.get(key, {})
             if isinstance(d, dict):
                 d['id'] = key
-                d.setdefault('emoji', defaults['emoji'])
-                d.setdefault('label', defaults['label'])
-                d.setdefault('subtitle', defaults['subtitle'])
+                for k, v in defaults.items():
+                    d.setdefault(k, v)
                 d.setdefault('style', '')
                 d.setdefault('style_promise', '')
                 d.setdefault('reason', '')
                 d.setdefault('how', '')
                 d.setdefault('source_note', '')
                 d.setdefault('plans', [])
+                d.setdefault('fit_rationale', '')
+                d.setdefault('light_annotation', '')
+                d.setdefault('device_annotation', '')
+                d.setdefault('source_type', '')
                 for p in d.get('plans', []):
                     if isinstance(p, dict):
                         p.setdefault('posture', '')
+                        p.setdefault('annotations', [])
                 array_dirs.append(d)
         if array_dirs:
             data['directions'] = array_dirs
             return data
-        # v2 dict 但没有任何可识别的 key —— 尝试把每个 value 当方向
+        # v2 dict 但没有任何可识别的 key
         array_dirs = []
         for key, d in directions.items():
             if isinstance(d, dict):
@@ -652,15 +1159,20 @@ def normalize_creative_output(data):
                 d.setdefault('how', '')
                 d.setdefault('source_note', '')
                 d.setdefault('plans', [])
+                d.setdefault('fit_rationale', '')
+                d.setdefault('light_annotation', '')
+                d.setdefault('device_annotation', '')
+                d.setdefault('source_type', '')
                 for p in d.get('plans', []):
                     if isinstance(p, dict):
                         p.setdefault('posture', '')
+                        p.setdefault('annotations', [])
                 array_dirs.append(d)
         if array_dirs:
             data['directions'] = array_dirs
             return data
 
-    # 无法识别的 directions 格式 → 记录并重置
+    # 无法识别的 directions 格式
     direction_type = type(directions).__name__
     data['_format_warning'] = f'directions 格式异常（类型: {direction_type}），已重置为空数组'
     data['directions'] = []
@@ -669,39 +1181,30 @@ def normalize_creative_output(data):
 
 def repair_json(text):
     """本地修复常见 JSON 语法错误 + 截断恢复"""
-    import re
-
     stripped = text.rstrip()
 
-    # 0. 截断恢复：检测 JSON 是否被 token 限制截断
-    # 如果最后非空白字符不是 } ] " 或数字，可能被截断
+    # 0. 截断恢复
     needs_closure = False
     if stripped and stripped[-1] not in ('}', ']', '"') and not stripped[-1].isdigit():
-        # 被截断了——找到最后一个安全的截断点（逗号或冒号后面）
-        # 回退到最后一个完整的 key-value 对
         last_comma = stripped.rfind(',')
         if last_comma > len(stripped) * 0.5:
-            # 从最后一个逗号处截断
             truncated = stripped[:last_comma]
             needs_closure = True
         else:
-            # 找不到逗号，找最后一个 }
             last_brace = stripped.rfind('}')
             if last_brace > len(stripped) * 0.5:
                 truncated = stripped[:last_brace + 1]
-                # 可能不需要额外闭合，但 directions 数组可能没闭合
                 needs_closure = True
             else:
                 truncated = stripped
 
         if needs_closure:
-            # 计算需要补的闭合括号
             open_braces = truncated.count('{') - truncated.count('}')
             open_brackets = truncated.count('[') - truncated.count(']')
             truncated += '\n' + ']' * open_brackets + '}' * open_braces
             text = truncated
 
-    # 1. 移除 trailing commas（在 ] 或 } 之前的逗号）
+    # 1. 移除 trailing commas
     text = re.sub(r',(\s*[}\]])', r'\1', text)
 
     # 2. 修复字符串中未转义的控制字符
@@ -750,13 +1253,12 @@ def parse_json_safe(content, retry_prompt=None):
     repaired = repair_json(content)
     try:
         data = json.loads(repaired)
-        print(f"[SSE] JSON repaired locally (was {len(content)} chars)", file=sys.stderr, flush=True)
+        print(f"[JSON] Repaired locally (was {len(content)} chars)", file=sys.stderr, flush=True)
         return data, None
     except json.JSONDecodeError as e:
         parse_errors.append(f"本地修复后仍失败: {e}")
 
     # ── 尝试 3: 重新提取 JSON 边界 ──
-    # 找最外层的 { }
     depth = 0
     start = -1
     for i, ch in enumerate(content):
@@ -768,24 +1270,20 @@ def parse_json_safe(content, retry_prompt=None):
             depth -= 1
             if depth == 0 and start >= 0:
                 extracted = content[start:i+1]
-                # 修复后尝试
                 extracted_repaired = repair_json(extracted)
                 try:
                     data = json.loads(extracted_repaired)
-                    print(f"[SSE] JSON extracted from braces (was {len(content)} chars, extracted {len(extracted)} chars)", file=sys.stderr, flush=True)
+                    print(f"[JSON] Extracted from braces (was {len(content)} chars, extracted {len(extracted)} chars)", file=sys.stderr, flush=True)
                     return data, None
                 except json.JSONDecodeError as e:
                     parse_errors.append(f"括号提取后仍失败: {e}")
                 break
 
-    # ── 尝试 4: API retry（最后的办法） ──
+    # ── 尝试 4: API retry ──
     if retry_prompt:
-        print(f"[SSE] JSON parse failed after 3 attempts: {'; '.join(parse_errors)}", file=sys.stderr, flush=True)
-        # 保存原始内容前 200 字符供调试
-        print(f"[SSE] Raw content start: {content[:200]}", file=sys.stderr, flush=True)
-        print(f"[SSE] Raw content end: ...{content[-200:]}", file=sys.stderr, flush=True)
+        print(f"[JSON] Parse failed after 3 attempts: {'; '.join(parse_errors)}", file=sys.stderr, flush=True)
+        print(f"[JSON] Raw start: {content[:200]}", file=sys.stderr, flush=True)
 
-        # 改进 retry prompt：带上原始错误信息
         full_retry = f"""{retry_prompt}
 
 原始输出的JSON解析错误：{parse_errors[-1]}
@@ -797,26 +1295,74 @@ def parse_json_safe(content, retry_prompt=None):
             retry_content = repair_json(retry_content)
             try:
                 data = json.loads(retry_content)
-                print(f"[SSE] Retry succeeded: {len(retry_content)} chars", file=sys.stderr, flush=True)
+                print(f"[JSON] Retry succeeded: {len(retry_content)} chars", file=sys.stderr, flush=True)
                 return data, None
             except json.JSONDecodeError as e:
                 parse_errors.append(f"API retry 仍失败: {e}")
         except Exception as e:
             parse_errors.append(f"API retry 异常: {e}")
 
-    # ── 全部失败 ──
-    print(f"[SSE] All JSON parse attempts failed: {'; '.join(parse_errors)}", file=sys.stderr, flush=True)
+    print(f"[JSON] All attempts failed: {'; '.join(parse_errors)}", file=sys.stderr, flush=True)
     return {"raw": content[:500], "parse_error": True, "errors": parse_errors}, parse_errors[-1]
 
 
+def build_device_context(device_key, lens_key=None):
+    """构建设备上下文字符串"""
+    ctx = DEVICE_CONTEXTS.get(device_key, DEVICE_CONTEXTS["unknown"])
+    text = f"""当前设备：{ctx['name']}
+可用焦段：{ctx['lenses']}
+设备优势：{ctx['strengths']}
+设备限制：{ctx['limits']}
+能力边界：{ctx['capability']}"""
+
+    if device_key == 'dslr-mirrorless' and lens_key:
+        lens_text = get_lens_context(lens_key)
+        if lens_text:
+            text += f"\n{lens_text}"
+
+    return text, ctx
+
+
+def build_device_constraints(device_key, lens_key=None):
+    """生成设备约束文本（用于 PLANS_PROMPT）"""
+    ctx = DEVICE_CONTEXTS.get(device_key, DEVICE_CONTEXTS["unknown"])
+    lines = [
+        f"你正在为 **{ctx['name']}** 设计拍摄方案。",
+        f"可用焦段：{ctx['lenses']}",
+        f"设备优势：{ctx['strengths']}",
+        f"设备限制：{ctx['limits']}",
+    ]
+
+    if device_key == 'dslr-mirrorless' and lens_key:
+        lens = LENSES.get(lens_key, {})
+        if lens:
+            lines.append(f"当前镜头：{lens.get('name', '未知')}（{lens.get('focal_range', '未知')}, {lens.get('aperture', '未知')}）")
+            if 'prime' in lens.get('type', ''):
+                lines.append("⚠️ 这是定焦镜头——所有方案必须用同一个焦段思考，靠走位变化而非变焦。")
+
+    lines.append("在写 where/do 时必须逐一检查上述焦段和能力边界。方案应该发挥优势、规避限制。")
+    return '\n'.join(lines)
+
+
+def get_tier_constraint(scene_tier):
+    """根据场景等级返回方案数量约束文本"""
+    tiers = {
+        '🥉': ('1', '3', '1-3'),
+        '🥈': ('3', '6', '3-6'),
+        '🥇': ('6', '9', '6-9'),
+    }
+    min_n, max_n, range_n = tiers.get(scene_tier, ('3', '6', '3-6'))
+    return f"当前场景等级 {scene_tier}：必须生成 {range_n} 套方案。上限 {max_n} 套——不准超过。场景给不出那么多就诚实少给（最少 {min_n} 套）。"
+
+
 # ============================================================
-# 流式分析生成器
+# 流式分析生成器（v3.5：渐进式——EXIF→场景→方向，方案按需）
 # ============================================================
 
 def analyze_photo_stream(image_path, device_override=None, lens_key=None):
     """流式照片分析——SSE 事件生成器
-    device_override: 用户手动选择的设备（优先级高于 EXIF 自动检测）
-    lens_key: 相机镜头选择（仅相机设备时有效）
+    阶段：EXIF → 视觉分析 → 方向卡片（不含方案）
+    方案由 /analyze/plans 按需生成
     """
     global _processing
     t0 = time.time()
@@ -848,7 +1394,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             _processing = False
             return
 
-        # ── Phase 1: EXIF + 视觉 API 并行 ──
+        # ── Phase 1: 先读 EXIF（~1s），立刻发给前端，不等 Vision ──
         exif_result = {"error": "未执行"}
         vision_result = {"error": "未执行"}
 
@@ -858,7 +1404,6 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
                 exif_result = extract_exif(image_path)
             except Exception as e:
                 exif_result = {"error": str(e)}
-                print(f"[SSE] EXIF thread error: {e}", file=sys.stderr, flush=True)
 
         def do_vision():
             nonlocal vision_result
@@ -876,15 +1421,14 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
                 vision_result = {"error": str(e)}
                 print(f"[SSE] Vision thread error: {e}", file=sys.stderr, flush=True)
 
+        # 1) EXIF 先跑（~1s），Vision 同时启动但不等待
         t_exif = threading.Thread(target=do_exif)
         t_vision = threading.Thread(target=do_vision)
         t_exif.start()
         t_vision.start()
-        t_exif.join()  # EXIF 通常先完成（~1s vs 30-60s for vision）
-        t_vision.join()
-        print("[SSE] EXIF + Vision threads joined", file=sys.stderr, flush=True)
+        t_exif.join()  # 只等 EXIF，不等 Vision
 
-        # ── 设备自动检测（EXIF 优先，用户手动覆盖次之） ──
+        # ── 设备自动检测（EXIF 数据已有）──
         exif_summary = "无EXIF数据"
         detected_device_key = None
         detected_device_name = None
@@ -894,7 +1438,10 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             exif_summary = json.dumps(exif_result, ensure_ascii=False)
             detected_device_key, detected_device_name, is_camera = detect_device_from_exif(exif_result)
 
-        # 确定最终设备：用户手动选择 > EXIF 自动检测 > unknown
+        # 清理 EXIF 设备名（去掉 "Apple " 等多余前缀）
+        if detected_device_name:
+            detected_device_name = detected_device_name.replace("Apple ", "").strip()
+
         if device_override:
             final_device_key = device_override
             device_source = "manual"
@@ -905,30 +1452,63 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             final_device_key = "unknown"
             device_source = "none"
 
-        device_ctx = DEVICE_CONTEXTS.get(final_device_key, DEVICE_CONTEXTS["unknown"])
-        device_text = f"""当前设备：{device_ctx['name']}
-可用焦段：{device_ctx['lenses']}
-设备优势：{device_ctx['strengths']}
-设备限制：{device_ctx['limits']}
-能力边界：{device_ctx['capability']}"""
+        device_text, device_ctx = build_device_context(final_device_key, lens_key)
 
-        # 镜头上下文（仅相机设备）
-        if is_camera and lens_key:
-            lens_text = get_lens_context(lens_key)
-            if lens_text:
-                device_text += f"\n{lens_text}"
+        # ── 🔥 立刻发送 EXIF + 设备信息给前端（不等 Vision！）──
+        exif_display = {}
+        if isinstance(exif_result, dict) and 'error' not in exif_result:
+            # 顶层字段
+            for key in ['device', 'datetime', 'dimensions', 'orientation']:
+                val = exif_result.get(key, '')
+                if val:
+                    exif_display[key] = val
+            # shooting_params 嵌套字段
+            sp = exif_result.get('shooting_params', {})
+            if isinstance(sp, dict):
+                for key in ['focal_length_35mm', 'iso', 'exposure_time', 'aperture',
+                             'white_balance', 'exposure_program', 'metering_mode',
+                             'image_orientation', 'brightness', 'lens_model',
+                             'exposure_compensation']:
+                    val = sp.get(key, '')
+                    if val or (isinstance(val, (int, float)) and val == 0):
+                        exif_display[key] = val
+                # 闪光灯特殊处理
+                flash = sp.get('flash', {})
+                if isinstance(flash, dict) and flash.get('fired'):
+                    exif_display['flash'] = '已触发 ⚡'
+                elif isinstance(flash, dict):
+                    exif_display['flash'] = '未触发'
+                # 分析备注（低光/慢快门等信号）
+                notes = sp.get('_analysis_notes', [])
+                if notes:
+                    exif_display['_notes'] = notes
 
-        # 发送设备检测结果给前端
-        yield emit("device_detected", {
+        print(f"[SSE] EXIF ready, sending immediately (Vision still running)", file=sys.stderr, flush=True)
+
+        # ── 🌤 天气 + 地名 + 光照时段（GPS 有才调）──
+        location_weather = get_location_weather(exif_result)
+        if location_weather:
+            print(f"[SSE] Location+Weather fetched: place={location_weather.get('place','?')}, period={location_weather.get('sun_times',{}).get('label','?')}", file=sys.stderr, flush=True)
+
+        yield emit("exif_ready", {
+            "exif": exif_display,
+            "exif_raw": exif_summary,
             "device_key": final_device_key,
             "device_name": device_ctx['name'],
+            "device_lenses": device_ctx['lenses'],
+            "device_strengths": device_ctx['strengths'],
+            "device_limits": device_ctx['limits'],
             "exif_device": detected_device_name or "",
             "is_camera": is_camera,
             "source": device_source,
-            "lens_options": list(LENSES.keys()) if is_camera else None
+            "lens_options": list(LENSES.keys()) if is_camera else None,
+            "location_weather": location_weather  # 🆕 天气/地名/光照时段
         })
 
-        print(f"[SSE] Device: {device_ctx['name']} (source={device_source}, is_camera={is_camera})", file=sys.stderr, flush=True)
+        # ── Phase 2: 等 Vision API 完成 ──
+        yield emit_progress("vision", "正在分析画面内容...")
+        t_vision.join()
+        print("[SSE] Vision thread joined", file=sys.stderr, flush=True)
 
         # ── 处理视觉结果 ──
         vision_content = vision_result.get("content", "")
@@ -936,86 +1516,120 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
         vision_error_msg = vision_result.get("error", "")
 
         if vision_error_msg:
-            print(f"[SSE] Vision API failed: {vision_error_msg}", file=sys.stderr, flush=True)
             yield emit("error", {"message": f"视觉分析失败: {vision_error_msg}"})
             _processing = False
             return
 
         if not vision_content:
-            print("[SSE] Vision API returned empty content", file=sys.stderr, flush=True)
             yield emit("error", {"message": "视觉分析返回空结果，请换张照片重试"})
             _processing = False
             return
 
         vision_json, vision_error = parse_json_safe(vision_content)
         if vision_error or (isinstance(vision_json, dict) and vision_json.get('parse_error')):
-            print(f"[SSE] Vision parse error: {vision_error}", file=sys.stderr, flush=True)
             yield emit("error", {"message": "视觉分析结果解析失败，请换张照片重试"})
             _processing = False
             return
 
         print("[SSE] Vision parsed OK", file=sys.stderr, flush=True)
-        yield emit_progress("vision", "场景识别完成，正在理解你的画面...")
 
-        # ── Phase 2: 创意推理 ──
-        yield emit_progress("creative", "正在为你设计拍摄方案...")
+        # ── 发送场景分析给前端展示 ──
+        yield emit("vision_ready", {
+            "scene_type": vision_json.get('scene_type', ''),
+            "people": vision_json.get('people', ''),
+            "light": vision_json.get('light', {}),
+            "color": vision_json.get('color', {}),
+            "space": vision_json.get('space', {}),
+            "composition": vision_json.get('composition', ''),
+            "perspective": vision_json.get('perspective', ''),
+            "weather_env": vision_json.get('weather_env', '')
+        })
 
-        creative_prompt = CREATIVE_PROMPT_TEMPLATE.format(
+        # ── Phase 2: 方向生成（不含方案）──
+        yield emit_progress("directions", "正在生成风格方向...")
+
+        # 风格积累上下文
+        scene_type = vision_json.get('scene_type', '')
+        style_context = get_style_context(scene_type)
+
+        directions_prompt = DIRECTIONS_PROMPT.format(
             vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
             exif_summary=exif_summary,
-            device_context=device_text
+            device_context=device_text,
+            style_context=style_context
         )
-        print(f"[SSE] Creative prompt size: {len(creative_prompt)} chars, starting API...", file=sys.stderr, flush=True)
-        creative_content, creative_usage = call_doubao([
-            {"role": "user", "content": creative_prompt}
-        ], max_tokens=8000)
-        print(f"[SSE] Creative API done: {creative_usage.get('total_tokens','?')} tokens", file=sys.stderr, flush=True)
+        print(f"[SSE] Directions prompt: {len(directions_prompt)} chars", file=sys.stderr, flush=True)
+        directions_content, directions_usage = call_doubao([
+            {"role": "user", "content": directions_prompt}
+        ], max_tokens=4000)
+        print(f"[SSE] Directions API done: {directions_usage.get('total_tokens','?')} tokens", file=sys.stderr, flush=True)
 
-        # 解析创意输出
-        creative_json, creative_error = parse_json_safe(
-            creative_content,
-            retry_prompt="你上次的输出不是有效JSON。请重新输出，只输出纯JSON对象，不要markdown包裹，不要任何额外文字。确保所有字符串正确引号包裹，所有逗号位置正确。"
+        # 解析方向输出
+        directions_json, directions_error = parse_json_safe(
+            directions_content,
+            retry_prompt="你上次的输出不是有效JSON。请重新输出，只输出纯JSON对象，不要markdown包裹，不要任何额外文字。directions 必须是数组 []。"
         )
-
-        # ── 诊断日志：每次请求都打印 ──
-        raw_len = len(creative_content)
-        raw_preview = creative_content[:300].replace('\n', '\\n')
-        is_parse_error = isinstance(creative_json, dict) and creative_json.get('parse_error')
-        print(f"[SSE] Creative raw: {raw_len} chars, parse_error={is_parse_error}, preview: {raw_preview}", file=sys.stderr, flush=True)
-
-        # 格式修复
-        creative_json = normalize_creative_output(creative_json)
+        directions_json = normalize_creative_output(directions_json)
 
         # 验证 directions 格式
-        if isinstance(creative_json, dict):
-            dirs = creative_json.get('directions')
+        if isinstance(directions_json, dict):
+            dirs = directions_json.get('directions')
             if not isinstance(dirs, list):
                 dir_type = type(dirs).__name__
                 print(f"[SSE] WARNING: directions is {dir_type}, not list. Resetting.", file=sys.stderr, flush=True)
-                # Log first 500 chars of raw creative content for debugging
-                raw_preview = creative_content[:500].replace('\n', '\\n')
-                print(f"[SSE] Raw creative preview: {raw_preview}", file=sys.stderr, flush=True)
-                creative_json['directions'] = []
-                if not creative_json.get('_format_warning'):
-                    creative_json['_format_warning'] = f'directions 格式异常（{dir_type}），已重置为空数组'
+                directions_json['directions'] = []
+                if not directions_json.get('_format_warning'):
+                    directions_json['_format_warning'] = f'directions 格式异常（{dir_type}），已重置为空数组'
 
+        # 提取元数据
+        presence = directions_json.get('presence', '')
+        insight = directions_json.get('insight', '')
+        scene_tier = directions_json.get('scene_tier', '🥈')
+        directions = directions_json.get('directions', [])
+        discovered_styles = directions_json.get('discovered_styles', [])
+        techniques_used = directions_json.get('techniques_used', [])
+        search_quality = directions_json.get('search_quality', {})
+
+        # ── 创建 session（后续方案生成使用）──
+        session_id = create_session(
+            vision_json=vision_json,
+            exif_summary=exif_summary,
+            device_key=final_device_key,
+            device_context=device_text,
+            directions=directions,
+            scene_tier=scene_tier
+        )
+
+        # ── 风格积累（异步不影响响应）──
+        try:
+            accumulate_styles(scene_type, discovered_styles, techniques_used)
+        except Exception as e:
+            print(f"[StyleCache] Accumulate error: {e}", file=sys.stderr, flush=True)
+
+        # ── 发送方向结果给前端 ──
+        yield emit("directions_ready", {
+            "presence": presence,
+            "insight": insight,
+            "scene_tier": scene_tier,
+            "directions": directions,
+            "search_quality": search_quality,
+            "discovered_styles": discovered_styles,
+            "techniques_used": techniques_used,
+            "session_id": session_id
+        })
+
+        # ── 完成 ──
         total_time = round(time.time() - t0, 1)
-        total_tokens = vision_usage.get('total_tokens', 0) + creative_usage.get('total_tokens', 0)
+        total_tokens = (vision_usage.get('total_tokens', 0) +
+                        directions_usage.get('total_tokens', 0))
 
-        full_result = {
+        print(f"[SSE] Complete! {total_time}s, {total_tokens} tokens, session={session_id}", file=sys.stderr, flush=True)
+        yield emit("complete", {
             "success": True,
             "elapsed": total_time,
             "tokens": total_tokens,
-            "exif": exif_summary,
-            "result": creative_json
-        }
-
-        result_json = json.dumps(full_result, ensure_ascii=False)
-        has_warning = isinstance(creative_json, dict) and creative_json.get('_format_warning')
-        dirs_count = len(creative_json.get('directions', [])) if isinstance(creative_json, dict) else 0
-        print(f"[SSE] Result: {len(result_json)} chars, {dirs_count} dirs, warning={has_warning}", file=sys.stderr, flush=True)
-        print(f"[SSE] Complete! {total_time}s, {total_tokens} tokens", file=sys.stderr, flush=True)
-        yield emit("complete", full_result)
+            "session_id": session_id
+        })
 
     except Exception as e:
         import traceback
@@ -1025,6 +1639,98 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
     finally:
         _processing = False
         print("[SSE] Generator finished", file=sys.stderr, flush=True)
+
+
+# ============================================================
+# 方案按需生成（用户选方向后调用）
+# ============================================================
+
+def generate_plans_for_direction(session_id, direction_id, device_override=None, lens_key=None):
+    """为指定方向生成方案，支持缓存"""
+    session = get_session(session_id)
+    if not session:
+        return None, "会话已过期，请重新上传照片"
+
+    # 确定设备
+    if device_override:
+        device_key = device_override
+    else:
+        device_key = session['device_key']
+
+    # 查找方向
+    direction = None
+    for d in session['directions']:
+        if d.get('id') == direction_id:
+            direction = d
+            break
+    if not direction:
+        return None, f"未找到方向 {direction_id}"
+
+    # 构建缓存 key（设备切换会导致缓存失效）
+    cache_key = f"{direction_id}:{device_key}"
+    if lens_key:
+        cache_key += f":{lens_key}"
+
+    # 检查缓存
+    if cache_key in session['plan_cache']:
+        print(f"[Plans] Cache hit: {cache_key}", file=sys.stderr, flush=True)
+        return session['plan_cache'][cache_key], None
+
+    # 构建设备上下文
+    device_text, _ = build_device_context(device_key, lens_key)
+    device_constraints = build_device_constraints(device_key, lens_key)
+    tier_constraint = get_tier_constraint(session['scene_tier'])
+
+    # 构建 prompt
+    plans_prompt = PLANS_PROMPT.format(
+        vision_json=json.dumps(session['vision_json'], ensure_ascii=False, indent=2),
+        device_context=device_text,
+        emoji=direction.get('emoji', ''),
+        label=direction.get('label', ''),
+        style=direction.get('style', ''),
+        style_promise=direction.get('style_promise', ''),
+        reason=direction.get('reason', ''),
+        how=direction.get('how', ''),
+        scene_tier=session['scene_tier'],
+        tier_constraint=tier_constraint,
+        device_constraints=device_constraints
+    )
+
+    print(f"[Plans] Prompt: {len(plans_prompt)} chars, direction={direction_id}, device={device_key}", file=sys.stderr, flush=True)
+
+    try:
+        plans_content, plans_usage = call_doubao([
+            {"role": "user", "content": plans_prompt}
+        ], max_tokens=6000)
+
+        plans_json, plans_error = parse_json_safe(
+            plans_content,
+            retry_prompt="你上次的输出不是有效JSON。请重新输出，只输出包含 plans 数组的纯JSON对象。"
+        )
+
+        if plans_error or not isinstance(plans_json, dict):
+            return None, f"方案生成解析失败: {plans_error}"
+
+        plans = plans_json.get('plans', [])
+        if not isinstance(plans, list):
+            plans = []
+
+        # 补齐字段
+        for p in plans:
+            if isinstance(p, dict):
+                p.setdefault('posture', '')
+                p.setdefault('annotations', [])
+                p.setdefault('perspective', '')
+
+        # 缓存
+        session['plan_cache'][cache_key] = plans
+        print(f"[Plans] Generated {len(plans)} plans, cached as {cache_key}", file=sys.stderr, flush=True)
+
+        return plans, None
+
+    except Exception as e:
+        print(f"[Plans] Error: {e}", file=sys.stderr, flush=True)
+        return None, str(e)
 
 
 # ============================================================
@@ -1039,7 +1745,7 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """流式分析上传的照片（SSE）"""
+    """流式分析上传的照片（SSE）—— v3.5: 渐进式 EXIF→场景→方向"""
     global _processing
 
     if not DOUBAO_API_KEY:
@@ -1056,19 +1762,19 @@ def analyze():
         return jsonify({"success": False, "error": "文件名为空"}), 400
 
     # 检查文件大小
-    photo.seek(0, 2)  # seek to end
+    photo.seek(0, 2)
     size = photo.tell()
     photo.seek(0)
     if size > MAX_FILE_SIZE:
         return jsonify({"success": False, "error": f"照片太大（{size//1024//1024}MB），限制 {MAX_FILE_SIZE//1024//1024}MB"}), 400
 
     # 保存临时文件
-    ext = os.path.splitext(photo.filename)[1] or '.jpg'
-    tmp_path = f"/tmp/zhichu_{int(time.time())}_{os.getpid()}{ext}"
+    fext = os.path.splitext(photo.filename)[1] or '.jpg'
+    tmp_path = f"/tmp/zhichu_{int(time.time())}_{os.getpid()}{fext}"
     photo.save(tmp_path)
 
     # 读取设备参数
-    device_override = request.form.get('device', None) or None  # 空字符串 → None
+    device_override = request.form.get('device', None) or None
     lens_key = request.form.get('lens', None) or None
 
     _processing = True
@@ -1088,10 +1794,35 @@ def analyze():
         mimetype='text/event-stream',
         headers={
             'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no',  # 禁用 nginx 缓冲
+            'X-Accel-Buffering': 'no',
             'Connection': 'keep-alive'
         }
     )
+
+
+@app.route('/analyze/plans', methods=['POST'])
+def analyze_plans():
+    """按需生成方案——用户选方向后调用"""
+    data = request.get_json() or {}
+    session_id = data.get('session_id', '')
+    direction_id = data.get('direction_id', '')
+    device_override = data.get('device', None) or None
+    lens_key = data.get('lens', None) or None
+
+    if not session_id or not direction_id:
+        return jsonify({"success": False, "error": "缺少 session_id 或 direction_id"}), 400
+
+    plans, error = generate_plans_for_direction(session_id, direction_id, device_override, lens_key)
+
+    if error:
+        return jsonify({"success": False, "error": error}), 500
+
+    return jsonify({
+        "success": True,
+        "plans": plans,
+        "direction_id": direction_id,
+        "device": device_override or get_session(session_id)['device_key'] if get_session(session_id) else 'unknown'
+    })
 
 
 @app.route('/health')
@@ -1101,12 +1832,14 @@ def health():
         "status": "ok",
         "api_key_configured": bool(DOUBAO_API_KEY),
         "exif_script_exists": os.path.exists(EXIF_SCRIPT),
+        "style_cache_exists": os.path.exists(STYLE_CACHE_FILE),
+        "style_cache_size": len(load_style_cache()) if os.path.exists(STYLE_CACHE_FILE) else 0,
+        "sessions_active": len(_sessions),
         "processing": _processing
     })
 
 
 if __name__ == '__main__':
-    # 打印访问地址
     import socket
     hostname = socket.gethostname()
     try:
@@ -1116,13 +1849,15 @@ if __name__ == '__main__':
 
     print(f"""
 ╔══════════════════════════════════════════╗
-║       直出相机 · 移动端测试工具 v3.4      ║
+║       直出相机 · 移动端测试工具 v3.5      ║
 ║                                          ║
 ║  手机浏览器访问:                          ║
 ║  → http://{local_ip}:8888          ║
 ║                                          ║
 ║  确保手机和电脑在同一 WiFi 网络            ║
 ║  按 Ctrl+C 停止服务器                     ║
+║                                          ║
+║  v3.5: 渐进式展示 + 方案按需生成 + 缓存   ║
 ╚══════════════════════════════════════════╝
     """)
 

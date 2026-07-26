@@ -5,88 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>直出相机</title>
+<title>直出相机 v3.5</title>
 <style>
   :root {
-    --bg: #0a0a0a;
-    --card: #141414;
-    --card2: #1a1a1a;
-    --text: #e8e8e8;
-    --dim: #8a8a8a;
-    --dimmer: #555;
-    --green: #4ade80;
-    --fire: #f59e0b;
-    --purple: #a78bfa;
-    --cyan: #22d3ee;
-    --red: #ef4444;
-    --border: #262626;
-    --radius: 18px;
-    --radius-sm: 12px;
+    --bg: #0a0a0a; --card: #141414; --card2: #1a1a1a; --text: #e8e8e8;
+    --dim: #8a8a8a; --dimmer: #555; --green: #4ade80; --fire: #f59e0b;
+    --purple: #a78bfa; --cyan: #22d3ee; --red: #ef4444; --border: #262626;
+    --radius: 18px; --radius-sm: 12px;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100dvh;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -webkit-tap-highlight-color: transparent;
+    background: var(--bg); color: var(--text); min-height: 100dvh; line-height: 1.6;
+    -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
   }
   .app { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
 
-  /* Header */
-  .header { text-align: center; padding: 16px 0 8px; }
-  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
+  .header { text-align:center; padding:16px 0 8px; }
+  .header h1 { font-size:20px; font-weight:700; letter-spacing:-0.3px;
     background: linear-gradient(135deg, #4ade80, #22d3ee);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .header p { font-size: 12px; color: var(--dim); margin-top: 2px; }
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .header p { font-size:12px; color:var(--dim); margin-top:2px; }
 
-  /* Device Bar */
+  /* ====== Device Bar ====== */
   .device-bar {
     background: var(--card); border-radius: var(--radius-sm);
     margin-bottom: 12px; border: 1px solid var(--border); overflow: hidden;
+    display: none;
   }
-  .device-bar .device-main {
-    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  .device-bar.show { display: block; }
+  .device-label-row {
+    display: flex; align-items: center; gap: 8px; padding: 12px 14px 6px;
   }
-  .device-bar .device-icon { font-size: 20px; flex-shrink: 0; }
-  .device-bar .device-info { flex: 1; min-width: 0; }
-  .device-bar .device-label { font-size: 10px; color: var(--dimmer); letter-spacing: 0.5px; }
-  .device-bar .device-name { font-size: 14px; font-weight: 600; }
-  .device-bar .device-name.pending { color: var(--dim); font-weight: 400; font-style: italic; }
-  .device-bar .device-detail { font-size: 11px; color: var(--dim); margin-top: 1px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .device-bar .device-badge {
-    font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 600; flex-shrink: 0;
+  .device-bar .device-icon { font-size: 18px; flex-shrink: 0; }
+  .device-label-text { font-size: 12px; color: var(--dimmer); font-weight: 500; letter-spacing: 0.5px; }
+  .device-source-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 600; flex-shrink: 0;
+    margin-left: auto;
   }
-  .badge-exif { background: rgba(34,211,238,0.12); color: var(--cyan); }
-  .badge-manual { background: rgba(245,158,11,0.12); color: var(--fire); }
-  .badge-none { background: rgba(138,138,138,0.12); color: var(--dimmer); }
-
-  .device-bar .device-override {
-    border-top: 1px solid var(--border); padding: 8px 14px;
-    display: flex; gap: 8px; align-items: center;
-  }
-  .device-bar .device-override label { font-size: 11px; color: var(--dimmer); white-space: nowrap; }
-  .device-bar .device-override select {
-    flex: 1; background: var(--card2); color: var(--text); border: 1px solid var(--border);
-    border-radius: 6px; padding: 6px 8px; font-size: 12px;
+  .tag-exif { background: rgba(34,211,238,0.12); color: var(--cyan); }
+  .tag-manual { background: rgba(245,158,11,0.12); color: var(--fire); }
+  .tag-none { background: rgba(138,138,138,0.12); color: var(--dimmer); }
+  .device-select-row { padding: 0 14px 10px; }
+  .device-select-row select {
+    width: 100%; background: var(--card2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; font-size: 14px; font-weight: 600;
     -webkit-appearance: none; appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 8px center;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    padding-right: 36px;
   }
-  .device-bar .device-override.hidden { display: none; }
-
-  /* Lens Selector */
-  .lens-bar {
-    background: var(--card); border-radius: var(--radius-sm);
-    margin-bottom: 12px; border: 1px solid var(--border);
-    padding: 8px 14px; display: none; align-items: center; gap: 8px;
+  .lens-select-row {
+    border-top: 1px solid var(--border); padding: 8px 14px;
+    display: none; gap: 8px; align-items: center;
   }
-  .lens-bar.show { display: flex; }
-  .lens-bar label { font-size: 11px; color: var(--dimmer); white-space: nowrap; }
-  .lens-bar select {
+  .lens-select-row.show { display: flex; }
+  .lens-select-row label { font-size: 11px; color: var(--dimmer); white-space: nowrap; }
+  .lens-select-row select {
     flex: 1; background: var(--card2); color: var(--text); border: 1px solid var(--border);
     border-radius: 6px; padding: 6px 8px; font-size: 12px;
     -webkit-appearance: none; appearance: none;
@@ -99,16 +74,12 @@
     display: block;
     background: var(--card); border: 2px dashed var(--border);
     border-radius: var(--radius); padding: 28px 20px; text-align: center;
-    cursor: default; transition: all 0.2s;
   }
   .upload-zone .icon { font-size: 44px; display: block; margin-bottom: 10px; }
   .upload-zone .label { font-size: 15px; font-weight: 600; }
   .upload-zone .hint { font-size: 12px; color: var(--dim); margin-top: 4px; }
   .upload-zone.hidden { display: none; }
-
-  .upload-btns {
-    display: flex; gap: 10px; margin-top: 18px; justify-content: center;
-  }
+  .upload-btns { display: flex; gap: 10px; margin-top: 18px; justify-content: center; }
   .btn-upload {
     flex: 1; max-width: 160px; padding: 12px 16px; border-radius: 12px;
     font-size: 14px; font-weight: 600; text-align: center; cursor: pointer;
@@ -118,22 +89,25 @@
   }
   .btn-upload:active { background: rgba(74,222,128,0.15); border-color: var(--green); }
 
-  /* Preview thumbnail */
+  /* Preview */
   .preview-thumb { display: none; margin-bottom: 16px; border-radius: 12px; overflow: hidden; }
   .preview-thumb.show { display: block; }
-  .preview-thumb img { width: 100%; display: block; max-height: 200px; object-fit: cover; }
+  .preview-thumb img { width: 100%; display: block; max-height: 50vh; object-fit: contain;
+    background: #000; /* 非填充区域黑底，不突兀 */ }
 
-  /* ── Loading ── */
-  .loading { display: none; text-align: center; padding: 40px 0; }
-  .loading.show { display: block; }
+  /* ====== Processing Panel ====== */
+  .processing { display: none; }
+  .processing.active { display: block; }
+
+  .loading-indicator { text-align: center; padding: 28px 0 16px; }
   .spinner {
     width: 36px; height: 36px; border: 3px solid var(--border);
     border-top-color: var(--green); border-radius: 50%;
     animation: spin 0.8s linear infinite; margin: 0 auto 14px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading .phase-text { font-size: 14px; color: var(--dim); margin-bottom: 12px; }
-  .loading .phase-timer { font-size: 12px; color: var(--dimmer); }
+  .loading-indicator .phase-text { font-size: 14px; color: var(--dim); margin-bottom: 8px; }
+  .loading-indicator .phase-timer { font-size: 12px; color: var(--dimmer); }
   .progress-bar {
     width: 100%; height: 3px; background: var(--border); border-radius: 2px;
     margin-top: 16px; overflow: hidden;
@@ -142,58 +116,141 @@
     height: 100%; background: linear-gradient(90deg, var(--green), var(--cyan));
     border-radius: 2px; width: 0%; transition: width 0.5s ease;
   }
+  .loading-done { display: none; }
+  .loading-done .spinner { display: none; }
+  .loading-done .progress-bar { display: none; }
+  .loading-done .phase-timer { display: none; }
 
-  /* ── Steps (shared) ── */
-  .step { display: none; animation: fadeUp 0.35s ease; }
-  .step.active { display: block; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* ── Step 1: Insight ── */
-  .insight-block {
-    background: var(--card); border-radius: var(--radius); padding: 24px 20px;
-    border-left: 3px solid var(--cyan); margin-bottom: 20px;
+  /* Info Panel — content replaced each phase */
+  .info-panel {
+    margin-bottom: 12px;
+    animation: fadeUp 0.35s ease;
   }
-  .insight-block .tag {
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .info-panel .info-tag {
     font-size: 10px; letter-spacing: 1.5px; color: var(--cyan);
-    text-transform: uppercase; font-weight: 600; margin-bottom: 10px;
+    text-transform: uppercase; font-weight: 600; margin-bottom: 8px;
   }
-  .insight-block .presence {
-    font-size: 13px; color: var(--dim); line-height: 1.85; margin-bottom: 14px;
-  }
-  .insight-block .insight {
-    font-size: 16px; font-weight: 600; line-height: 1.65; color: var(--text);
-  }
-  .insight-block .still-loading {
-    margin-top: 14px; padding: 8px 12px; background: rgba(34,211,238,0.06);
-    border-radius: 10px; font-size: 12px; color: var(--cyan);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .insight-block .still-loading .mini-spin {
-    width: 14px; height: 14px; border: 2px solid rgba(34,211,238,0.2);
-    border-top-color: var(--cyan); border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+  .info-panel .info-card {
+    background: var(--card); border-radius: var(--radius); padding: 16px 18px;
+    border: 1px solid var(--border);
   }
 
-  /* ── Step 2: Direction Cards (single at a time) ── */
-  .dir-progress {
-    text-align: center; font-size: 11px; color: var(--dimmer);
-    margin-bottom: 10px; letter-spacing: 0.5px;
+  /* EXIF phase display */
+  .exif-phase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px; }
+  .exif-phase-grid .ep-item { padding: 6px 10px; background: var(--card2); border-radius: 6px; }
+  .exif-phase-grid .ep-label { color: var(--dimmer); font-size: 10px; }
+  .exif-phase-grid .ep-val { color: var(--text); font-weight: 500; }
+  .exif-phase-grid .ep-full { grid-column: 1 / 3; }
+  .exif-pills-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .exif-pill {
+    font-size: 11px; padding: 3px 10px; border-radius: 10px;
+    background: rgba(34,211,238,0.08); color: var(--cyan);
   }
+  .exif-no-data { font-size: 12px; color: var(--dimmer); padding: 4px 0; }
+  .exif-warn { background: rgba(245,158,11,0.1); color: var(--fire); }
+
+  /* Weather / Location rows */
+  .info-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13px; }
+  .info-row + .info-row { border-top: 1px solid rgba(255,255,255,0.04); }
+  .info-row-wrap { flex-wrap: wrap; }
+  .ir-icon { flex-shrink: 0; font-size: 15px; width: 22px; text-align: center; }
+  .ir-text { flex: 1; min-width: 0; color: var(--text); }
+  .ir-sub { font-size: 11px; color: var(--dimmer); margin-left: auto; flex-shrink: 0; }
+  .ir-multiline { flex: 1; min-width: 0; font-size: 12px; line-height: 1.7; }
+  .light-badge {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; white-space: nowrap;
+    background: rgba(74,222,128,0.12); color: var(--green);
+  }
+  .light-desc { font-size: 11px; color: var(--dim); }
+  .light-sub { font-size: 10px; color: var(--dimmer); display: block; }
+
+  /* Forecast bar */
+  .forecast-bar {
+    display: flex; gap: 4px; margin-top: 4px; overflow-x: auto;
+    padding-bottom: 4px; -webkit-overflow-scrolling: touch;
+  }
+  .fc-item {
+    flex-shrink: 0; text-align: center; font-size: 11px; color: var(--dim);
+    padding: 6px 10px; background: var(--card2); border-radius: 8px; min-width: 52px;
+    line-height: 1.5;
+  }
+  .fc-item.rain { background: rgba(245,158,11,0.08); color: var(--fire); }
+  .fc-item small { display: block; font-size: 10px; color: var(--dimmer); }
+
+  /* Scene phase display */
+  .scene-type-tag {
+    display: inline-block; font-size: 12px; padding: 4px 12px; border-radius: 20px;
+    background: rgba(34,211,238,0.08); color: var(--cyan); margin-bottom: 10px;
+  }
+  .scene-section { margin-bottom: 10px; }
+  .scene-section .ss-label { font-size: 10px; color: var(--dimmer); letter-spacing: 0.5px; margin-bottom: 3px; }
+  .scene-section .ss-text { font-size: 13px; color: var(--text); line-height: 1.7; }
+  .mood-bars { display: flex; gap: 12px; margin-top: 4px; }
+  .mood-bar { flex: 1; text-align: center; }
+  .mood-bar .mb-label { font-size: 9px; color: var(--dimmer); }
+  .mood-bar .mb-fill {
+    height: 4px; border-radius: 2px; background: var(--border); margin-top: 2px; overflow: hidden;
+  }
+  .mood-bar .mb-fill-inner { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+
+  /* ====== Carousel (方向卡片 + 方案卡片) ====== */
+  .carousel-track {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .carousel-track::-webkit-scrollbar { display: none; }
+  .carousel-card {
+    flex: 0 0 100%; scroll-snap-align: start;
+    padding: 0 2px; box-sizing: border-box;
+  }
+  .carousel-dots {
+    display: flex; justify-content: center; gap: 6px; padding: 14px 0 6px;
+  }
+  .carousel-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--border);
+    transition: all 0.25s ease; flex-shrink: 0;
+  }
+  .carousel-dot.active { background: var(--cyan); width: 20px; border-radius: 3px; }
+
+  /* ====== Final Result: Directions ====== */
+  .result-area { display: none; }
+  .result-area.active { display: block; }
+
+  .insight-block {
+    background: var(--card); border-radius: var(--radius); padding: 20px 18px;
+    border-left: 3px solid var(--cyan); margin-bottom: 16px;
+  }
+  .insight-block .presence { font-size: 13px; color: var(--dim); line-height: 1.85; margin-bottom: 10px; }
+  .insight-block .insight { font-size: 16px; font-weight: 600; line-height: 1.65; color: var(--text); }
+  .tier-badge {
+    display: inline-block; font-size: 13px; padding: 2px 10px; border-radius: 12px;
+    margin-bottom: 10px; font-weight: 600;
+  }
+
+  .dir-progress { text-align: center; font-size: 11px; color: var(--dimmer); margin-bottom: 4px; }
   .dir-card-single {
-    background: var(--card); border-radius: var(--radius); padding: 24px 20px;
-    margin-bottom: 12px; border: 1px solid transparent; transition: all 0.2s;
+    background: var(--card); border-radius: var(--radius); padding: 22px 18px;
+    margin: 0; border: 1px solid transparent; min-height: 200px;
   }
   .dir-card-single .badge {
     display: inline-block; font-size: 12px; font-weight: 700;
-    padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 8px;
   }
   .badge-now { background: rgba(74,222,128,0.12); color: var(--green); }
   .badge-best { background: rgba(245,158,11,0.12); color: var(--fire); }
   .badge-creative { background: rgba(167,139,250,0.12); color: var(--purple); }
   .dir-card-single .style-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-  .dir-card-single .style-promise { font-size: 13px; color: var(--dim); margin-bottom: 10px; }
-  .dir-card-single .reason { font-size: 14px; color: var(--dim); line-height: 1.75; margin-bottom: 4px; }
-  .dir-card-single .source-tag { font-size: 10px; color: var(--dimmer); }
+  .dir-card-single .style-promise { font-size: 13px; color: var(--dim); margin-bottom: 8px; }
+  .dir-card-single .reason { font-size: 13px; color: var(--dim); line-height: 1.75; margin-bottom: 10px; }
+  .dir-meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; }
+  .dir-meta span { padding: 2px 8px; border-radius: 8px; }
+  .meta-fit { background: rgba(34,211,238,0.08); color: var(--cyan); }
+  .meta-light { background: rgba(74,222,128,0.08); color: var(--green); }
+  .meta-device { background: rgba(245,158,11,0.08); color: var(--fire); }
+  .meta-source { background: rgba(167,139,250,0.08); color: var(--purple); }
 
   .dir-actions { display: flex; gap: 10px; margin-top: 4px; }
   .btn-select {
@@ -210,8 +267,9 @@
     background: var(--card); color: var(--dim); border: 1px solid var(--border);
   }
   .btn-select.secondary:active { border-color: var(--dim); color: var(--text); }
+  .btn-select:disabled { opacity: 0.3; pointer-events: none; }
 
-  /* ── Step 3: Plans ── */
+  /* ====== Plans ====== */
   .plans-header {
     display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
     padding-bottom: 12px; border-bottom: 1px solid var(--border);
@@ -225,42 +283,35 @@
   .plans-header .info { flex: 1; }
   .plans-header .dir-label { font-size: 12px; color: var(--dim); }
   .plans-header .dir-style { font-size: 16px; font-weight: 700; }
-  .plans-header .plan-count { font-size: 11px; color: var(--dimmer); }
 
-  /* Plan Card v3.4: 7-section */
+  .plan-loading { text-align: center; padding: 30px 0; display: none; }
+  .plan-loading.show { display: block; }
+  .mini-spin {
+    width: 24px; height: 24px; border: 2px solid var(--border);
+    border-top-color: var(--green); border-radius: 50%;
+    animation: spin 0.6s linear infinite; margin: 0 auto 10px;
+  }
+  .plan-loading .load-text { font-size: 13px; color: var(--dim); }
+
   .plan-card {
     background: var(--card); border-radius: var(--radius); padding: 18px;
-    margin-bottom: 12px; border: 1px solid var(--border);
+    margin: 0; border: 1px solid var(--border); min-height: 180px;
   }
   .plan-card .plan-name {
     font-size: 16px; font-weight: 700; margin-bottom: 12px;
     display: flex; align-items: center; gap: 8px;
   }
   .plan-card .plan-name .idx {
-    width: 22px; height: 22px; border-radius: 50%; font-size: 11px;
+    width: 24px; height: 24px; border-radius: 50%; font-size: 12px;
     font-weight: 700; display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  .plan-name .idx { background: rgba(74,222,128,0.12); color: var(--green); }
-
-  /* Annotated photo */
   .annotated-photo {
     position: relative; border-radius: var(--radius-sm); overflow: hidden;
     margin-bottom: 14px; background: #000; line-height: 0;
   }
   .annotated-photo canvas { width: 100%; display: block; }
-  .annotated-photo .anno-tooltip {
-    position: absolute; background: rgba(0,0,0,0.85); color: #fff;
-    padding: 4px 10px; border-radius: 6px; font-size: 11px;
-    pointer-events: none; white-space: nowrap; display: none;
-    border: 1px solid rgba(255,255,255,0.15); z-index: 5;
-  }
-
-  /* Plan sections */
-  .plan-section {
-    margin-bottom: 10px; font-size: 13px; line-height: 1.75;
-    display: flex; gap: 8px;
-  }
+  .plan-section { margin-bottom: 10px; font-size: 13px; line-height: 1.75; display: flex; gap: 8px; }
   .plan-section .sec-icon { flex-shrink: 0; font-size: 14px; width: 20px; }
   .plan-section .sec-text { flex: 1; }
   .sec-prep .sec-text { color: var(--dim); }
@@ -269,12 +320,10 @@
   .sec-result .sec-text { color: var(--fire); }
   .sec-posture .sec-text { color: #c084fc; }
 
-  /* Why fold */
   .why-toggle {
     display: flex; align-items: center; gap: 6px; padding: 8px 0;
     font-size: 12px; color: var(--dimmer); cursor: pointer;
-    border-top: 1px solid var(--border); margin-top: 4px;
-    user-select: none;
+    border-top: 1px solid var(--border); margin-top: 4px; user-select: none;
   }
   .why-toggle .arrow { transition: transform 0.2s; font-size: 10px; }
   .why-toggle.open .arrow { transform: rotate(90deg); }
@@ -284,14 +333,45 @@
     font-size: 13px; color: var(--purple); line-height: 1.7;
   }
   .why-content.open { display: block; }
-
-  /* Perspective */
   .plan-perspective {
     margin-top: 8px; padding: 8px 12px; background: rgba(74,222,128,0.05);
     border-radius: 10px; font-size: 12px; color: var(--green); line-height: 1.6;
   }
 
-  /* Foldable data sections */
+  /* 生图 */
+  .img-gen-btn {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%; padding: 10px; margin-top: 10px;
+    background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 10px; color: var(--fire); font-size: 13px; font-weight: 600;
+    cursor: pointer; text-align: center; justify-content: center;
+  }
+  .img-gen-btn:active { background: rgba(245,158,11,0.15); }
+  .img-gen-prompt {
+    display: none; margin-top: 8px; padding: 12px;
+    background: var(--card2); border-radius: 10px; border: 1px solid var(--border);
+  }
+  .img-gen-prompt.open { display: block; }
+  .img-gen-prompt .prompt-text {
+    font-size: 12px; color: var(--text); line-height: 1.75; margin-bottom: 8px;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .img-gen-prompt .prompt-notes {
+    font-size: 11px; color: var(--fire); margin-bottom: 10px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .img-gen-prompt .prompt-notes .note-tag {
+    padding: 2px 8px; border-radius: 8px;
+    background: rgba(245,158,11,0.12); color: var(--fire);
+  }
+  .copy-btn {
+    display: inline-block; padding: 6px 14px; border-radius: 8px;
+    background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2);
+    color: var(--green); font-size: 12px; cursor: pointer; font-weight: 600;
+  }
+  .copy-btn:active { background: rgba(74,222,128,0.2); }
+
+  /* Data sections */
   .data-sections { margin-top: 20px; }
   .fold-section {
     background: var(--card); border-radius: var(--radius-sm);
@@ -299,8 +379,7 @@
   }
   .fold-header {
     padding: 12px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
-    display: flex; justify-content: space-between; align-items: center;
-    user-select: none;
+    display: flex; justify-content: space-between; align-items: center; user-select: none;
   }
   .fold-header .arrow { font-size: 10px; transition: transform 0.2s; color: var(--dimmer); }
   .fold-header.open .arrow { transform: rotate(90deg); }
@@ -313,17 +392,13 @@
   .fold-body .item:last-child { border-bottom: none; }
   .fold-body .item-name { font-weight: 500; color: var(--text); }
   .fold-body .item-meta { font-size: 11px; color: var(--dimmer); text-align: right; }
-
-  /* Quality badge */
   .quality-badge {
-    display: inline-block; padding: 2px 8px; border-radius: 10px;
-    font-size: 11px; font-weight: 600;
+    display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
   }
   .quality-green { background: rgba(74,222,128,0.12); color: var(--green); }
   .quality-yellow { background: rgba(245,158,11,0.12); color: var(--fire); }
   .quality-red { background: rgba(239,68,68,0.12); color: var(--red); }
 
-  /* Meta bar */
   .meta-bar {
     text-align: center; padding: 20px 0 8px; font-size: 11px; color: var(--dimmer);
     display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;
@@ -335,7 +410,6 @@
   }
   .reshoot-btn:active { border-color: var(--green); color: var(--text); }
 
-  /* Error */
   .error-msg {
     background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);
     border-radius: 14px; padding: 16px; text-align: center;
@@ -349,51 +423,65 @@
 
   <div class="header">
     <h1>📷 直出相机</h1>
-    <p>拍照上传 → 看方案 → 拍出好照片</p>
+    <p>拍照上传 → 场景分析 → 方向选择 → 出方案</p>
   </div>
 
-  <!-- Device Bar -->
+  <!-- ====== Device Bar (appears after EXIF, stays at top) ====== -->
   <div class="device-bar" id="deviceBar">
-    <div class="device-main">
+    <div class="device-label-row">
       <span class="device-icon" id="deviceIcon">📱</span>
-      <div class="device-info">
-        <div class="device-label">拍摄设备</div>
-        <div class="device-name pending" id="deviceName">待选择 — 上传照片后自动识别</div>
-        <div class="device-detail" id="deviceDetail"></div>
-      </div>
-      <span class="device-badge badge-none" id="deviceBadge">待识别</span>
+      <span class="device-label-text">拍摄设备</span>
+      <span class="device-source-tag tag-none" id="deviceSourceTag">识别中</span>
     </div>
-    <div class="device-override" id="deviceOverride">
-      <label>切换为：</label>
+    <div class="device-select-row">
       <select id="deviceSelect">
-        <option value="">不覆盖（使用识别结果）</option>
-        <option value="iphone-17-pro">iPhone 17 Pro</option>
-        <option value="iphone-17">iPhone 17</option>
-        <option value="iphone-pro-13-16">iPhone Pro (13-16)</option>
-        <option value="iphone-standard-13-16">iPhone (13-16)</option>
-        <option value="android-flagship">安卓旗舰</option>
-        <option value="dslr-mirrorless">单反/微单相机</option>
+        <option value="">📱 自动识别</option>
+        <optgroup label="iPhone">
+          <option value="iphone-17-pro">iPhone 17 Pro</option>
+          <option value="iphone-17">iPhone 17</option>
+          <option value="iphone-pro-13-16">iPhone Pro (13-16)</option>
+          <option value="iphone-standard-13-16">iPhone (13-16)</option>
+        </optgroup>
+        <optgroup label="Android">
+          <option value="android-flagship">安卓旗舰</option>
+        </optgroup>
+        <optgroup label="Sony 索尼">
+          <option value="sony-a7m4">Sony A7M4 / A7R5 / A7C2</option>
+          <option value="sony-a6400">Sony A6400 / ZV-E10</option>
+        </optgroup>
+        <optgroup label="Fujifilm 富士">
+          <option value="fujifilm-xt5">Fujifilm X-T5 / X-H2</option>
+          <option value="fujifilm-xt50">Fujifilm X-T50 / X-T30 II / X-S20</option>
+          <option value="fujifilm-x100vi">Fujifilm X100VI（固定镜头）</option>
+        </optgroup>
+        <optgroup label="Ricoh 理光">
+          <option value="ricoh-gr3">Ricoh GR III / GR IIIx（固定镜头）</option>
+        </optgroup>
+        <optgroup label="Canon 佳能">
+          <option value="canon-r6ii">Canon EOS R6 II / R5 / R8</option>
+        </optgroup>
+        <optgroup label="其他">
+          <option value="other-camera">其他相机</option>
+        </optgroup>
       </select>
     </div>
-  </div>
-
-  <!-- Lens Selector (only for cameras) -->
-  <div class="lens-bar" id="lensBar">
-    <label>🔍 镜头：</label>
-    <select id="lensSelect">
-      <option value="">自动（未知镜头）</option>
-      <option value="24-70-f2.8">24-70mm f/2.8 标准变焦</option>
-      <option value="70-200-f2.8">70-200mm f/2.8 长焦变焦</option>
-      <option value="16-35-f2.8">16-35mm f/2.8 广角变焦</option>
-      <option value="24-105-f4">24-105mm f/4 标准变焦</option>
-      <option value="50-f1.8">50mm f/1.8 定焦</option>
-      <option value="50-f1.2">50mm f/1.2 定焦</option>
-      <option value="85-f1.4">85mm f/1.4 人像定焦</option>
-      <option value="85-f1.8">85mm f/1.8 人像定焦</option>
-      <option value="35-f1.4">35mm f/1.4 广角定焦</option>
-      <option value="28-f2.8">28mm f/2.8 广角定焦</option>
-      <option value="kit-lens">套机镜头 (18-55mm)</option>
-    </select>
+    <div class="lens-select-row" id="lensRow">
+      <label>🔍 镜头：</label>
+      <select id="lensSelect">
+        <option value="">自动（未知镜头）</option>
+        <option value="24-70-f2.8">24-70mm f/2.8</option>
+        <option value="70-200-f2.8">70-200mm f/2.8</option>
+        <option value="16-35-f2.8">16-35mm f/2.8</option>
+        <option value="24-105-f4">24-105mm f/4</option>
+        <option value="50-f1.8">50mm f/1.8</option>
+        <option value="50-f1.2">50mm f/1.2</option>
+        <option value="85-f1.4">85mm f/1.4</option>
+        <option value="85-f1.8">85mm f/1.8</option>
+        <option value="35-f1.4">35mm f/1.4</option>
+        <option value="28-f2.8">28mm f/2.8</option>
+        <option value="kit-lens">套机镜头 (18-55mm)</option>
+      </select>
+    </div>
   </div>
 
   <!-- Upload -->
@@ -401,6 +489,7 @@
     <span class="icon">📸</span>
     <div class="label">拍照或选照片</div>
     <div class="hint">HEIC / JPEG / PNG · 最大 20MB</div>
+    <div class="hint" style="color:var(--fire);font-size:11px;margin-top:1px">💡 用「相册」选原图可保留拍摄参数和地点</div>
     <div class="upload-btns">
       <label class="btn-upload" for="cameraInput">📷 拍照</label>
       <label class="btn-upload" for="galleryInput">🖼️ 相册</label>
@@ -414,56 +503,56 @@
     <img id="previewImg" src="" alt="预览">
   </div>
 
-  <!-- Loading -->
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <div class="phase-text" id="loadingText">正在分析照片...</div>
-    <div class="phase-timer" id="loadingTimer"></div>
-    <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+  <!-- ====== Processing Panel ====== -->
+  <div class="processing" id="processing">
+    <!-- Loading indicator -->
+    <div class="loading-indicator" id="loadingIndicator">
+      <div class="spinner"></div>
+      <div class="phase-text" id="loadingText">正在读取照片信息...</div>
+      <div class="phase-timer" id="loadingTimer"></div>
+      <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+    </div>
+    <!-- Info panel — content replaced each phase -->
+    <div class="info-panel" id="infoPanel"></div>
   </div>
 
-  <!-- Error -->
+  <!-- ====== Error ====== -->
   <div class="error-msg" id="errorMsg"></div>
 
-  <!-- Step 1: Insight -->
-  <div class="step" id="stepInsight">
+  <!-- ====== Final Result: Directions ====== -->
+  <div class="result-area" id="resultArea">
     <div class="insight-block" id="insightBlock"></div>
-    <div class="still-loading" id="insightLoading" style="display:none">
-      <div class="mini-spin"></div> 正在生成拍摄方案...
-    </div>
-  </div>
-
-  <!-- Step 2: Directions -->
-  <div class="step" id="stepDirs">
     <div class="dir-progress" id="dirProgress"></div>
-    <div id="dirCardSingle"></div>
+    <div class="carousel-track" id="dirCarouselTrack"></div>
+    <div class="carousel-dots" id="dirCarouselDots"></div>
     <div class="dir-actions" id="dirActions"></div>
   </div>
 
-  <!-- Step 3: Plans -->
-  <div class="step" id="stepPlans">
+  <!-- ====== Plans Area ====== -->
+  <div class="result-area" id="plansArea">
     <div class="plans-header">
       <button class="back" onclick="showDirections()">←</button>
       <div class="info">
         <div class="dir-label" id="planDirLabel"></div>
         <div class="dir-style" id="planDirStyle"></div>
       </div>
-      <div class="plan-count" id="planCount"></div>
     </div>
-    <div id="planCards"></div>
+    <div class="plan-loading" id="planLoading">
+      <div class="mini-spin"></div>
+      <div class="load-text">正在生成拍摄方案...</div>
+    </div>
+    <div class="carousel-track" id="planCarouselTrack"></div>
+    <div class="carousel-dots" id="planCarouselDots"></div>
     <div class="data-sections" id="dataSections"></div>
   </div>
 
-  <!-- Bottom bar -->
+  <!-- Bottom -->
   <div class="meta-bar" id="metaBar"></div>
   <button class="reshoot-btn" id="reshootBtn" onclick="resetAll()">再拍一张</button>
 
 </div>
 
 <script>
-// ============================================================
-// Utilities
-// ============================================================
 const $ = s => document.querySelector(s);
 function esc(s) {
   if (!s) return '';
@@ -472,46 +561,59 @@ function esc(s) {
   return div.innerHTML;
 }
 
-// ============================================================
 // State
-// ============================================================
-let resultData = null;
-let selectedDir = null;
+let sessionId = null;
 let allDirs = [];
-let currentDirIdx = 0;
 let photoDataUrl = null;
 let timerInterval = null;
 let startTime = 0;
-let detectedDevice = null;  // {device_key, device_name, is_camera, source}
+let planCache = {};
+let currentDeviceKey = null;
+let currentDeviceName = '';      // 设备显示名
+let currentDeviceLenses = '';   // 镜头描述
+let currentLightInfo = null;    // Vision 光线分析
+let currentColorInfo = null;    // Vision 色彩分析
+let currentLightPeriod = null;  // 天气光照时段
+let discoveredStyles = [];
+let techniquesUsed = [];
+let searchQuality = null;
 
 // ============================================================
 // Loading UI
 // ============================================================
-const LOADING_PHASES = {
+const PHASES = {
   'exif': '正在读取照片信息...',
-  'vision': '正在识别场景光线和色彩...',
-  'creative': '正在为你设计拍摄方案...',
-  'final': '马上好——最后检查方案...'
+  'vision': '正在分析画面内容...',
+  'directions': '正在生成风格方向...',
 };
 
 function startLoading() {
   $('#uploadZone').classList.add('hidden');
-  hideAllSteps();
+  $('#deviceBar').classList.remove('show');
+  $('#resultArea').classList.remove('active');
+  $('#plansArea').classList.remove('active');
   $('#errorMsg').classList.remove('show');
-  $('#loading').classList.add('show');
-  $('#loadingText').textContent = '正在分析照片...';
+  $('#infoPanel').innerHTML = '';
+
+  const li = $('#loadingIndicator');
+  li.classList.remove('loading-done');
+  li.querySelector('.spinner').style.display = '';
+  li.querySelector('.progress-bar').style.display = '';
+  li.querySelector('.phase-timer').style.display = '';
+
+  $('#loadingText').textContent = '正在读取照片信息...';
   $('#loadingTimer').textContent = '';
   $('#progressFill').style.width = '0%';
+  $('#processing').classList.add('active');
+
   startTime = Date.now();
   timerInterval = setInterval(updateTimer, 1000);
 }
 
-function updateLoadingPhase(phase) {
-  const text = LOADING_PHASES[phase] || phase;
-  $('#loadingText').textContent = text;
-  // Progress bar
-  const phases = { 'exif': 10, 'vision': 40, 'creative': 75, 'final': 90 };
-  $('#progressFill').style.width = (phases[phase] || 50) + '%';
+function updatePhase(phase) {
+  $('#loadingText').textContent = PHASES[phase] || phase;
+  const pcts = { 'exif': 15, 'vision': 50, 'directions': 85 };
+  $('#progressFill').style.width = (pcts[phase] || 50) + '%';
 }
 
 function updateTimer() {
@@ -519,9 +621,11 @@ function updateTimer() {
   $('#loadingTimer').textContent = `已等待 ${elapsed} 秒`;
 }
 
-function stopLoading() {
+function finishLoading() {
   clearInterval(timerInterval);
-  $('#loading').classList.remove('show');
+  const li = $('#loadingIndicator');
+  li.classList.add('loading-done');
+  $('#loadingText').textContent = '分析完成';
 }
 
 // ============================================================
@@ -530,27 +634,49 @@ function stopLoading() {
 function showError(msg) {
   $('#errorMsg').textContent = '❌ ' + msg;
   $('#errorMsg').classList.add('show');
-  stopLoading();
-  $('#uploadZone').classList.remove('hidden');
-  $('#reshootBtn').style.display = 'block';
+  clearInterval(timerInterval);
+  $('#processing').classList.remove('active');
 }
 
-function hideAllSteps() {
-  ['stepInsight', 'stepDirs', 'stepPlans'].forEach(id => {
-    $('#' + id).classList.remove('active');
-  });
-}
+// ============================================================
+// Device bar events
+// ============================================================
+// 存储原始 option text，用于恢复
+const _origOptionTexts = new Map();
+$('#deviceSelect').addEventListener('change', () => {
+  const val = $('#deviceSelect').value;
+  // 用户手动切换了设备
+  if (val) {
+    // 恢复所有 option 的原始文本
+    _origOptionTexts.forEach((text, value) => {
+      const opt = $('#deviceSelect').querySelector(`option[value="${CSS.escape(value)}"]`);
+      if (opt) opt.textContent = text;
+    });
+    $('#deviceSourceTag').textContent = '手动选择';
+    $('#deviceSourceTag').className = 'device-source-tag tag-manual';
+    // 相机显示镜头选择
+    const isCamera = ['sony-a7m4','sony-a7c2','sony-a6400','fujifilm-xt5','fujifilm-xt50','fujifilm-x100vi','ricoh-gr3','canon-r6ii','other-camera'].includes(val);
+    if (isCamera) $('#lensRow').classList.add('show');
+    else { $('#lensRow').classList.remove('show'); $('#lensSelect').value = ''; }
+  } else {
+    // 切回自动识别
+    $('#deviceSourceTag').textContent = '自动识别';
+    $('#deviceSourceTag').className = 'device-source-tag tag-exif';
+    $('#lensRow').classList.remove('show');
+    $('#lensSelect').value = '';
+  }
+  planCache = {};
+});
+$('#lensSelect').addEventListener('change', () => { planCache = {}; });
 
 // ============================================================
 // Upload & SSE
 // ============================================================
-// Attach to both camera and gallery inputs
-['#cameraInput', '#galleryInput'].forEach(sel => {
+['#cameraInput','#galleryInput'].forEach(sel => {
   $(sel).addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Preview
     const reader = new FileReader();
     reader.onload = ev => {
       photoDataUrl = ev.target.result;
@@ -558,6 +684,17 @@ function hideAllSteps() {
       $('#previewThumb').classList.add('show');
     };
     reader.readAsDataURL(file);
+
+    // Reset
+    sessionId = null; allDirs = []; activeDirIdx = 0; activePlanIdx = 0;
+    planCache = {}; currentDeviceKey = null; currentDeviceName = ''; currentDeviceLenses = '';
+    currentLightInfo = null; currentColorInfo = null; currentLightPeriod = null;
+    discoveredStyles = []; techniquesUsed = []; searchQuality = null;
+    $('#planCarouselTrack').innerHTML = '';
+    $('#planCarouselDots').innerHTML = '';
+    $('#dataSections').innerHTML = '';
+    $('#infoPanel').innerHTML = '';
+    $('#insightBlock').innerHTML = '';
 
     startLoading();
 
@@ -569,688 +706,860 @@ function hideAllSteps() {
     if (lens) fd.append('lens', lens);
 
     try {
-      const resp = await fetch('/analyze', { method: 'POST', body: fd });
-
+      const resp = await fetch('/analyze', { method:'POST', body:fd });
       if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        stopLoading();
-        showError(errData.error || `服务器错误 (${resp.status})`);
+        const err = await resp.json().catch(()=>({}));
+        showError(err.error || `服务器错误 (${resp.status})`);
         return;
       }
-
-      // Read SSE stream
       const reader2 = resp.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
-      let sseDebug = [];
-      let eventType = '';  // Moved OUTSIDE while loop — survives across chunks
-
-      try {
-        while (true) {
-          const { done, value } = await reader2.read();
-          if (done) {
-            sseDebug.push('stream done');
-            break;
-          }
-
-          const chunk = decoder.decode(value, { stream: true });
-          sseDebug.push('chunk:' + chunk.length);
-          buffer += chunk;
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (!line) continue;
-            if (line.startsWith('event: ')) {
-              eventType = line.slice(7).trim();
-              sseDebug.push('evt:' + eventType);
-            } else if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6);
-              if (!dataStr || dataStr === 'null') continue;
-              const trimmed = dataStr.trim();
-              const looksComplete = (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-                                    (trimmed.startsWith('[') && trimmed.endsWith(']'));
-              if (!looksComplete) continue;
-              const curEvent = eventType;
-              try {
-                const data = JSON.parse(trimmed);
-                handleSSEEvent(curEvent, data);
-                sseDebug.push('ok:' + curEvent);
-                eventType = '';
-              } catch (err) {
-                sseDebug.push('PARSE_ERR:' + curEvent + ':' + err.message.substring(0, 50) + ' dataLen=' + trimmed.length);
-                console.error('SSE parse error:', err.message, 'data:', trimmed.substring(0, 200));
-              }
-            }
+      let buffer = '', eventType = '';
+      while (true) {
+        const { done, value } = await reader2.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream:true});
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line) continue;
+          if (line.startsWith('event: ')) { eventType = line.slice(7).trim(); }
+          else if (line.startsWith('data: ')) {
+            const ds = line.slice(6);
+            if (!ds || ds === 'null') continue;
+            const t = ds.trim();
+            if (!t.startsWith('{') || !t.endsWith('}')) continue;
+            try { const d = JSON.parse(t); handleSSE(eventType, d); eventType = ''; }
+            catch(er) { console.error('SSE parse:', er.message); }
           }
         }
-      } catch (streamErr) {
-        sseDebug.push('STREAM_ERR:' + streamErr.message);
-        console.error('SSE stream error:', streamErr);
       }
-
-      if (!resultData && !document.querySelector('#errorMsg.show')) {
-        stopLoading();
-        showError('响应结束但未收到完整数据。调试: ' + sseDebug.join(' | '));
-      }
-    } catch (err) {
-      stopLoading();
-      showError('网络错误：' + err.message);
+    } catch(err) {
+      showError('网络错误：'+err.message);
     }
   });
 });
 
-function handleSSEEvent(event, data) {
-  switch (event) {
-    case 'progress':
-      updateLoadingPhase(data.phase);
-      break;
-
-    case 'device_detected':
-      // EXIF 自动识别到设备 → 更新设备栏
-      updateDeviceBar(data);
-      break;
-
-    case 'vision':
-      updateLoadingPhase('creative');
-      window._pendingInsight = data;
-      break;
-
-    case 'complete':
-      stopLoading();
-      if (!data.success) {
-        showError(data.error || '分析失败');
-        return;
-      }
-      resultData = data;
-      $('#metaBar').innerHTML = `⏱ ${data.elapsed}s · 🪙 ${data.tokens} tokens`;
-      showInsight();
-      break;
-
-    case 'error':
-      stopLoading();
-      showError(data.message || '分析过程出错');
-      break;
-  }
+function handleSSE(event, data) {
+  try {
+    switch (event) {
+      case 'progress': updatePhase(data.phase); break;
+      case 'exif_ready':
+        updatePhase('vision');
+        showDeviceBar(data);
+        showExifInfo(data);
+        break;
+      case 'vision_ready':
+        updatePhase('directions');
+        showSceneInfo(data);
+        break;
+      case 'directions_ready':
+        finishLoading();
+        $('#infoPanel').innerHTML = '';
+        showDirectionsResult(data);
+        break;
+      case 'complete':
+        if (data.session_id) sessionId = data.session_id;
+        $('#metaBar').innerHTML = `⏱ ${data.elapsed}s · 🪙 ${data.tokens} tokens`;
+        break;
+      case 'error':
+        showError(data.message || '分析过程出错');
+        break;
+    }
+  } catch(err) { console.error('handleSSE:', event, err.message); }
 }
 
 // ============================================================
-// Device Bar Update
+// Phase 1: Device Bar + EXIF Info
 // ============================================================
-function updateDeviceBar(info) {
-  detectedDevice = info;
+function showDeviceBar(data) {
+  currentDeviceKey = data.device_key;
+  currentDeviceName = data.device_name || '';
+  currentDeviceLenses = data.device_lenses || '';
+  $('#deviceIcon').textContent = data.is_camera ? '📷' : '📱';
 
-  // Device name and icon
-  const isCamera = info.is_camera;
-  const iconEl = $('#deviceIcon');
-  const nameEl = $('#deviceName');
-  const detailEl = $('#deviceDetail');
-  const badgeEl = $('#deviceBadge');
-  const overrideEl = $('#deviceOverride');
-  const lensBar = $('#lensBar');
+  const sel = $('#deviceSelect');
 
-  iconEl.textContent = isCamera ? '📷' : '📱';
-  nameEl.textContent = info.device_name || '待选择';
-  nameEl.classList.remove('pending');
-
-  // Detail line: EXIF raw device or lens info
-  if (info.exif_device && info.source === 'exif') {
-    detailEl.textContent = 'EXIF: ' + info.exif_device;
-  } else if (info.source === 'manual') {
-    detailEl.textContent = '手动选择';
-  } else {
-    detailEl.textContent = '未检测到 EXIF 信息';
+  // 首次初始化时保存所有 option 的原始文本
+  if (_origOptionTexts.size === 0) {
+    sel.querySelectorAll('option').forEach(opt => {
+      if (opt.value) _origOptionTexts.set(opt.value, opt.textContent);
+    });
   }
 
-  // Badge
-  if (info.source === 'exif') {
-    badgeEl.textContent = '已识别';
-    badgeEl.className = 'device-badge badge-exif';
-  } else if (info.source === 'manual') {
-    badgeEl.textContent = '手动';
-    badgeEl.className = 'device-badge badge-manual';
+  if (data.source === 'exif') {
+    // 恢复原始文本，再修改当前匹配项
+    _origOptionTexts.forEach((text, value) => {
+      const opt = sel.querySelector(`option[value="${CSS.escape(value)}"]`);
+      if (opt) opt.textContent = text;
+    });
+    // 找到匹配的 option 并加上"（自动识别）"
+    const opt = sel.querySelector(`option[value="${data.device_key}"]`);
+    if (opt) {
+      opt.textContent = _origOptionTexts.get(data.device_key) + '（自动识别）';
+    }
+    sel.value = data.device_key;
+    $('#deviceSourceTag').textContent = '自动识别';
+    $('#deviceSourceTag').className = 'device-source-tag tag-exif';
+  } else if (data.source === 'manual') {
+    _origOptionTexts.forEach((text, value) => {
+      const opt = sel.querySelector(`option[value="${CSS.escape(value)}"]`);
+      if (opt) opt.textContent = text;
+    });
+    sel.value = data.device_key;
+    $('#deviceSourceTag').textContent = '手动选择';
+    $('#deviceSourceTag').className = 'device-source-tag tag-manual';
   } else {
-    badgeEl.textContent = '待识别';
-    badgeEl.className = 'device-badge badge-none';
-    nameEl.classList.add('pending');
+    // 未识别到设备
+    _origOptionTexts.forEach((text, value) => {
+      const opt = sel.querySelector(`option[value="${CSS.escape(value)}"]`);
+      if (opt) opt.textContent = text;
+    });
+    sel.value = '';
+    $('#deviceSourceTag').textContent = '未识别';
+    $('#deviceSourceTag').className = 'device-source-tag tag-none';
   }
 
-  // Override row: always visible, but default option reflects current
-  overrideEl.classList.remove('hidden');
+  if (data.is_camera) $('#lensRow').classList.add('show');
+  else { $('#lensRow').classList.remove('show'); $('#lensSelect').value = ''; }
 
-  // Lens selector: show only for cameras
-  if (isCamera) {
-    lensBar.classList.add('show');
-  } else {
-    lensBar.classList.remove('show');
+  $('#deviceBar').classList.add('show');
+}
+
+function toggleDeviceSwitcher() {
+  // 已移除二级菜单，保留空函数避免旧引用报错
+}
+
+function showExifInfo(data) {
+  const exif = data.exif || {};
+  const lw = data.location_weather || null;
+  // 存储光照时段（用于生图提示词）
+  if (lw && lw.sun_times) currentLightPeriod = lw.sun_times;
+  let html = '<div class="info-card">';
+  html += '<div class="info-tag">📋 照片信息</div>';
+
+  // ── Row 1: 设备 ──
+  html += `<div class="info-row"><span class="ir-icon">📱</span><span class="ir-text">${esc(data.device_name||'未知设备')}</span><span class="ir-sub">${esc(data.device_lenses||'')}</span></div>`;
+
+  // ── Row 2: 地点（GPS→地名）──
+  if (lw && lw.place) {
+    html += `<div class="info-row"><span class="ir-icon">📍</span><span class="ir-text">${esc(lw.place)}</span></div>`;
+  } else if (lw && lw.gps) {
+    html += `<div class="info-row"><span class="ir-icon">📍</span><span class="ir-text">${lw.gps.lat.toFixed(4)}, ${lw.gps.lon.toFixed(4)}</span></div>`;
   }
+
+  // ── Row 3: 时间 + 光照时段 ──
+  let timeHtml = '';
+  if (exif.datetime) {
+    const dt = exif.datetime;
+    timeHtml += `<span>🕐 ${esc(dt)}</span>`;
+    if (lw && lw.sun_times && lw.sun_times.label) {
+      const st = lw.sun_times;
+      timeHtml += ` <span class="light-badge">${esc(st.emoji)} ${esc(st.label)}</span>`;
+      if (st.desc) timeHtml += ` <span class="light-desc">${esc(st.desc)}</span>`;
+      timeHtml += ` <span class="light-sub">日出 ${esc(st.sunrise)} · 日落 ${esc(st.sunset)}</span>`;
+    }
+    html += `<div class="info-row info-row-wrap"><span class="ir-icon">🕐</span><div class="ir-multiline">${timeHtml}</div></div>`;
+  } else {
+    html += '<div class="info-row"><span class="ir-icon">🕐</span><span class="ir-text" style="color:var(--dimmer)">时间未知</span></div>';
+  }
+
+  // ── Row 4: 天气（拍摄时）──
+  if (lw && lw.historical) {
+    const hw = lw.historical;
+    let wh = `<span>${esc(hw.emoji)} ${esc(hw.desc)}</span>`;
+    if (hw.temp != null) wh += ` <span>🌡 ${hw.temp}°C</span>`;
+    if (hw.cloud != null) wh += ` <span>☁️ ${hw.cloud}%</span>`;
+    if (hw.wind != null && hw.wind > 0) wh += ` <span>💨 ${hw.wind}km/h</span>`;
+    html += `<div class="info-row"><span class="ir-icon">🌤</span><span class="ir-text">${wh}</span></div>`;
+  }
+
+  // ── Row 5: 预报（最近48h的照片）──
+  if (lw && lw.forecast && lw.forecast.length > 0) {
+    const fc = lw.forecast;
+    // 找降雨概率最高的时刻提示
+    const rainWarn = fc.find(f => f.precip_prob != null && f.precip_prob >= 30);
+    let fcHtml = '<div class="forecast-bar">';
+    fc.forEach(f => {
+      const rainClass = (f.precip_prob != null && f.precip_prob >= 30) ? 'rain' : '';
+      fcHtml += `<span class="fc-item ${rainClass}">${esc(f.time)}<br>${esc(f.emoji)}${f.temp!=null?esc(Math.round(f.temp))+'°':''}${f.precip_prob!=null?'<small>'+esc(f.precip_prob)+'%</small>':''}</span>`;
+    });
+    fcHtml += '</div>';
+    html += `<div class="info-row info-row-wrap"><span class="ir-icon">📡</span><div class="ir-multiline"><span style="font-size:11px;color:var(--dimmer)">未来6小时预报</span>${fcHtml}${rainWarn?`<div style="font-size:11px;color:var(--fire);margin-top:4px">🌧 提示：${rainWarn.time} 起降雨概率 ${rainWarn.precip_prob}%</div>`:''}</div></div>`;
+  }
+
+  // ── Row 6: 光线判断（合并 ISO/快门/闪光）──
+  const iso = exif.iso;
+  const shutter = exif.exposure_time || '';
+  const flashFired = exif.flash && exif.flash.includes('已触发');
+  let lightJudge = '';
+  if (iso != null || shutter) {
+    const isoNum = parseInt(iso);
+    const shutterNum = shutter.includes('/') ? 1/parseFloat(shutter.split('/')[1]) : parseFloat(shutter);
+    if (flashFired) {
+      lightJudge = '⚡ 有人工补光';
+    } else if (isoNum >= 1600) {
+      lightJudge = '🌙 光线很暗 · 建议稳定支撑';
+    } else if (isoNum >= 800 || (shutterNum && shutterNum < 1/60)) {
+      lightJudge = '🌅 光线较弱 · 手持注意稳定';
+    } else if (isoNum >= 200) {
+      lightJudge = '⛅ 中等光线 · 正常拍摄';
+    } else if (isoNum < 200 && isoNum >= 32) {
+      lightJudge = '☀️ 光线充足 · 可随意拍';
+    } else {
+      lightJudge = '💡 光线条件未知';
+    }
+  } else if (!flashFired) {
+    lightJudge = '💡 光线条件未知（请根据画面判断）';
+  }
+  if (lightJudge) {
+    html += `<div class="info-row"><span class="ir-icon">💡</span><span class="ir-text">${lightJudge}</span></div>`;
+  }
+
+  // ── EXIF 备注（仅低光/慢快门等硬证据）──
+  if (exif._notes && exif._notes.length > 0) {
+    html += '<div class="exif-pills-bar" style="margin-top:8px">';
+    exif._notes.forEach(n => { html += `<span class="exif-pill exif-warn">${esc(n)}</span>`; });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  $('#infoPanel').innerHTML = html;
+  $('#infoPanel').scrollIntoView({ behavior:'smooth' });
 }
 
 // ============================================================
-// Step 1: Insight
+// Phase 2: Scene Analysis (replaces EXIF info)
 // ============================================================
-function showInsight() {
-  hideAllSteps();
-  const r = resultData.result;
-  if (!r || r.parse_error) { showError('结果解析失败'); return; }
+function showSceneInfo(data) {
+  // 存储光线 + 色彩分析（用于生图提示词）
+  if (data.light) currentLightInfo = data.light;
+  if (data.color) currentColorInfo = data.color;
+  let html = '<div class="info-card">';
+  html += '<div class="info-tag">🔍 画面分析</div>';
 
+  if (data.scene_type) {
+    html += `<div class="scene-type-tag">${esc(data.scene_type)}</div>`;
+  }
+
+  if (data.people && data.people !== '无人物') {
+    html += `<div class="scene-section"><div class="ss-label">👤 人物</div><div class="ss-text">${esc(data.people)}</div></div>`;
+  }
+
+  if (data.light) {
+    const l = data.light;
+    let lh = '';
+    if (l.direction) lh += `方向：${esc(l.direction)} · `;
+    if (l.quality) lh += `光质：${esc(l.quality)} · `;
+    if (l.color_temp) lh += `色温：${esc(l.color_temp)}`;
+    if (l.special && l.special !== '无特殊') lh += `<br>特殊：${esc(l.special)}`;
+    html += `<div class="scene-section"><div class="ss-label">💡 光线</div><div class="ss-text">${lh}</div></div>`;
+  }
+
+  if (data.color) {
+    const c = data.color;
+    let ch = '';
+    if (c.primary) ch += `主色：${esc(c.primary)} · `;
+    if (c.secondary) ch += `次色：${esc(c.secondary)}`;
+    if (c.accent) ch += `<br>强调色：${esc(c.accent)}`;
+    html += `<div class="scene-section"><div class="ss-label">🎨 色彩</div><div class="ss-text">${ch}</div>`;
+    if (c.mood_axes) {
+      const m = c.mood_axes;
+      html += `<div class="mood-bars">
+        <div class="mood-bar"><div class="mb-label">冷暖 ${(m.warmth*100).toFixed(0)}%</div><div class="mb-fill"><div class="mb-fill-inner" style="width:${m.warmth*100}%;background:linear-gradient(90deg,#3b82f6,#f59e0b)"></div></div></div>
+        <div class="mood-bar"><div class="mb-label">活力 ${(m.energy*100).toFixed(0)}%</div><div class="mb-fill"><div class="mb-fill-inner" style="width:${m.energy*100}%;background:linear-gradient(90deg,#555,#4ade80)"></div></div></div>
+        <div class="mood-bar"><div class="mb-label">复杂度 ${(m.complexity*100).toFixed(0)}%</div><div class="mb-fill"><div class="mb-fill-inner" style="width:${m.complexity*100}%;background:linear-gradient(90deg,#555,#a78bfa)"></div></div></div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (data.space) {
+    const sp = data.space;
+    let sh = '';
+    if (sp.depth) sh += `空间深度：${esc(sp.depth)}`;
+    if (sp.foreground) sh += `<br>前景：${esc(sp.foreground)}`;
+    if (sp.midground) sh += `<br>中景：${esc(sp.midground)}`;
+    if (sp.background) sh += `<br>背景：${esc(sp.background)}`;
+    if (sp.anchors && Array.isArray(sp.anchors) && sp.anchors.length > 0) {
+      sh += `<br>📍 锚点：${esc(sp.anchors.join(' · '))}`;
+    }
+    html += `<div class="scene-section"><div class="ss-label">📐 空间</div><div class="ss-text">${sh}</div></div>`;
+  }
+
+  if (data.composition) {
+    html += `<div class="scene-section"><div class="ss-label">📷 构图</div><div class="ss-text">${esc(data.composition)}</div></div>`;
+  }
+
+  if (data.perspective || data.weather_env) {
+    let eh = '';
+    if (data.perspective) eh += `视角：${esc(data.perspective)}`;
+    if (data.weather_env) eh += (eh?'<br>':'') + `环境：${esc(data.weather_env)}`;
+    html += `<div class="scene-section"><div class="ss-label">🌤 视角与环境</div><div class="ss-text">${eh}</div></div>`;
+  }
+
+  html += '</div>';
+  $('#infoPanel').innerHTML = html;
+  $('#infoPanel').scrollIntoView({ behavior:'smooth' });
+}
+
+// ============================================================
+// Phase 3: Directions (carousel swipe)
+// ============================================================
+let activeDirIdx = 0;
+
+function showDirectionsResult(data) {
+  sessionId = data.session_id;
+  discoveredStyles = data.discovered_styles || [];
+  techniquesUsed = data.techniques_used || [];
+  searchQuality = data.search_quality || null;
+
+  const tier = data.scene_tier || '🥈';
   $('#insightBlock').innerHTML = `
-    <div class="tag">📷 场景洞察</div>
-    <div class="presence">${esc(r.presence || '')}</div>
-    <div class="insight">💡 ${esc(r.insight || '')}</div>
-  `;
+    <span class="tier-badge" style="background:rgba(34,211,238,0.08);color:var(--cyan)">${esc(tier)}</span>
+    <div class="presence">${esc(data.presence||'')}</div>
+    <div class="insight">💡 ${esc(data.insight||'')}</div>`;
 
-  // Show format warning if any
-  if (r._format_warning) {
-    $('#insightBlock').innerHTML += `<div style="font-size:11px;color:var(--fire);margin-top:8px;">⚠️ ${esc(r._format_warning)}</div>`;
-  }
-
-  $('#stepInsight').classList.add('active');
-  $('#reshootBtn').style.display = 'block';
-
-  // Auto-advance to directions after a brief moment
-  // (user can read insight then tap button)
-  const btnNext = document.createElement('button');
-  btnNext.className = 'btn-next';
-  btnNext.textContent = '看看怎么拍 →';
-  btnNext.onclick = () => {
-    showDirections();
-    btnNext.remove();
-  };
-  // Remove old btn-next if exists
-  const oldBtn = $('#stepInsight').querySelector('.btn-next');
-  if (oldBtn) oldBtn.remove();
-  $('#stepInsight').appendChild(btnNext);
-
-  $('#stepInsight').scrollIntoView({ behavior: 'smooth' });
-}
-
-// ============================================================
-// Step 2: Directions (sequential, one at a time)
-// ============================================================
-function showDirections() {
-  hideAllSteps();
-  allDirs = (resultData.result.directions || []).filter(d => d && (d.style || d.plans?.length > 0));
+  allDirs = (data.directions||[]).filter(d => d && (d.style || d.reason));
   if (allDirs.length === 0) { showError('未找到合适的方向'); return; }
 
-  currentDirIdx = 0;
-  renderCurrentDirection();
-  $('#stepDirs').classList.add('active');
-  $('#stepDirs').scrollIntoView({ behavior: 'smooth' });
+  activeDirIdx = 0;
+  renderDirectionCarousel();
+  $('#resultArea').classList.add('active');
+  $('#reshootBtn').style.display = 'block';
+  $('#resultArea').scrollIntoView({ behavior:'smooth' });
 }
 
-function renderCurrentDirection() {
-  const d = allDirs[currentDirIdx];
-  if (!d) return;
-
-  const cls = d.id === 'now' ? 'badge-now' : d.id === 'best' ? 'badge-best' : 'badge-creative';
+function renderDirectionCarousel() {
   const total = allDirs.length;
+  $('#dirProgress').textContent = `风格方向 ${activeDirIdx+1} / ${total} · 左右滑动切换`;
 
-  $('#dirProgress').textContent = `${currentDirIdx + 1} / ${total}`;
+  // 渲染卡片
+  let cardsHtml = '';
+  allDirs.forEach((d, i) => {
+    const cls = d.id==='now'?'badge-now':d.id==='best'?'badge-best':'badge-creative';
+    let meta = '';
+    if (d.fit_rationale) meta += `<span class="meta-fit">${esc(d.fit_rationale)}</span>`;
+    if (d.light_annotation) meta += `<span class="meta-light">光线 ${esc(d.light_annotation)}</span>`;
+    if (d.device_annotation) meta += `<span class="meta-device">设备 ${esc(d.device_annotation)}</span>`;
+    if (d.source_type) meta += `<span class="meta-source">📎 ${esc(d.source_type)}</span>`;
+    cardsHtml += `
+      <div class="carousel-card">
+        <div class="dir-card-single">
+          <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
+          <div class="style-name">${esc(d.style||'未命名风格')}</div>
+          ${d.style_promise?`<div class="style-promise">✨ ${esc(d.style_promise)}</div>`:''}
+          <div class="reason">${esc(d.reason||'')}</div>
+          ${meta?`<div class="dir-meta">${meta}</div>`:''}
+        </div>
+      </div>`;
+  });
+  $('#dirCarouselTrack').innerHTML = cardsHtml;
 
-  $('#dirCardSingle').innerHTML = `
-    <div class="dir-card-single">
-      <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
-      <div class="style-name">${esc(d.style)}</div>
-      ${d.style_promise ? `<div class="style-promise">✨ ${esc(d.style_promise)}</div>` : ''}
-      <div class="reason">${esc(d.reason || '')}</div>
-      ${d.source_note ? `<div class="source-tag">📎 ${esc(d.source_note)}</div>` : ''}
-    </div>
-  `;
+  // 渲染圆点
+  let dotsHtml = '';
+  for (let i = 0; i < total; i++) {
+    dotsHtml += `<span class="carousel-dot${i===activeDirIdx?' active':''}" data-idx="${i}"></span>`;
+  }
+  $('#dirCarouselDots').innerHTML = dotsHtml;
+  // 圆点点击切换
+  $('#dirCarouselDots').querySelectorAll('.carousel-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.dataset.idx);
+      scrollCarouselTo('dirCarouselTrack', idx);
+    });
+  });
 
-  // Action buttons
-  const hasMore = currentDirIdx < total - 1;
-  const nextLabel = currentDirIdx < total - 1
-    ? (allDirs[currentDirIdx + 1].emoji + ' ' + allDirs[currentDirIdx + 1].label + ' →')
-    : '';
+  // 滚动监听更新 active
+  const track = $('#dirCarouselTrack');
+  track.onscroll = () => updateCarouselActive('dirCarouselTrack', 'dirCarouselDots', idx => { activeDirIdx = idx; $('#dirProgress').textContent = `风格方向 ${idx+1} / ${total} · 左右滑动切换`; });
 
+  // 滚动到当前 active
+  scrollCarouselTo('dirCarouselTrack', activeDirIdx);
+
+  // 底部按钮
+  const d = allDirs[activeDirIdx];
+  const cls2 = d.id==='now'?'badge-now':d.id==='best'?'badge-best':'badge-creative';
   $('#dirActions').innerHTML = `
-    <button class="btn-select secondary" id="btnNextDir" ${!hasMore ? 'disabled style="opacity:0.3"' : ''}>
-      ${hasMore ? nextLabel : '没有更多了'}
-    </button>
-    <button class="btn-select primary" id="btnSelectDir">
-      📸 就选这个 → 出方案
-    </button>
-  `;
+    <button class="btn-select primary" id="btnSelectDir" style="width:100%">📸 就选这个（${esc(d.emoji)} ${esc(d.label)}）→ 出方案</button>`;
+  $('#btnSelectDir').addEventListener('click', ()=>{ loadPlans(allDirs[activeDirIdx]); });
 
-  $('#btnNextDir').addEventListener('click', () => {
-    if (currentDirIdx < total - 1) {
-      currentDirIdx++;
-      renderCurrentDirection();
-      $('#stepDirs').scrollIntoView({ behavior: 'smooth' });
+  // 滑动时更新按钮文字
+  track.addEventListener('scroll', () => {
+    const d2 = allDirs[activeDirIdx];
+    if (d2 && $('#btnSelectDir')) {
+      $('#btnSelectDir').textContent = `📸 就选这个（${esc(d2.emoji)} ${esc(d2.label)}）→ 出方案`;
     }
-  });
+  }, {passive: true});
+}
 
-  $('#btnSelectDir').addEventListener('click', () => {
-    selectDirection(allDirs[currentDirIdx]);
+function scrollCarouselTo(trackId, idx) {
+  const track = document.getElementById(trackId);
+  if (!track) return;
+  const cards = track.querySelectorAll('.carousel-card');
+  if (idx >= 0 && idx < cards.length) {
+    track.scrollTo({ left: cards[idx].offsetLeft - track.offsetLeft, behavior: 'smooth' });
+  }
+}
+
+function updateCarouselActive(trackId, dotsId, onUpdate) {
+  const track = document.getElementById(trackId);
+  const dotsContainer = document.getElementById(dotsId);
+  if (!track || !dotsContainer) return;
+  const cards = track.querySelectorAll('.carousel-card');
+  if (cards.length === 0) return;
+  const center = track.scrollLeft + track.clientWidth / 2;
+  let activeIdx = 0, minDist = Infinity;
+  cards.forEach((card, i) => {
+    const cardCenter = card.offsetLeft + card.clientWidth / 2;
+    const dist = Math.abs(center - cardCenter);
+    if (dist < minDist) { minDist = dist; activeIdx = i; }
   });
+  // 更新 dots
+  const dots = dotsContainer.querySelectorAll('.carousel-dot');
+  dots.forEach((d, i) => { d.classList.toggle('active', i === activeIdx); });
+  if (onUpdate) onUpdate(activeIdx);
 }
 
 // ============================================================
-// Step 3: Plans with 7-section cards + Canvas annotations
+// Plans (on demand, carousel)
 // ============================================================
-function selectDirection(d) {
-  selectedDir = d;
-  if (!selectedDir) return;
+let activePlanIdx = 0;
 
-  const labelEmoji = d.id === 'now' ? '🟢' : d.id === 'best' ? '🔥' : '✨';
-  $('#planDirLabel').textContent = `${labelEmoji} ${esc(d.label)}`;
-  $('#planDirStyle').textContent = esc(d.style);
-  const plans = d.plans || [];
-  $('#planCount').textContent = `${plans.length} 套方案`;
+async function loadPlans(direction) {
+  if (!direction) return;
 
+  const deviceKey = $('#deviceSelect').value || currentDeviceKey || 'unknown';
+  const lensKey = $('#lensSelect').value || '';
+  const cacheKey = `${direction.id}:${deviceKey}:${lensKey}`;
+
+  $('#resultArea').classList.remove('active');
+
+  const emoji = direction.id==='now'?'🟢':direction.id==='best'?'🔥':'✨';
+  $('#planDirLabel').textContent = `${emoji} ${esc(direction.label)}`;
+  $('#planDirStyle').textContent = esc(direction.style||'');
+
+  if (planCache[cacheKey]) { renderPlans(planCache[cacheKey], direction); return; }
+
+  $('#planCarouselTrack').innerHTML = '';
+  $('#planCarouselDots').innerHTML = '';
+  $('#dataSections').innerHTML = '';
+  $('#planLoading').classList.add('show');
+  $('#plansArea').classList.add('active');
+  $('#plansArea').scrollIntoView({ behavior:'smooth' });
+
+  try {
+    const resp = await fetch('/analyze/plans', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ session_id:sessionId, direction_id:direction.id,
+        device: deviceKey!==currentDeviceKey ? deviceKey : null, lens: lensKey||null })
+    });
+    const data = await resp.json();
+    $('#planLoading').classList.remove('show');
+    if (!data.success) { showError(data.error||'方案生成失败'); return; }
+    planCache[cacheKey] = data.plans||[];
+    renderPlans(data.plans||[], direction);
+  } catch(err) {
+    $('#planLoading').classList.remove('show');
+    showError('方案请求失败：'+err.message);
+  }
+}
+
+function renderPlans(plans, direction) {
+  activePlanIdx = 0;
+  const total = plans.length;
+
+  // 渲染卡片
   let html = '';
-  plans.forEach((p, i) => {
-    html += renderPlanCard(p, i, d);
-  });
-  $('#planCards').innerHTML = html;
+  plans.forEach((p,i)=>{ html += `<div class="carousel-card">${renderPlanCard(p,i,direction)}</div>`; });
+  $('#planCarouselTrack').innerHTML = html;
 
-  // Render Canvas annotations for each plan
-  plans.forEach((p, i) => {
-    if (p.annotations && p.annotations.length > 0 && photoDataUrl) {
-      renderAnnotations(`annoCanvas${i}`, p.annotations);
-    }
+  // 渲染圆点
+  let dotsHtml = '';
+  for (let i = 0; i < total; i++) {
+    dotsHtml += `<span class="carousel-dot${i===0?' active':''}" data-idx="${i}"></span>`;
+  }
+  $('#planCarouselDots').innerHTML = dotsHtml;
+  $('#planCarouselDots').querySelectorAll('.carousel-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.dataset.idx);
+      scrollCarouselTo('planCarouselTrack', idx);
+    });
   });
 
-  // Bind why-toggle clicks
-  plans.forEach((p, i) => {
+  // 滚动监听
+  const track = $('#planCarouselTrack');
+  track.onscroll = () => updateCarouselActive('planCarouselTrack', 'planCarouselDots', idx => { activePlanIdx = idx; });
+
+  // Canvas 标注 + 事件绑定
+  plans.forEach((p,i)=>{
+    if (p.annotations && p.annotations.length>0 && photoDataUrl) renderAnnotations(`ac${i}`, p.annotations);
+  });
+
+  plans.forEach((p,i)=>{
     if (p.why) {
-      const toggle = document.getElementById(`whyToggle${i}`);
-      const content = document.getElementById(`whyContent${i}`);
-      if (toggle && content) {
-        toggle.addEventListener('click', () => {
-          toggle.classList.toggle('open');
-          content.classList.toggle('open');
-        });
-      }
+      const tg = document.getElementById(`wt${i}`), ct = document.getElementById(`wc${i}`);
+      if (tg&&ct) tg.addEventListener('click', ()=>{ tg.classList.toggle('open'); ct.classList.toggle('open'); });
     }
+    const btn = document.getElementById(`igb${i}`), pnl = document.getElementById(`igp${i}`);
+    if (btn&&pnl) btn.addEventListener('click', ()=>{ pnl.classList.toggle('open'); if(pnl.classList.contains('open')) pnl.scrollIntoView({behavior:'smooth'}); });
+    const cb = document.getElementById(`cp${i}`);
+    if (cb) cb.addEventListener('click', ()=>{
+      const te = document.getElementById(`pt${i}`);
+      if (te) {
+        const txt = te.textContent;
+        if (navigator.clipboard&&navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(()=>{ cb.textContent='✅ 已复制'; setTimeout(()=>{cb.textContent='📋 复制'},2000); });
+        } else {
+          const r = document.createRange(); r.selectNode(te); window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
+          cb.textContent='✅ 已选中'; setTimeout(()=>{cb.textContent='📋 复制'},2000);
+        }
+      }
+    });
   });
 
-  // Render data sections
   renderDataSections();
-
-  hideAllSteps();
-  $('#stepPlans').classList.add('active');
-  $('#stepPlans').scrollIntoView({ behavior: 'smooth' });
+  $('#plansArea').classList.add('active');
+  $('#reshootBtn').style.display = 'block';
+  $('#plansArea').scrollIntoView({ behavior:'smooth' });
 }
 
-function renderPlanCard(p, i, d) {
-  const colorVar = d.id === 'now' ? 'var(--green)' : d.id === 'best' ? 'var(--fire)' : 'var(--purple)';
-  const colorBg = d.id === 'now' ? 'rgba(74,222,128,0.08)' : d.id === 'best' ? 'rgba(245,158,11,0.08)' : 'rgba(167,139,250,0.08)';
+function renderPlanCard(p, i, direction) {
+  const cv = direction.id==='now'?'var(--green)':direction.id==='best'?'var(--fire)':'var(--purple)';
+  const cb = direction.id==='now'?'rgba(74,222,128,0.08)':direction.id==='best'?'rgba(245,158,11,0.08)':'rgba(167,139,250,0.08)';
 
-  let card = `
-    <div class="plan-card">
-      <div class="plan-name">
-        <span class="idx" style="background:${colorBg};color:${colorVar}">${i + 1}</span>
-        ${esc(p.name || '方案 ' + (i+1))}
-      </div>`;
+  let c = `<div class="plan-card"><div class="plan-name"><span class="idx" style="background:${cb};color:${cv}">${i+1}</span>${esc(p.name||'方案'+(i+1))}</div>`;
+  if (p.annotations && p.annotations.length>0) c += `<div class="annotated-photo"><canvas id="ac${i}"></canvas></div>`;
+  if (p.prep) c += `<div class="plan-section sec-prep"><span class="sec-icon">📋</span><span class="sec-text">${esc(p.prep)}</span></div>`;
+  if (p.where) c += `<div class="plan-section sec-where"><span class="sec-icon">📍</span><span class="sec-text">${esc(p.where)}</span></div>`;
+  if (p.do) c += `<div class="plan-section sec-do"><span class="sec-icon">🎬</span><span class="sec-text">${esc(p.do)}</span></div>`;
+  if (p.posture) c += `<div class="plan-section sec-posture"><span class="sec-icon">🧍</span><span class="sec-text">${esc(p.posture)}</span></div>`;
+  if (p.result) c += `<div class="plan-section sec-result"><span class="sec-icon">✨</span><span class="sec-text">${esc(p.result)}</span></div>`;
+  if (p.why) { c += `<div class="why-toggle" id="wt${i}"><span class="arrow">▶</span> 💡 为什么这样好看？</div>`; c += `<div class="why-content" id="wc${i}">${esc(p.why)}</div>`; }
+  if (p.perspective) c += `<div class="plan-perspective">🎯 ${esc(p.perspective)}</div>`;
 
-  // Annotated photo section
-  if (p.annotations && p.annotations.length > 0) {
-    card += `
-      <div class="annotated-photo" id="annoContainer${i}">
-        <canvas id="annoCanvas${i}"></canvas>
-      </div>`;
+  const ip = genImgPrompt(p, direction);
+  let nh = '';
+  if (ip.notes.length>0) nh = '<div class="prompt-notes">'+ip.notes.map(n=>`<span class="note-tag">${n}</span>`).join('')+'</div>';
+  c += `<button class="img-gen-btn" id="igb${i}">🖼️ 生图</button>`;
+  c += `<div class="img-gen-prompt" id="igp${i}"><div class="prompt-text" id="pt${i}">${esc(ip.prompt)}</div>${nh}<button class="copy-btn" id="cp${i}">📋 复制</button></div>`;
+  c += '</div>';
+  return c;
+}
+
+function buildLightDesc() {
+  // 组合天气光照时段 + Vision 光线方向/光质
+  const parts = [];
+  if (currentLightPeriod && currentLightPeriod.label) {
+    const label = currentLightPeriod.label;
+    if (label.includes('黄金')) parts.push('黄金时刻暖光');
+    else if (label.includes('蓝调')) parts.push('蓝调时刻柔光');
+    else if (label.includes('夜间')) parts.push('夜间灯光');
+    else if (label.includes('正午')) parts.push('正午自然光');
+    else if (label.includes('暮光')) parts.push('暮光时分');
+  }
+  if (currentLightInfo) {
+    if (currentLightInfo.direction && !currentLightInfo.direction.includes('不确定')) parts.push(currentLightInfo.direction);
+    if (currentLightInfo.quality && !currentLightInfo.quality.includes('不确定')) parts.push(currentLightInfo.quality);
+  }
+  return parts.join('，');
+}
+
+function buildDeviceDesc() {
+  // 当前选中的设备 key（手动切换优先）
+  const selVal = $('#deviceSelect').value;
+  const devKey = selVal || currentDeviceKey || '';
+  const lensKey = $('#lensSelect').value || '';
+
+  // 设备描述映射
+  const deviceDescs = {
+    'iphone-17-pro': 'iPhone 17 Pro 主摄（24mm等效）拍摄',
+    'iphone-17': 'iPhone 17 主摄（26mm等效）拍摄',
+    'iphone-pro-13-16': 'iPhone Pro 主摄（24mm等效）拍摄',
+    'iphone-standard-13-16': 'iPhone 主摄（26mm等效）拍摄',
+    'android-flagship': '安卓旗舰手机 主摄拍摄',
+    'sony-a7m4': 'Sony A7M4 全画幅相机拍摄',
+    'sony-a7c2': 'Sony A7C2 全画幅相机拍摄',
+    'sony-a6400': 'Sony A6400 APS-C相机拍摄',
+    'fujifilm-xt5': 'Fujifilm X-T5 相机拍摄',
+    'fujifilm-xt50': 'Fujifilm X-T50 相机拍摄',
+    'fujifilm-x100vi': 'Fujifilm X100VI（35mm定焦）拍摄',
+    'ricoh-gr3': 'Ricoh GR III（28mm定焦）拍摄',
+    'canon-r6ii': 'Canon EOS R6 II 全画幅相机拍摄',
+    'other-camera': '相机拍摄',
+  };
+  let txt = deviceDescs[devKey] || (currentDeviceName ? currentDeviceName + ' 拍摄' : '');
+
+  // 如果选了具体镜头，追加镜头信息
+  if (lensKey) {
+    const lensNames = {
+      '24-70-f2.8': '24-70mm f/2.8', '70-200-f2.8': '70-200mm f/2.8',
+      '16-35-f2.8': '16-35mm f/2.8', '24-105-f4': '24-105mm f/4',
+      '50-f1.8': '50mm f/1.8', '50-f1.2': '50mm f/1.2',
+      '85-f1.4': '85mm f/1.4', '85-f1.8': '85mm f/1.8',
+      '35-f1.4': '35mm f/1.4', '28-f2.8': '28mm f/2.8',
+      'kit-lens': '变焦镜头',
+    };
+    if (lensNames[lensKey]) {
+      txt = txt.replace('拍摄', `+ ${lensNames[lensKey]} 镜头拍摄`);
+    }
+  }
+  return txt || '';
+}
+
+function genImgPrompt(plan, direction) {
+  // ── 豆包官方公式：主体→动作→场景→光线→镜头语言→风格/质感→画质→约束词 ──
+  const elements = [];
+
+  // 1. 主体+动作（有人物时最优先）
+  if (plan.posture) elements.push(plan.posture);
+  else if (plan.do) elements.push(plan.do);
+
+  // 2. 场景位置
+  if (plan.where) elements.push(plan.where);
+
+  // 3. 光线条件（天气光照时段 + Vision 光质方向）
+  const lightDesc = buildLightDesc();
+  if (lightDesc) elements.push(lightDesc);
+
+  // 4. 拍摄角度与景别（do 还没被 posture 用过时加入）
+  if (plan.do && plan.posture) elements.push(plan.do);
+
+  // 5. 设备描述（相机型号 + 镜头）
+  const deviceDesc = buildDeviceDesc();
+  if (deviceDesc) elements.push(deviceDesc);
+
+  // 6. 画面效果
+  if (plan.result) elements.push(plan.result);
+
+  // 7. 风格承诺（过滤抽象感受词）
+  let style = (direction.style_promise || '');
+  style = style.replace(/[，,。.][^，,。.]*[感觉得像][^，,。.]*/g, '');
+  style = style.replace(/发出去.*?评论/g, '');
+  style = style.replace(/发圈.*?评论/g, '');
+  style = style.replace(/干净高级的/g, '');
+  style = style.trim();
+  if (style) elements.push(style);
+  elements.push('写实摄影风格');
+
+  // 8. 色调（来自 Vision 色彩分析）
+  let colorDesc = '';
+  if (currentColorInfo && currentColorInfo.color_temp) {
+    if (currentColorInfo.color_temp.includes('暖')) colorDesc = '暖色调';
+    else if (currentColorInfo.color_temp.includes('冷')) colorDesc = '冷色调';
+    else if (currentColorInfo.color_temp.includes('中')) colorDesc = '中性色调';
+  }
+  if (colorDesc && !((style||'').includes('暖色调') || (style||'').includes('冷色调'))) {
+    elements.push(colorDesc);
   }
 
-  // Prep
-  if (p.prep) {
-    card += `
-      <div class="plan-section sec-prep">
-        <span class="sec-icon">📋</span>
-        <span class="sec-text">${esc(p.prep)}</span>
-      </div>`;
-  }
+  // 9. 画质兜底 + 负面约束词
+  elements.push('高清细节，自然肤色，无模糊，无畸变，无多余杂物，无水印');
 
-  // Where
-  if (p.where) {
-    card += `
-      <div class="plan-section sec-where">
-        <span class="sec-icon">📍</span>
-        <span class="sec-text">${esc(p.where)}</span>
-      </div>`;
-  }
+  // 逗号拼接
+  const prompt = elements.filter(Boolean).join('，');
 
-  // Do
-  if (p.do) {
-    card += `
-      <div class="plan-section sec-do">
-        <span class="sec-icon">🎬</span>
-        <span class="sec-text">${esc(p.do)}</span>
-      </div>`;
-  }
+  // ── 智能标注（保持不变）──
+  const operational = [plan.do||'', plan.where||'', plan.prep||'', plan.result||'', plan.posture||'', plan.perspective||''].join(' ');
 
-  // Posture (only if there are people in the scene)
-  if (p.posture) {
-    card += `
-      <div class="plan-section sec-posture">
-        <span class="sec-icon">🧍</span>
-        <span class="sec-text">${esc(p.posture)}</span>
-      </div>`;
-  }
+  const notes = [];
 
-  // Result
-  if (p.result) {
-    card += `
-      <div class="plan-section sec-result">
-        <span class="sec-icon">✨</span>
-        <span class="sec-text">${esc(p.result)}</span>
-      </div>`;
-  }
+  // 后期处理检测
+  const postPatterns = [
+    {re: /后期|修图|调色/, label: '后期调色'},
+    {re: /滤镜/, label: '使用滤镜'},
+    {re: /HDR/, label: 'HDR合成'},
+    {re: /降噪/, label: '降噪处理'},
+    {re: /锐化/, label: '锐化处理'},
+    {re: /堆栈/, label: '堆栈合成'},
+    {re: /曲线|HSL|色阶/, label: '曲线/色阶调整'},
+    {re: /蒙版/, label: '蒙版合成'},
+    {re: /加深|减淡/, label: '加深/减淡'},
+    {re: /液化/, label: '液化处理'},
+    {re: /暗房|暗角/, label: '暗角效果'},
+    {re: /去雾|除雾/, label: '去雾处理'},
+    {re: /黑白|单色转换|去色/, label: '黑白转换'},
+    {re: /颗粒|噪点/, label: '胶片颗粒'},
+  ];
+  const foundPost = [];
+  postPatterns.forEach(({re, label}) => { if (re.test(operational)) foundPost.push(label); });
+  if (foundPost.length > 0) notes.push(`🖥️ 后期：${foundPost.join('、')}`);
 
-  // Why (foldable)
-  if (p.why) {
-    card += `
-      <div class="why-toggle" id="whyToggle${i}">
-        <span class="arrow">▶</span> 💡 为什么这样好看？
-      </div>
-      <div class="why-content" id="whyContent${i}">${esc(p.why)}</div>`;
-  }
+  // 道具/器材检测
+  const propPatterns = [
+    {re: /反光板|柔光板|补光灯|LED灯|常亮灯/, label: '补光设备'},
+    {re: /三脚架|独脚架|稳定器|手持稳定/, label: '支撑/稳定设备'},
+    {re: /闪光灯|离机闪|机顶闪/, label: '闪光灯'},
+    {re: /滤镜|ND镜|CPL|偏振|渐变镜|UV镜/, label: '镜头滤镜'},
+    {re: /烟雾|烟饼|造雾/, label: '烟雾效果'},
+    {re: /泡泡|气泡/, label: '泡泡道具'},
+    {re: /花瓣|花束|鲜花|花环/, label: '花束/花瓣'},
+    {re: /纱巾|薄纱|纱帘|纱布/, label: '纱巾/纱布'},
+    {re: /镜子|反光/, label: '镜面/反光物'},
+    {re: /灯串|灯带|小灯|蜡烛|灯光/, label: '灯光/灯饰'},
+    {re: /椅子|凳子|沙发/, label: '座椅道具'},
+    {re: /雨伞|伞|遮阳伞/, label: '伞具'},
+    {re: /帽子|围巾|手套|墨镜|眼镜/, label: '配饰道具'},
+    {re: /书|报纸|杂志|杯子|玻璃杯/, label: '手持小道具'},
+  ];
+  const foundProps = [];
+  propPatterns.forEach(({re, label}) => { if (re.test(operational)) foundProps.push(label); });
+  const prepText = plan.prep || '';
+  const needsPrep = prepText && !/什么都不用|不需要|不用准备|无需准备|没有特殊/.test(prepText) && prepText.length > 5;
+  if (foundProps.length > 0) notes.push(`📦 需准备：${foundProps.join('、')}`);
+  else if (needsPrep) notes.push(`📋 准备：${prepText.slice(0, 40)}${prepText.length>40?'...':''}`);
 
-  // Perspective
-  if (p.perspective) {
-    card += `
-      <div class="plan-perspective">🎯 ${esc(p.perspective)}</div>`;
-  }
+  // AI/合成检测
+  const aiPatterns = [
+    {re: /AI生成|AI 生成|人工智能生成/, label: 'AI生成内容'},
+    {re: /替换背景|换背景|抠图换/, label: '背景替换'},
+    {re: /合成|多张合成|多图合成/, label: '多图合成'},
+    {re: /双重曝光|多重曝光/, label: '双重/多重曝光'},
+    {re: /超现实|不可能|虚幻/, label: '超现实效果'},
+    {re: /添加.{0,3}元素|加上.{0,3}元素|植入/, label: '添加画面元素'},
+  ];
+  const foundAI = [];
+  aiPatterns.forEach(({re, label}) => { if (re.test(operational)) foundAI.push(label); });
+  if (foundAI.length > 0) notes.push(`🤖 AI/合成：${foundAI.join('、')}`);
 
-  card += '</div>';
-  return card;
+  // 设备标注（新增：告知用户当前用的设备信息）
+  const devNote = buildDeviceDesc();
+  if (devNote) notes.push(`📷 ${devNote}`);
+
+  // 参考图提示
+  notes.push('📎 建议用原图做参考图（图生图模式），保持人物和场景不变');
+
+  return {prompt, notes};
+}
+
+function showDirections() {
+  if (allDirs.length===0) return;
+  $('#plansArea').classList.remove('active');
+  renderDirectionCarousel();
+  $('#resultArea').classList.add('active');
+  $('#resultArea').scrollIntoView({ behavior:'smooth' });
 }
 
 // ============================================================
-// Canvas Annotation Engine
+// Canvas Annotations
 // ============================================================
-function renderAnnotations(canvasId, annotations) {
-  const canvas = document.getElementById(canvasId);
+function renderAnnotations(cid, annotations) {
+  const canvas = document.getElementById(cid);
   if (!canvas) return;
-
   const container = canvas.parentElement;
   const img = new Image();
-  img.onload = () => {
-    // Set canvas size to match container width while preserving aspect ratio
-    const containerWidth = container.clientWidth;
-    const scale = containerWidth / img.width;
-    canvas.width = containerWidth;
-    canvas.height = img.height * scale;
-
+  img.onload = ()=>{
+    const cw = container.clientWidth, scale = cw/img.width;
+    canvas.width = cw; canvas.height = img.height*scale;
     const ctx = canvas.getContext('2d');
-
-    // Draw photo
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    // Draw each annotation
-    annotations.forEach(anno => {
-      drawAnnotation(ctx, anno, canvas.width, canvas.height);
-    });
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    annotations.forEach(a=>drawAnno(ctx,a,canvas.width,canvas.height));
   };
   img.src = photoDataUrl;
 }
 
-function drawAnnotation(ctx, anno, cw, ch) {
-  const color = anno.color || '#4ade80';
-  const alpha = '99';
+function drawAnno(ctx, a, cw, ch) {
+  const color = a.color||'#4ade80';
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(1.5,cw*0.004);
+  ctx.font=`bold ${Math.max(11,cw*0.032)}px -apple-system, "PingFang SC", sans-serif`; ctx.textBaseline='bottom';
 
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = Math.max(1.5, cw * 0.004);
-  ctx.font = `bold ${Math.max(11, cw * 0.032)}px -apple-system, "PingFang SC", sans-serif`;
-  ctx.textBaseline = 'bottom';
-
-  switch (anno.type) {
-    // ── subject: 被摄者在画面内的精确位置 ──
-    case 'subject':
-    case 'position': {  // backward compat
-      const cx = anno.x * cw;
-      const cy = anno.y * ch;
-      const r = Math.max(8, cw * 0.025);
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
-      ctx.fillStyle = color + '26';
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fillStyle = color + alpha;
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.lineWidth = Math.max(1.5, cw * 0.004);
-
-      if (anno.label) {
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-        ctx.lineWidth = 3;
-        ctx.strokeText(anno.label, cx + r + 6, cy + 5);
-        ctx.fillText(anno.label, cx + r + 6, cy + 5);
-      }
+  switch(a.type){
+    case 'subject': case 'position': {
+      const cx=a.x*cw, cy=a.y*ch, r=Math.max(8,cw*0.025);
+      ctx.beginPath(); ctx.arc(cx,cy,r+4,0,Math.PI*2); ctx.fillStyle=color+'26'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=color+'99'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); ctx.lineWidth=Math.max(1.5,cw*0.004);
+      if(a.label){ctx.fillStyle='#fff'; ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3; ctx.strokeText(a.label,cx+r+6,cy+5); ctx.fillText(a.label,cx+r+6,cy+5);}
       break;
     }
-
-    // ── shooter: 拍摄者站位（画面外）+ 引导线 + 角度弧 ──
     case 'shooter': {
-      const fromX = (anno.from?.x ?? 0.05) * cw;
-      const fromY = (anno.from?.y ?? 0.85) * ch;
-      const toX = (anno.to?.x ?? 0.4) * cw;
-      const toY = (anno.to?.y ?? 0.5) * ch;
-
-      // Dashed guide line from shooter to target
-      ctx.beginPath();
-      ctx.strokeStyle = color + '88';
-      ctx.lineWidth = Math.max(2, cw * 0.005);
-      ctx.setLineDash([6, 4]);
-      const midX = (fromX + toX) / 2;
-      const midY = Math.min(fromY, toY) - Math.abs(toX - fromX) * 0.25;
-      ctx.moveTo(fromX, fromY);
-      ctx.quadraticCurveTo(midX, midY, toX, toY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Arrowhead at target
-      const tipAngle = Math.atan2(toY - midY, toX - midX);
-      const arrowLen = Math.max(8, cw * 0.025);
-      ctx.beginPath();
-      ctx.fillStyle = color + alpha;
-      ctx.moveTo(toX, toY);
-      ctx.lineTo(toX - arrowLen * Math.cos(tipAngle - 0.6), toY - arrowLen * Math.sin(tipAngle - 0.6));
-      ctx.lineTo(toX - arrowLen * Math.cos(tipAngle + 0.6), toY - arrowLen * Math.sin(tipAngle + 0.6));
-      ctx.closePath();
-      ctx.fill();
-
-      // Camera icon at shooter position
-      ctx.font = `${Math.max(18, cw * 0.06)}px -apple-system, "PingFang SC", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('📷', fromX, fromY);
-
-      // Angle arc near shooter
-      if (anno.angle) {
-        ctx.font = `bold ${Math.max(11, cw * 0.032)}px -apple-system, "PingFang SC", sans-serif`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'bottom';
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-        ctx.lineWidth = 3;
-        const labelX = fromX + (fromX < cw/2 ? 20 : -80);
-        const labelY = fromY - 12;
-        ctx.strokeText(anno.angle, labelX, labelY);
-        ctx.fillText(anno.angle, labelX, labelY);
-      }
+      const fx=(a.from?.x??0.05)*cw, fy=(a.from?.y??0.85)*ch, tx=(a.to?.x??0.4)*cw, ty=(a.to?.y??0.5)*ch;
+      ctx.beginPath(); ctx.strokeStyle=color+'88'; ctx.lineWidth=Math.max(2,cw*0.005); ctx.setLineDash([6,4]);
+      const mx=(fx+tx)/2, my=Math.min(fy,ty)-Math.abs(tx-fx)*0.25;
+      ctx.moveTo(fx,fy); ctx.quadraticCurveTo(mx,my,tx,ty); ctx.stroke(); ctx.setLineDash([]);
+      const tip=Math.atan2(ty-my,tx-mx), al=Math.max(8,cw*0.025);
+      ctx.beginPath(); ctx.fillStyle=color+'99';
+      ctx.moveTo(tx,ty); ctx.lineTo(tx-al*Math.cos(tip-0.6),ty-al*Math.sin(tip-0.6));
+      ctx.lineTo(tx-al*Math.cos(tip+0.6),ty-al*Math.sin(tip+0.6)); ctx.closePath(); ctx.fill();
+      ctx.font=`${Math.max(18,cw*0.06)}px -apple-system, "PingFang SC", sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('📷',fx,fy);
+      if(a.angle){ctx.font=`bold ${Math.max(11,cw*0.032)}px -apple-system, "PingFang SC", sans-serif`; ctx.textAlign='left'; ctx.textBaseline='bottom'; ctx.fillStyle='#fff'; ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3; ctx.strokeText(a.angle,fx+(fx<cw/2?20:-80),fy-12); ctx.fillText(a.angle,fx+(fx<cw/2?20:-80),fy-12);}
       break;
     }
-
-    // ── frame: 取景范围虚线框 ──
     case 'frame': {
-      const x = anno.x * cw;
-      const y = anno.y * ch;
-      const w = (anno.w || 0.5) * cw;
-      const h = (anno.h || 0.5) * ch;
-
-      ctx.setLineDash([8, 4]);
-      ctx.strokeStyle = color + alpha;
-      ctx.lineWidth = Math.max(2, cw * 0.005);
-      ctx.strokeRect(x, y, w, h);
-      ctx.setLineDash([]);
-
-      if (anno.label) {
-        ctx.fillStyle = color + alpha;
-        ctx.fillText(anno.label, x + 6, y - 6);
-      }
+      const x=a.x*cw, y=a.y*ch, w=(a.w||0.5)*cw, h=(a.h||0.5)*ch;
+      ctx.setLineDash([8,4]); ctx.strokeStyle=color+'99'; ctx.lineWidth=Math.max(2,cw*0.005); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
+      if(a.label){ctx.fillStyle=color+'99'; ctx.fillText(a.label,x+6,y-6);}
       break;
     }
-
-    // ── crop: 裁剪引导（半透明遮罩 + 边框） ──
     case 'crop': {
-      const x = (anno.x || 0) * cw;
-      const y = (anno.y || 0) * ch;
-      const w = (anno.w || 1) * cw;
-      const h = (anno.h || 1) * ch;
-
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(0, 0, cw, y);           // top
-      ctx.fillRect(0, y + h, cw, ch - y - h); // bottom
-      ctx.fillRect(0, y, x, h);            // left
-      ctx.fillRect(x + w, y, cw - x - w, h); // right
-
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 3]);
-      ctx.strokeRect(x, y, w, h);
-      ctx.setLineDash([]);
-
-      if (anno.label) {
-        ctx.fillStyle = '#fff';
-        ctx.fillText(anno.label, x + 6, y - 8);
-      }
+      const x=(a.x||0)*cw, y=(a.y||0)*ch, w=(a.w||1)*cw, h=(a.h||1)*ch;
+      ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(0,0,cw,y); ctx.fillRect(0,y+h,cw,ch-y-h); ctx.fillRect(0,y,x,h); ctx.fillRect(x+w,y,cw-x-w,h);
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
+      if(a.label){ctx.fillStyle='#fff'; ctx.fillText(a.label,x+6,y-8);}
       break;
     }
   }
-
   ctx.restore();
 }
 
 // ============================================================
-// Data Sections (foldable)
+// Data Sections
 // ============================================================
 function renderDataSections() {
-  const r = resultData.result;
-  let html = '';
-
-  // Search quality
-  if (r.search_quality) {
-    const sq = r.search_quality;
-    const qCls = sq.overall === '🟢' ? 'quality-green' : sq.overall === '🟡' ? 'quality-yellow' : 'quality-red';
-    html += `
-      <div class="fold-section">
-        <div class="fold-header" onclick="toggleFold(this)">
-          🔍 搜索质量 <span class="quality-badge ${qCls}">${esc(sq.overall)}</span>
-          <span class="arrow">▶</span>
-        </div>
-        <div class="fold-body">${esc(sq.honest_note || '')}</div>
-      </div>`;
+  let h = '';
+  if (searchQuality) {
+    const sq=searchQuality, qc=sq.overall==='🟢'?'quality-green':sq.overall==='🟡'?'quality-yellow':'quality-red';
+    h+=`<div class="fold-section"><div class="fold-header" onclick="tf(this)">🔍 搜索质量 <span class="quality-badge ${qc}">${esc(sq.overall)}</span><span class="arrow">▶</span></div><div class="fold-body">${esc(sq.honest_note||'')}</div></div>`;
   }
-
-  // Discovered styles
-  if (r.discovered_styles && r.discovered_styles.length > 0) {
-    html += `<div class="fold-section">
-      <div class="fold-header" onclick="toggleFold(this)">
-        🎨 发现的风格 <span style="font-size:11px;color:var(--dimmer)">${r.discovered_styles.length} 个</span>
-        <span class="arrow">▶</span>
-      </div>
-      <div class="fold-body">`;
-    r.discovered_styles.forEach(s => {
-      if (!s) return;
-      html += `<div class="item">
-        <div>
-          <div class="item-name">${esc(s.name || '')}</div>
-          <div style="font-size:11px;color:var(--dim)">${esc(s.fit_rationale || '')}</div>
-        </div>
-        <div class="item-meta">
-          <div>${esc(s.light_annotation || '')}</div>
-          <div>${esc(s.device_annotation || '')}</div>
-          <div>${esc(s.source_type || '')}</div>
-        </div>
-      </div>`;
-    });
-    html += '</div></div>';
+  if (discoveredStyles.length>0) {
+    h+=`<div class="fold-section"><div class="fold-header" onclick="tf(this)">🎨 发现的风格 <span style="font-size:11px;color:var(--dimmer)">${discoveredStyles.length}个</span><span class="arrow">▶</span></div><div class="fold-body">`;
+    discoveredStyles.forEach(s=>{ if(!s)return; h+=`<div class="item"><div><div class="item-name">${esc(s.name||'')}</div><div style="font-size:11px;color:var(--dim)">${esc(s.fit_rationale||'')}</div></div><div class="item-meta"><div>${esc(s.light_annotation||'')}</div><div>${esc(s.device_annotation||'')}</div><div>${esc(s.source_type||'')}</div></div></div>`; });
+    h+='</div></div>';
   }
-
-  // Techniques used
-  if (r.techniques_used && r.techniques_used.length > 0) {
-    html += `<div class="fold-section">
-      <div class="fold-header" onclick="toggleFold(this)">
-        🔧 使用的技法 <span style="font-size:11px;color:var(--dimmer)">${r.techniques_used.length} 个</span>
-        <span class="arrow">▶</span>
-      </div>
-      <div class="fold-body">`;
-    r.techniques_used.forEach(t => {
-      if (!t) return;
-      html += `<div class="item">
-        <div>
-          <div class="item-name">${esc(t.name || '')}</div>
-          <div style="font-size:11px;color:var(--dim)">${esc(t.description || '')}</div>
-        </div>
-        <div class="item-meta">${esc(t.source_type || '')}</div>
-      </div>`;
-    });
-    html += '</div></div>';
+  if (techniquesUsed.length>0) {
+    h+=`<div class="fold-section"><div class="fold-header" onclick="tf(this)">🔧 使用的技法 <span style="font-size:11px;color:var(--dimmer)">${techniquesUsed.length}个</span><span class="arrow">▶</span></div><div class="fold-body">`;
+    techniquesUsed.forEach(t=>{ if(!t)return; h+=`<div class="item"><div><div class="item-name">${esc(t.name||'')}</div><div style="font-size:11px;color:var(--dim)">${esc(t.description||'')}</div></div><div class="item-meta">${esc(t.source_type||'')}</div></div>`; });
+    h+='</div></div>';
   }
-
-  $('#dataSections').innerHTML = html;
+  $('#dataSections').innerHTML = h;
 }
-
-function toggleFold(header) {
-  header.classList.toggle('open');
-  const body = header.nextElementSibling;
-  if (body) body.classList.toggle('open');
-}
+function tf(header) { header.classList.toggle('open'); const b=header.nextElementSibling; if(b)b.classList.toggle('open'); }
 
 // ============================================================
 // Reset
 // ============================================================
 function resetAll() {
-  hideAllSteps();
-  resultData = null; selectedDir = null; detectedDevice = null;
-  allDirs = []; currentDirIdx = 0; photoDataUrl = null;
+  sessionId=null; allDirs=[]; activeDirIdx=0; activePlanIdx=0; photoDataUrl=null;
+  planCache={}; currentDeviceKey=null; currentDeviceName=''; currentDeviceLenses='';
+  currentLightInfo=null; currentColorInfo=null; currentLightPeriod=null;
+  discoveredStyles=[]; techniquesUsed=[]; searchQuality=null;
   $('#errorMsg').classList.remove('show');
   $('#previewThumb').classList.remove('show');
   $('#uploadZone').classList.remove('hidden');
-  $('#metaBar').innerHTML = '';
-  $('#dataSections').innerHTML = '';
-  $('#reshootBtn').style.display = 'none';
-  $('#cameraInput').value = '';
-  $('#galleryInput').value = '';
-
-  // Reset device bar
-  $('#deviceIcon').textContent = '📱';
-  $('#deviceName').textContent = '待选择 — 上传照片后自动识别';
-  $('#deviceName').classList.add('pending');
-  $('#deviceDetail').textContent = '';
-  $('#deviceBadge').textContent = '待识别';
-  $('#deviceBadge').className = 'device-badge badge-none';
-  $('#deviceOverride').classList.add('hidden');
-  $('#deviceSelect').value = '';
-  $('#lensBar').classList.remove('show');
-  $('#lensSelect').value = '';
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  $('#deviceBar').classList.remove('show');
+  $('#processing').classList.remove('active');
+  $('#resultArea').classList.remove('active');
+  $('#plansArea').classList.remove('active');
+  $('#metaBar').innerHTML=''; $('#dataSections').innerHTML='';
+  $('#reshootBtn').style.display='none';
+  $('#cameraInput').value=''; $('#galleryInput').value='';
+  $('#dirCarouselTrack').innerHTML=''; $('#dirCarouselDots').innerHTML='';
+  $('#planCarouselTrack').innerHTML=''; $('#planCarouselDots').innerHTML='';
+  $('#insightBlock').innerHTML=''; $('#dirActions').innerHTML='';
+  $('#infoPanel').innerHTML='';
+  $('#deviceSelect').value=''; $('#lensSelect').value='';
+  $('#lensRow').classList.remove('show');
+  $('#deviceSourceTag').textContent='识别中'; $('#deviceSourceTag').className='device-source-tag tag-none';
+  $('#deviceIcon').textContent='📱';
+  // 恢复所有 option 原始文本
+  _origOptionTexts.forEach((text, value) => {
+    const opt = $('#deviceSelect').querySelector(`option[value="${CSS.escape(value)}"]`);
+    if (opt) opt.textContent = text;
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
 }
-
-// Init
-$('#reshootBtn').style.display = 'none';
-
-// Device override change → show/hide lens bar
-$('#deviceSelect').addEventListener('change', () => {
-  const val = $('#deviceSelect').value;
-  if (val === 'dslr-mirrorless') {
-    $('#lensBar').classList.add('show');
-  } else {
-    $('#lensBar').classList.remove('show');
-    $('#lensSelect').value = '';
-  }
-});
+$('#reshootBtn').style.display='none';
 </script>
 </body>
 </html>

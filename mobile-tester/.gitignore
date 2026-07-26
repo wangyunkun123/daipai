@@ -1,3 +1,4 @@
 .env
 __pycache__/
 *.pyc
+style_cache.json
