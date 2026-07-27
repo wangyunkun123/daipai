@@ -417,6 +417,29 @@
     color: #ef4444; font-size: 13px; display: none; margin-top: 16px;
   }
   .error-msg.show { display: block; }
+
+  /* ====== Restore Banner ====== */
+  .restore-banner {
+    display: none; background: linear-gradient(135deg, rgba(34,211,238,0.12), rgba(74,222,128,0.08));
+    border: 1px solid rgba(34,211,238,0.3); border-radius: var(--radius-sm);
+    padding: 14px 16px; margin-bottom: 12px; animation: fadeUp 0.35s ease;
+  }
+  .restore-banner.show { display: flex; align-items: center; gap: 10px; }
+  .restore-banner .rb-icon { font-size: 24px; flex-shrink: 0; }
+  .restore-banner .rb-info { flex: 1; min-width: 0; }
+  .restore-banner .rb-title { font-size: 14px; font-weight: 600; color: var(--cyan); }
+  .restore-banner .rb-detail { font-size: 11px; color: var(--dim); margin-top: 2px; }
+  .restore-banner .rb-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .rb-btn {
+    padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; white-space: nowrap;
+  }
+  .rb-btn-restore { background: rgba(34,211,238,0.2); color: var(--cyan); }
+  .rb-btn-restore:active { background: rgba(34,211,238,0.35); }
+  .rb-btn-dismiss { background: transparent; color: var(--dimmer); border: 1px solid var(--border); }
+  .rb-btn-dismiss:active { color: var(--text); }
+  .restore-status { text-align: center; padding: 8px; font-size: 12px; color: var(--dim); display: none; }
+  .restore-status.show { display: block; }
 </style>
 </head>
 <body>
@@ -426,6 +449,20 @@
     <h1>📷 带拍</h1>
     <p>拍照上传 → 场景分析 → 方向选择 → 出方案</p>
   </div>
+
+  <!-- ====== Restore Banner ====== -->
+  <div class="restore-banner" id="restoreBanner">
+    <span class="rb-icon">💾</span>
+    <div class="rb-info">
+      <div class="rb-title">检测到上次的分析结果</div>
+      <div class="rb-detail" id="restoreDetail"></div>
+    </div>
+    <div class="rb-actions">
+      <button class="rb-btn rb-btn-restore" id="restoreBtn">恢复</button>
+      <button class="rb-btn rb-btn-dismiss" id="dismissRestoreBtn">忽略</button>
+    </div>
+  </div>
+  <div class="restore-status" id="restoreStatus"></div>
 
   <!-- ====== Device Bar (appears after EXIF, stays at top) ====== -->
   <div class="device-bar" id="deviceBar">
@@ -585,6 +622,144 @@ let currentLightPeriod = null;  // 天气光照时段
 let discoveredStyles = [];
 let techniquesUsed = [];
 let searchQuality = null;
+let currentPlans = [];  // 当前方案列表，用于切换时判断标注
+
+const STORAGE_KEY = 'daipai_last_session';
+const STORAGE_TTL = 24 * 60 * 60 * 1000;  // 24小时
+
+// ============================================================
+// Session 持久化——误关页面后找回
+// ============================================================
+function saveSessionState(phase) {
+  if (!sessionId) return;
+  try {
+    const d = allDirs[activeDirIdx] || {};
+    const data = {
+      sessionId, phase,
+      deviceName: currentDeviceName || d.style || '',
+      insight: ($('#insightBlock').textContent || '').slice(0, 60),
+      timestamp: Date.now()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e) { /* localStorage 不可用时静默失败 */ }
+}
+
+function checkSavedSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data.sessionId || !data.timestamp) return;
+    // 过期检查
+    if (Date.now() - data.timestamp > STORAGE_TTL) {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    // 显示恢复横幅
+    const detail = [];
+    if (data.deviceName) detail.push(`📱 ${data.deviceName}`);
+    if (data.insight) detail.push(`💡 ${data.insight}`);
+    const elapsed = Math.round((Date.now() - data.timestamp) / 60000);
+    detail.push(`⏱ ${elapsed < 1 ? '刚刚' : elapsed + '分钟前'}`);
+    $('#restoreDetail').textContent = detail.join(' · ');
+    $('#restoreBanner').classList.add('show');
+    // 绑定按钮
+    $('#restoreBtn').onclick = () => restoreSession(data.sessionId);
+    $('#dismissRestoreBtn').onclick = () => { $('#restoreBanner').classList.remove('show'); };
+  } catch(e) { /* 静默 */ }
+}
+
+function clearSavedSession() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  $('#restoreBanner').classList.remove('show');
+  $('#restoreStatus').classList.remove('show');
+  $('#restoreStatus').textContent = '';
+}
+
+async function restoreSession(sid) {
+  $('#restoreBanner').classList.remove('show');
+  $('#restoreStatus').classList.add('show');
+  $('#restoreStatus').textContent = '⏳ 正在恢复上次的分析结果...';
+  try {
+    const resp = await fetch(`/api/restore/${sid}`);
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({}));
+      $('#restoreStatus').textContent = '❌ ' + (err.error || '恢复失败');
+      clearSavedSession();
+      return;
+    }
+    const result = await resp.json();
+    if (!result.success || !result.data) {
+      $('#restoreStatus').textContent = '❌ 恢复数据异常';
+      clearSavedSession();
+      return;
+    }
+    const d = result.data;
+
+    // 1. 恢复照片
+    if (d.photo_b64) {
+      photoDataUrl = `data:image/jpeg;base64,${d.photo_b64}`;
+      $('#previewImg').src = photoDataUrl;
+      $('#previewThumb').classList.add('show');
+    }
+
+    // 2. 恢复设备栏
+    if (d.device_key && d.device_key !== 'unknown') {
+      showDeviceBar({
+        device_key: d.device_key,
+        device_name: d.device_name || '',
+        device_lenses: d.device_lenses || '',
+        is_camera: d.is_camera || false,
+        source: d.device_source || 'none',
+        exif: d.exif_data || {}
+      });
+      // 展示 EXIF 信息
+      if (d.exif_data && Object.keys(d.exif_data).length > 0) {
+        showExifInfo({ exif: d.exif_data, location_weather: d.location_weather, device_name: d.device_name, device_lenses: d.device_lenses });
+      }
+    }
+
+    // 3. 恢复场景分析
+    if (d.vision_json && Object.keys(d.vision_json).length > 0) {
+      showSceneInfo(d.vision_json);
+    }
+
+    // 4. 恢复 session_id
+    sessionId = sid;
+
+    // 5. 恢复方向结果
+    allDirs = d.directions || [];
+    discoveredStyles = d.discovered_styles || [];
+    techniquesUsed = d.techniques_used || [];
+    searchQuality = d.search_quality || null;
+    if (allDirs.length > 0) {
+      // 需要构造完整数据给 showDirectionsResult
+      showDirectionsResult({
+        session_id: sid,
+        presence: d.presence || '',
+        insight: d.insight || '',
+        scene_tier: d.scene_tier || '🥈',
+        directions: allDirs,
+        discovered_styles: discoveredStyles,
+        techniques_used: techniquesUsed,
+        search_quality: searchQuality
+      });
+    }
+
+    // 6. 恢复方案缓存
+    planCache = d.plan_cache || {};
+
+    // 7. 隐藏加载态
+    $('#processing').classList.remove('active');
+    finishLoading();
+
+    $('#restoreStatus').classList.remove('show');
+    // 滚动到结果区
+    $('#resultArea').scrollIntoView({ behavior: 'smooth' });
+  } catch(err) {
+    $('#restoreStatus').textContent = '❌ 网络错误：' + err.message;
+  }
+}
 
 // ============================================================
 // Loading UI
@@ -697,7 +872,8 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
     sessionId = null; allDirs = []; activeDirIdx = 0; activePlanIdx = 0;
     planCache = {}; currentDeviceKey = null; currentDeviceName = ''; currentDeviceLenses = '';
     currentLightInfo = null; currentColorInfo = null; currentLightPeriod = null;
-    discoveredStyles = []; techniquesUsed = []; searchQuality = null;
+    discoveredStyles = []; techniquesUsed = []; searchQuality = null; currentPlans = [];
+    clearSavedSession();  // 新上传开始，清除旧存档
     $('#planCarouselTrack').innerHTML = '';
     $('#planCarouselDots').innerHTML = '';
     $('#dataSections').innerHTML = '';
@@ -1036,6 +1212,7 @@ function showDirectionsResult(data) {
   $('#resultArea').classList.add('active');
   $('#reshootBtn').style.display = 'block';
   $('#resultArea').scrollIntoView({ behavior:'smooth' });
+  saveSessionState('directions');  // 自动保存——方便误关后找回
 }
 
 function renderDirectionCarousel() {
@@ -1174,6 +1351,7 @@ async function loadPlans(direction) {
 
 function renderPlans(plans, direction) {
   activePlanIdx = 0;
+  currentPlans = plans;
   const total = plans.length;
 
   // 渲染卡片
@@ -1194,9 +1372,9 @@ function renderPlans(plans, direction) {
     });
   });
 
-  // 滚动监听
+  // 滚动监听——切换方案时同步更新原图预览显隐
   const track = $('#planCarouselTrack');
-  track.onscroll = () => updateCarouselActive('planCarouselTrack', 'planCarouselDots', idx => { activePlanIdx = idx; });
+  track.onscroll = () => updateCarouselActive('planCarouselTrack', 'planCarouselDots', idx => { activePlanIdx = idx; togglePreviewForPlan(idx); });
 
   // Canvas 标注 + 事件绑定
   plans.forEach((p,i)=>{
@@ -1226,9 +1404,11 @@ function renderPlans(plans, direction) {
   });
 
   renderDataSections();
+  togglePreviewForPlan(0);  // 首套方案：有标注则隐藏原图
   $('#plansArea').classList.add('active');
   $('#reshootBtn').style.display = 'block';
   $('#plansArea').scrollIntoView({ behavior:'smooth' });
+  saveSessionState('plans');  // 自动保存——方案已生成，方便误关后找回
 }
 
 function renderPlanCard(p, i, direction) {
@@ -1450,6 +1630,16 @@ function showDirections() {
 // ============================================================
 // Canvas Annotations
 // ============================================================
+// 切换原图预览：有标注图就隐藏原图，没标注才显示原图
+function togglePreviewForPlan(idx) {
+  const plan = currentPlans[idx];
+  if (plan && plan.annotations && plan.annotations.length > 0) {
+    $('#previewThumb').classList.remove('show');
+  } else {
+    $('#previewThumb').classList.add('show');
+  }
+}
+
 function renderAnnotations(cid, annotations) {
   const canvas = document.getElementById(cid);
   if (!canvas) return;
@@ -1540,7 +1730,8 @@ function resetAll() {
   sessionId=null; allDirs=[]; activeDirIdx=0; activePlanIdx=0; photoDataUrl=null;
   planCache={}; currentDeviceKey=null; currentDeviceName=''; currentDeviceLenses='';
   currentLightInfo=null; currentColorInfo=null; currentLightPeriod=null;
-  discoveredStyles=[]; techniquesUsed=[]; searchQuality=null;
+  discoveredStyles=[]; techniquesUsed=[]; searchQuality=null; currentPlans=[];
+  clearSavedSession();  // 主动重置，清除存档
   $('#errorMsg').classList.remove('show');
   $('#previewThumb').classList.remove('show');
   $('#uploadZone').classList.remove('hidden');
@@ -1567,6 +1758,8 @@ function resetAll() {
   window.scrollTo({top:0,behavior:'smooth'});
 }
 $('#reshootBtn').style.display='none';
+// 页面加载时检查是否有上次未完成的分析
+checkSavedSession();
 </script>
 </body>
 </html>

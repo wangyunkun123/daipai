@@ -1747,6 +1747,22 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             "session_id": session_id
         })
 
+        # ── 保存完整恢复数据到 session（用户误关页面后可找回）──
+        sess = _sessions.get(session_id)
+        if sess:
+            sess['photo_b64'] = img_b64
+            sess['exif_data'] = exif_display
+            sess['location_weather'] = location_weather
+            sess['presence'] = presence
+            sess['insight'] = insight
+            sess['discovered_styles'] = discovered_styles
+            sess['techniques_used'] = techniques_used
+            sess['search_quality'] = search_quality
+            sess['device_name'] = device_ctx['name']
+            sess['device_lenses'] = device_ctx['lenses']
+            sess['is_camera'] = is_camera
+            sess['device_source'] = device_source
+
         # ── 完成 ──
         total_time = round(time.time() - t0, 1)
         total_tokens = (vision_usage.get('total_tokens', 0) +
@@ -2032,6 +2048,35 @@ def health():
         "sessions_active": len(_sessions),
         "processing": _processing
     })
+
+
+@app.route('/api/restore/<session_id>')
+def restore_session(session_id):
+    """恢复分析结果——用户误关页面后找回上次结果"""
+    session = get_session(session_id)
+    if not session:
+        return jsonify({"success": False, "error": "会话已过期（超过30分钟），请重新上传照片"}), 404
+
+    return jsonify({"success": True, "data": {
+        "photo_b64": session.get('photo_b64', ''),
+        "exif_data": session.get('exif_data', {}),
+        "location_weather": session.get('location_weather'),
+        "vision_json": session.get('vision_json', {}),
+        "presence": session.get('presence', ''),
+        "insight": session.get('insight', ''),
+        "scene_tier": session.get('scene_tier', '🥈'),
+        "directions": session.get('directions', []),
+        "discovered_styles": session.get('discovered_styles', []),
+        "techniques_used": session.get('techniques_used', []),
+        "search_quality": session.get('search_quality'),
+        "device_key": session.get('device_key', ''),
+        "device_name": session.get('device_name', ''),
+        "device_lenses": session.get('device_lenses', ''),
+        "is_camera": session.get('is_camera', False),
+        "device_source": session.get('device_source', 'none'),
+        "plan_cache": session.get('plan_cache', {}),
+        "created_at": session.get('created_at', 0)
+    }})
 
 
 if __name__ == '__main__':
