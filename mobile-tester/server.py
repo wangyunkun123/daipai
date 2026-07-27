@@ -2492,6 +2492,54 @@ def admin_stats():
     })
 
 
+# ── v3.6: 数据导入（本地 → 生产同步）──
+@app.route('/admin/import-data', methods=['POST'])
+@login_required
+def admin_import_data():
+    """导入风格和技法数据（用于本地→生产数据同步）"""
+    import sqlite3
+    data = request.get_json() or {}
+    styles = data.get('styles', [])
+    techniques = data.get('techniques', [])
+    imported_styles = 0
+    imported_techniques = 0
+
+    try:
+        db = sqlite3.connect(DB_PATH)
+        for s in styles:
+            db.execute('''INSERT OR REPLACE INTO styles (name, one_liner, source_type, fit_rationale, created_at, updated_at, verify_count)
+                          VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                       (s['name'], s.get('one_liner'), s.get('source_type', 'inference'),
+                        s.get('fit_rationale'), s.get('created_at'), s.get('updated_at'), s.get('verify_count', 1)))
+            imported_styles += 1
+        for t in techniques:
+            db.execute('''INSERT OR REPLACE INTO techniques (name, source_type, description, created_at, updated_at, verify_count)
+                          VALUES (?, ?, ?, ?, ?, ?)''',
+                       (t['name'], t.get('source_type', 'tutorial'),
+                        t.get('description'), t.get('created_at'), t.get('updated_at'), t.get('verify_count', 1)))
+            imported_techniques += 1
+        db.commit()
+        db.close()
+        return jsonify({"success": True, "imported_styles": imported_styles, "imported_techniques": imported_techniques})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/admin/export-data')
+@login_required
+def admin_export_data():
+    """导出风格和技法数据（JSON）"""
+    import sqlite3
+    try:
+        db = sqlite3.connect(DB_PATH)
+        styles = [dict(r) for r in db.execute('SELECT name, one_liner, source_type, fit_rationale, created_at, updated_at, verify_count FROM styles').fetchall()]
+        techniques = [dict(r) for r in db.execute('SELECT name, source_type, description, created_at, updated_at, verify_count FROM techniques').fetchall()]
+        db.close()
+        return jsonify({"styles": styles, "techniques": techniques})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── v3.5: 配额状态查询 ──
 @app.route('/quota-status')
 def quota_status():
