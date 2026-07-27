@@ -1374,20 +1374,83 @@ async function loadPlans(direction) {
   $('#plansArea').classList.add('active');
   $('#plansArea').scrollIntoView({ behavior:'smooth' });
 
+  const payload = {
+    session_id: sessionId,
+    direction_id: direction.id,
+    device: deviceKey !== currentDeviceKey ? deviceKey : null,
+    lens: lensKey || null
+  };
+
   try {
+    // ── 首次尝试：触发 LLM 生成 ──
     const resp = await fetch('/analyze/plans', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ session_id:sessionId, direction_id:direction.id,
-        device: deviceKey!==currentDeviceKey ? deviceKey : null, lens: lensKey||null })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
     const data = await resp.json();
     $('#planLoading').classList.remove('show');
-    if (!data.success) { showError(data.error||'方案生成失败'); return; }
-    planCache[cacheKey] = data.plans||[];
-    renderPlans(data.plans||[], direction);
-  } catch(err) {
+    if (!data.success) { showError(data.error || '方案生成失败'); return; }
+    planCache[cacheKey] = data.plans || [];
+    renderPlans(data.plans || [], direction);
+    return;
+  } catch (err) {
+    // 首次请求失败（通常是移动网络 NAT 空闲超时断开连接）
+    // 不要立即报错——服务端可能仍在后台生成中，轮询检查缓存
+    console.log('First plans request failed: ' + err.message + ', starting poll...');
+  }
+
+  // ── 轮询模式：每 3 秒检查一次缓存（最多 20 次 = 60 秒）──
+  const pollPayload = { ...payload, poll: true };
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await new Promise(r => setTimeout(r, 3000));
+
+    try {
+      const resp = await fetch('/analyze/plans', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pollPayload)
+      });
+      const data = await resp.json();
+
+      if (data.success && data.plans) {
+        // 缓存命中！服务端已生成完毕
+        $('#planLoading').classList.remove('show');
+        planCache[cacheKey] = data.plans || [];
+        renderPlans(data.plans || [], direction);
+        return;
+      }
+      if (data.success && data.generating) {
+        // 还在生成中，继续等待
+        continue;
+      }
+      if (!data.success) {
+        // session 过期等服务端错误
+        $('#planLoading').classList.remove('show');
+        showError(data.error || '方案生成失败');
+        return;
+      }
+    } catch (pollErr) {
+      // 轮询本身失败（网络抖动），继续下一次
+      console.log('Poll attempt ' + (attempt + 1) + ' failed: ' + pollErr.message);
+    }
+  }
+
+  // ── 轮询超时，再完整重试一次（可能服务器压力大、或之前的生成请求丢了）──
+  try {
+    const retryResp = await fetch('/analyze/plans', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const retryData = await retryResp.json();
     $('#planLoading').classList.remove('show');
-    showError('方案请求失败：'+err.message);
+    if (retryData.success) {
+      planCache[cacheKey] = retryData.plans || [];
+      renderPlans(retryData.plans || [], direction);
+      return;
+    }
+    showError(retryData.error || '方案生成失败');
+  } catch (finalErr) {
+    $('#planLoading').classList.remove('show');
+    showError('方案请求失败：请检查网络后重试');
   }
 }
 

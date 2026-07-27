@@ -50,6 +50,10 @@ SESSION_TTL = 1800  # 30分钟
 _processing_lock = threading.Lock()
 _processing = False
 
+# 方案生成并发控制——防止重复 LLM 调用（retry/poll 同时来时只生成一次）
+_plan_generating: dict[str, float] = {}  # key: global_cache_key → started_at_timestamp
+_plan_generating_lock = threading.Lock()
+
 # Session 存储
 _sessions: dict[str, dict] = {}
 
@@ -1791,7 +1795,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
                 source_types_str = ','.join(f"{k}:{v}" for k, v in search_meta.get('sources', {}).items())
                 log_search(trace_id, 'style', scene_type[:200],
                           search_meta.get('total_results', 0) if isinstance(search_meta, dict) else 0,
-                          search_quality_web, source_types_str, search_duration)
+                          search_quality_web, source_types_str, search_duration,
+                          results_summary=search_text[:500] if search_text else None)
             except Exception:
                 pass
         except Exception as e:
@@ -1824,7 +1829,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
                 try:
                     log_search(trace_id, 'location', search_place[:200],
                               len(loc_text.split('\n')) if loc_text else 0,
-                              loc_quality, '', loc_duration)
+                              loc_quality, '', loc_duration,
+                              results_summary=loc_text[:500] if loc_text else None)
                 except Exception:
                     pass
             except Exception as e:
@@ -2052,6 +2058,50 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         print(f"[Plans] Cache hit: {cache_key}", file=sys.stderr, flush=True)
         return session['plan_cache'][cache_key], None
 
+    # ── 防止重复 LLM 调用（retry/poll 并发时同一 key 只生成一次）──
+    global_key = f"{session_id}:{cache_key}"
+    with _plan_generating_lock:
+        # 清理 stale entries（超过 5 分钟的标记视为无效，可能 worker 被 kill）
+        now = time.time()
+        stale = [k for k, t in _plan_generating.items() if now - t > 300]
+        for k in stale:
+            _plan_generating.pop(k, None)
+        if stale:
+            print(f"[Plans] Cleaned {len(stale)} stale generating entries", file=sys.stderr, flush=True)
+
+        if global_key in _plan_generating:
+            is_generating = True
+        else:
+            is_generating = False
+            _plan_generating[global_key] = time.time()
+
+    if is_generating:
+        # 另一个请求正在生成中，等待它完成（在锁外等待，不阻塞其他请求）
+        waited = 0
+        while waited < 60:
+            time.sleep(1.5)
+            waited += 1.5
+            # 每 3 秒检查一次缓存
+            if waited % 3 < 0.5:
+                sess = get_session(session_id)
+                if sess and cache_key in sess.get('plan_cache', {}):
+                    print(f"[Plans] Waited {waited:.0f}s for in-progress generation, cache now ready", file=sys.stderr, flush=True)
+                    return sess['plan_cache'][cache_key], None
+            # 检查生成标记是否已清除（生成失败或完成）
+            with _plan_generating_lock:
+                if global_key not in _plan_generating:
+                    sess = get_session(session_id)
+                    if sess and cache_key in sess.get('plan_cache', {}):
+                        return sess['plan_cache'][cache_key], None
+                    # 生成失败且无缓存 → 重新标记并触发生成
+                    _plan_generating[global_key] = time.time()
+                    break
+
+        # 等待超时（>60s）— 原请求可能还在跑但特别慢，不触发生成避免重复
+        if waited >= 60:
+            print(f"[Plans] Timed out waiting for existing generation ({global_key})", file=sys.stderr, flush=True)
+            return None, "方案生成时间较长，请稍后重试"
+
     # 构建设备上下文
     device_text, _ = build_device_context(device_key, lens_key)
     device_constraints = build_device_constraints(device_key, lens_key)
@@ -2132,6 +2182,10 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     except Exception as e:
         print(f"[Plans] Error: {e}", file=sys.stderr, flush=True)
         return None, str(e)
+    finally:
+        # 清理“生成中”标记
+        with _plan_generating_lock:
+            _plan_generating.pop(global_key, None)
 
 
 # ============================================================
@@ -2226,16 +2280,52 @@ def analyze():
 
 @app.route('/analyze/plans', methods=['POST'])
 def analyze_plans():
-    """按需生成方案——用户选方向后调用"""
+    """按需生成方案——用户选方向后调用。
+
+    支持 poll 模式：参数 poll=true 时只检查缓存，不触发 LLM 生成。
+    用于解决移动网络 NAT 空闲超时断开连接的问题（首次请求失败后前端轮询缓存）。
+    """
     data = request.get_json() or {}
     session_id = data.get('session_id', '')
     direction_id = data.get('direction_id', '')
     device_override = data.get('device', None) or None
     lens_key = data.get('lens', None) or None
+    poll_only = data.get('poll', False)
 
     if not session_id or not direction_id:
         return jsonify({"success": False, "error": "缺少 session_id 或 direction_id"}), 400
 
+    # 确定缓存 key
+    session = get_session(session_id)
+    if not session:
+        return jsonify({"success": False, "error": "会话已过期，请重新上传照片"}), 404
+
+    cache_key = f"{direction_id}:{device_override or session['device_key']}"
+    if lens_key:
+        cache_key += f":{lens_key}"
+
+    # 检查缓存
+    if cache_key in session.get('plan_cache', {}):
+        return jsonify({
+            "success": True,
+            "plans": session['plan_cache'][cache_key],
+            "direction_id": direction_id,
+            "cached": True
+        })
+
+    # poll 模式：检查是否真的有生成在进行中
+    if poll_only:
+        global_key = f"{session_id}:{cache_key}"
+        with _plan_generating_lock:
+            is_generating = global_key in _plan_generating
+        if is_generating:
+            return jsonify({"success": True, "generating": True})
+        else:
+            # 没有生成在进行中（首次请求可能根本没到服务器）
+            # → 降级为正常模式，触发生成
+            print(f"[Plans] Poll found no in-progress generation, falling back to full generation", file=sys.stderr, flush=True)
+
+    # 正常模式：触发 LLM 生成（可能耗时 30-90 秒，移动网络 NAT 可能断开）
     plans, error = generate_plans_for_direction(session_id, direction_id, device_override, lens_key)
 
     if error:
@@ -2245,7 +2335,7 @@ def analyze_plans():
         "success": True,
         "plans": plans,
         "direction_id": direction_id,
-        "device": device_override or get_session(session_id)['device_key'] if get_session(session_id) else 'unknown'
+        "device": device_override or session['device_key']
     })
 
 

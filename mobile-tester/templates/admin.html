@@ -51,17 +51,42 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 
 /* Feedback table */
 .fb-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.fb-table th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); color: var(--dim); font-weight: 500; }
+.fb-table th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); color: var(--dim); font-weight: 500; white-space: nowrap; }
 .fb-table td { padding: 8px 6px; border-bottom: 1px solid rgba(42,42,42,0.5); color: var(--text); }
 .fb-table .rt-like { color: var(--green); }
 .fb-table .rt-dislike { color: var(--red); }
 
-/* Trend */
-.trend-bar { display: flex; gap: 4px; align-items: flex-end; height: 80px; padding: 8px 0; }
-.trend-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.trend-day .bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--purple); min-height: 2px; transition: height 0.3s; }
-.trend-day .day { font-size: 10px; color: var(--dim); }
-.trend-day .cnt { font-size: 10px; color: var(--dimmer); }
+/* ── 响应式表格：窄屏自动切卡片布局 ── */
+@media (max-width: 600px) {
+  .resp-table thead { display: none; }
+  .resp-table, .resp-table tbody { display: block; }
+  .resp-table tr { display: block; margin-bottom: 8px; background: var(--card); border-radius: var(--radius-sm); padding: 10px; border: 1px solid var(--border); }
+  .resp-table td { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; border: none; font-size: 11px; gap: 8px; }
+  .resp-table td::before { content: attr(data-label); color: var(--dimmer); font-size: 10px; flex-shrink: 0; white-space: nowrap; }
+  .resp-table td .td-val { text-align: right; flex: 1; word-break: break-all; }
+}
+/* 宽屏下 data-label 不显示，保持正常表格 */
+@media (min-width: 601px) {
+  .resp-table td::before { content: none !important; }
+}
+
+/* ── 折叠/展开 ── */
+.hidden-row { display: none; }
+.hidden-row.show { display: table-row; }
+@media (max-width: 600px) {
+  .hidden-row.show { display: block; }
+}
+.collapse-btn {
+  display: block; width: 100%; padding: 8px; margin: 8px 0;
+  background: var(--card2); border: 1px dashed var(--border); border-radius: 8px;
+  color: var(--dim); font-size: 12px; cursor: pointer; text-align: center;
+}
+.collapse-btn:active { background: var(--card); color: var(--text); }
+.collapse-btn-row td { padding: 4px 0; border: none; }
+
+/* ── SVG 折线图 ── */
+.svg-chart-wrap { margin: 8px 0; padding: 4px; background: var(--card); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.svg-chart { display: block; width: 100%; }
 
 /* Refresh */
 .refresh-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -107,14 +132,14 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 
 <!-- 📈 7天趋势 -->
 <h2>📈 7天使用趋势</h2>
-<div class="trend-bar" id="trendBar"></div>
+<div class="svg-chart-wrap" id="trendChart"></div>
 
 <!-- 🧠 v3.6: AI API 调用监控 -->
 <h2>🧠 AI API 调用监控</h2>
 <div class="stats-grid" id="apiStatsGrid"></div>
-<div class="trend-bar" id="apiTrendBar" style="height:50px"></div>
+<div class="svg-chart-wrap" id="apiTrendChart"></div>
 <div style="overflow-x:auto;margin-top:8px">
-<table class="fb-table">
+<table class="fb-table resp-table">
 <thead><tr><th>时间</th><th>类型</th><th>Tokens</th><th>耗时</th><th>状态</th><th>Session</th></tr></thead>
 <tbody id="apiCallLog"></tbody>
 </table>
@@ -124,8 +149,8 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 <h2>🌐 Web 搜索追踪</h2>
 <div class="stats-grid" id="searchStatsGrid"></div>
 <div style="overflow-x:auto;margin-top:8px">
-<table class="fb-table">
-<thead><tr><th>时间</th><th>类型</th><th>查询</th><th>结果</th><th>质量</th><th>耗时</th></tr></thead>
+<table class="fb-table resp-table">
+<thead><tr><th>时间</th><th>类型</th><th>查询关键词</th><th>搜索结果</th><th>质量</th><th>耗时</th></tr></thead>
 <tbody id="searchLog"></tbody>
 </table>
 </div>
@@ -157,6 +182,61 @@ const REASON_LABELS = {
   'want_image_gen': '🖼️ 需要生图直接示意',
   'other': '💬 其他'
 };
+
+// ── 折叠/展开通用函数 ──
+function toggleCollapse(btn) {
+  const tbody = btn.closest('tbody') || btn.parentElement;
+  const hiddenRows = tbody.querySelectorAll('.hidden-row');
+  const isOpen = hiddenRows.length > 0 && hiddenRows[0].classList.contains('show');
+  if (isOpen) {
+    hiddenRows.forEach(r => r.classList.remove('show'));
+    btn.textContent = btn.dataset.expandText || '展开全部 ▼';
+  } else {
+    hiddenRows.forEach(r => r.classList.add('show'));
+    btn.textContent = '收起 ▲';
+  }
+}
+
+// ── SVG 折线图渲染 ──
+function renderLineChart(containerId, data, color, labelFn) {
+  const container = document.getElementById(containerId);
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="empty">暂无数据</div>';
+    return;
+  }
+
+  const points = data.map((d, i) => ({x: i, y: d.val, label: d.label}));
+  const maxY = Math.max(...points.map(p => p.y), 1);
+  const W = 300, H = 80, PAD = {top: 12, right: 16, bottom: 16, left: 16};
+  const pw = W - PAD.left - PAD.right;
+  const ph = H - PAD.top - PAD.bottom;
+
+  const scaleX = i => PAD.left + (points.length > 1 ? (i / (points.length - 1)) * pw : pw / 2);
+  const scaleY = v => PAD.top + ph - (v / maxY) * ph;
+
+  const linePath = points.map((p, i) => `${i===0?'M':'L'}${scaleX(i).toFixed(1)},${scaleY(p.y).toFixed(1)}`).join(' ');
+  const areaPath = linePath + ` L${scaleX(points.length-1).toFixed(1)},${H-PAD.bottom} L${scaleX(0).toFixed(1)},${H-PAD.bottom} Z`;
+
+  let html = `<svg class="svg-chart" viewBox="0 0 ${W} ${H}" style="max-width:100%">`;
+  // 网格线
+  for (let i = 0; i <= 3; i++) {
+    const gy = PAD.top + (ph / 3) * i;
+    html += `<line x1="${PAD.left}" y1="${gy.toFixed(1)}" x2="${W-PAD.right}" y2="${gy.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;
+  }
+  // 填充区域
+  html += `<polygon points="${areaPath}" fill="${color}" class="chart-area" />`;
+  // 折线
+  html += `<polyline points="${linePath}" class="chart-line" stroke="${color}" />`;
+  // 数据点 + 标签
+  points.forEach((p, i) => {
+    const cx = scaleX(i).toFixed(1), cy = scaleY(p.y).toFixed(1);
+    html += `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${color}" class="chart-dot" stroke="var(--bg)"/>`;
+    html += `<text x="${cx}" y="${H-4}" text-anchor="middle" font-size="8">${p.label}</text>`;
+    html += `<text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="9" fill="${color}" font-weight="600">${p.y}</text>`;
+  });
+  html += '</svg>';
+  container.innerHTML = html;
+}
 
 async function loadData() {
   try {
@@ -248,19 +328,13 @@ function render(d) {
     }).join('');
   }
 
-  // Trend
+  // 7天趋势 → SVG 折线图
   const trend = f.trend || [];
-  const tb = document.getElementById('trendBar');
-  if (trend.length === 0) {
-    tb.innerHTML = '<span class="empty">暂无数据</span>';
-  } else {
-    const maxVal = Math.max(...trend.map(t=>t.total||0), 1);
-    tb.innerHTML = trend.map(t => {
-      const h = Math.max(2, Math.round((t.total||0) / maxVal * 70));
-      const day = (t.usage_date||'').slice(5); // MM-DD
-      return `<div class="trend-day"><div class="cnt">${t.total||0}</div><div class="bar" style="height:${h}px"></div><div class="day">${day}</div></div>`;
-    }).join('');
-  }
+  const chartData = trend.map(t => ({
+    val: t.total||0,
+    label: (t.usage_date||'').slice(5)  // MM-DD
+  }));
+  renderLineChart('trendChart', chartData, '#a78bfa');
 
   // ── v3.6: 三块新监控 ──
   renderApiStats(d.api_stats);
@@ -288,40 +362,43 @@ function renderApiStats(as) {
     <div class="stat-card"><div class="val" style="font-size:14px">👁${v.cnt||0} 🎬${d.cnt||0} 📋${p.cnt||0}</div><div class="lbl">今日 vision/directions/plans</div></div>
   `;
 
-  // Token 趋势条
-  const atb = document.getElementById('apiTrendBar');
-  const aTrend = as.trend || [];
-  if (aTrend.length === 0) {
-    atb.innerHTML = '<span class="empty">暂无数据</span>';
-  } else {
-    const maxT = Math.max(...aTrend.map(t=>t.tokens||0), 1);
-    atb.innerHTML = aTrend.map(t => {
-      const h = Math.max(2, Math.round((t.tokens||0) / maxT * 40));
-      const day = (t.day||'').slice(5);
-      return `<div class="trend-day"><div class="cnt" style="font-size:9px">${((t.tokens||0)/1000).toFixed(0)}k</div><div class="bar" style="height:${h}px;background:var(--green)"></div><div class="day">${day}</div></div>`;
-    }).join('');
-  }
+  // Token 趋势 → SVG 折线图
+  const aTrend = (as.trend || []).map(t => ({
+    val: t.tokens||0,
+    label: (t.day||'').slice(5)
+  }));
+  renderLineChart('apiTrendChart', aTrend, '#4ade80');
 
-  // 最近调用明细
+  // 最近调用明细（默认显示 5 条，其余折叠）
   const recent = as.recent || [];
   const alog = document.getElementById('apiCallLog');
   if (recent.length === 0) {
     alog.innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
   } else {
     const typeLabel = {vision:'👁 视觉识别', directions:'🎬 方向生成', plans:'📋 方案生成'};
-    alog.innerHTML = recent.map(r => {
+    const renderRow = (r, hidden) => {
       const time = (r.created_at||'').slice(11,19);
       const icon = r.success ? '✅' : '❌';
       const sid = (r.session_id||'').slice(0,8);
-      return `<tr>
-        <td>${time}</td>
-        <td>${typeLabel[r.call_type]||r.call_type}</td>
-        <td>${r.total_tokens||0}</td>
-        <td>${r.duration_ms||0}ms</td>
-        <td>${icon}</td>
-        <td style="font-size:10px;color:var(--dimmer)">${sid}</td>
+      return `<tr class="${hidden?'hidden-row':''}">
+        <td data-label="时间"><span class="td-val">${time}</span></td>
+        <td data-label="类型"><span class="td-val">${typeLabel[r.call_type]||r.call_type}</span></td>
+        <td data-label="Tokens"><span class="td-val">${(r.total_tokens||0).toLocaleString()}</span></td>
+        <td data-label="耗时"><span class="td-val">${r.duration_ms||0}ms</span></td>
+        <td data-label="状态"><span class="td-val">${icon}</span></td>
+        <td data-label="Session"><span class="td-val" style="font-size:10px;color:var(--dimmer)">${sid}</span></td>
       </tr>`;
-    }).join('');
+    };
+
+    const DEFAULT_SHOW = 5;
+    let html = recent.slice(0, DEFAULT_SHOW).map(r => renderRow(r, false)).join('');
+    if (recent.length > DEFAULT_SHOW) {
+      html += recent.slice(DEFAULT_SHOW).map(r => renderRow(r, true)).join('');
+      html += `<tr class="collapse-btn-row"><td colspan="6">
+        <button class="collapse-btn" data-expand-text="展开全部 (${recent.length}条) ▼" onclick="toggleCollapse(this)">展开全部 (${recent.length}条) ▼</button>
+      </td></tr>`;
+    }
+    alog.innerHTML = html;
   }
 }
 
@@ -340,27 +417,39 @@ function renderSearchStats(ss) {
     <div class="stat-card"><div class="val red">${(ss.total_searches||0) - (ss.total_with_results||0)}</div><div class="lbl">无结果</div></div>
   `;
 
-  // 最近搜索
+  // 最近搜索（默认显示 1 条，其余折叠）
   const recent = ss.recent || [];
   const slog = document.getElementById('searchLog');
   if (recent.length === 0) {
     slog.innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
   } else {
     const typeLabel = {style:'🎨 风格', location:'📍 位置'};
-    slog.innerHTML = recent.map(r => {
+    const renderRow = (r, hidden) => {
       const time = (r.created_at||'').slice(11,19);
-      const query = (r.query_text||'').slice(0,50);
+      const query = (r.query_text||'').slice(0,80);
       const qualityIcon = r.result_count > 0 ? '🟢' : '🔴';
-      const sources = (r.source_types||'').slice(0,30);
-      return `<tr>
-        <td>${time}</td>
-        <td>${typeLabel[r.search_type]||r.search_type}</td>
-        <td style="font-size:11px">${esc(query)}</td>
-        <td>${r.result_count||0}条 ${sources ? '('+esc(sources)+')' : ''}</td>
-        <td>${qualityIcon}</td>
-        <td>${r.duration_ms||0}ms</td>
+      const summary = r.results_summary
+        ? esc(r.results_summary.slice(0, 80)) + (r.results_summary.length > 80 ? '…' : '')
+        : ((r.source_types||'') ? esc(r.source_types).slice(0,60) : '-');
+      return `<tr class="${hidden?'hidden-row':''}">
+        <td data-label="时间"><span class="td-val">${time}</span></td>
+        <td data-label="类型"><span class="td-val">${typeLabel[r.search_type]||r.search_type}</span></td>
+        <td data-label="查询关键词"><span class="td-val" style="font-size:11px;word-break:break-all">${esc(query)||'-'}</span></td>
+        <td data-label="搜索结果"><span class="td-val" style="font-size:10px;color:var(--dim);word-break:break-all">${summary}</span></td>
+        <td data-label="质量"><span class="td-val">${qualityIcon}</span></td>
+        <td data-label="耗时"><span class="td-val">${r.duration_ms||0}ms</span></td>
       </tr>`;
-    }).join('');
+    };
+
+    const DEFAULT_SHOW = 1;
+    let html = recent.slice(0, DEFAULT_SHOW).map(r => renderRow(r, false)).join('');
+    if (recent.length > DEFAULT_SHOW) {
+      html += recent.slice(DEFAULT_SHOW).map(r => renderRow(r, true)).join('');
+      html += `<tr class="collapse-btn-row"><td colspan="6">
+        <button class="collapse-btn" data-expand-text="展开全部 (${recent.length}条) ▼" onclick="toggleCollapse(this)">展开全部 (${recent.length}条) ▼</button>
+      </td></tr>`;
+    }
+    slog.innerHTML = html;
   }
 }
 
@@ -428,7 +517,7 @@ async function approve(id, action) {
     });
     const d = await r.json();
     if (d.success) {
-      loadData(); // 重新加载
+      loadData();
     } else {
       if (card) card.style.opacity = '1';
       alert(d.message || '操作失败');
@@ -444,7 +533,6 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// 自动刷新（每30秒）
 loadData();
 setInterval(loadData, 30000);
 </script>

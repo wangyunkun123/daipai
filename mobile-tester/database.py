@@ -177,6 +177,14 @@ def _init_tables(conn):
     """)
     conn.commit()
 
+    # v3.7: 迁移——search_log 加 results_summary 列（已有列则跳过）
+    try:
+        conn.execute("ALTER TABLE search_log ADD COLUMN results_summary TEXT")
+        conn.commit()
+        print("[DB] Migration: added results_summary column to search_log", file=sys.stderr, flush=True)
+    except Exception:
+        pass  # 列已存在
+
 
 # ============================================================
 # 风格积累（替代 style_cache.json 的 accumulate_styles）
@@ -481,16 +489,18 @@ def log_api_call(session_id, call_type, model='', prompt_tokens=0,
 
 
 def log_search(session_id, search_type, query_text='', result_count=0,
-               result_quality='🔴', source_types=None, duration_ms=0):
-    """记录一次 Web 搜索执行"""
+               result_quality='🔴', source_types=None, duration_ms=0,
+               results_summary=None):
+    """记录一次 Web 搜索执行（v3.7: 可选 results_summary 存搜索摘要）"""
     conn = get_db()
     try:
         conn.execute("""
             INSERT INTO search_log (session_id, search_type, query_text, result_count,
-                                    result_quality, source_types, duration_ms)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                                    result_quality, source_types, duration_ms, results_summary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (session_id, search_type, query_text[:300], result_count,
-              result_quality, source_types or '', duration_ms))
+              result_quality, source_types or '', duration_ms,
+              (results_summary or '')[:500]))
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -573,7 +583,7 @@ def get_search_stats():
         # 最近 30 条
         recent = [dict(r) for r in conn.execute("""
             SELECT session_id, search_type, query_text, result_count,
-                   result_quality, source_types, duration_ms, created_at
+                   result_quality, source_types, duration_ms, results_summary, created_at
             FROM search_log ORDER BY id DESC LIMIT 30
         """).fetchall()]
 
