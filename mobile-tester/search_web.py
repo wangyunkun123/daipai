@@ -19,14 +19,14 @@ def _search_ddg(query, max_results=5):
     返回 [{"title": "", "url": "", "snippet": ""}] 或空列表。
     """
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
         results = []
         with DDGS() as ddgs:
             for r in ddgs.text(query, max_results=max_results):
                 results.append({
                     "title": r.get("title", ""),
-                    "url": r.get("href", ""),
-                    "snippet": r.get("body", ""),
+                    "url": r.get("url", r.get("href", "")),
+                    "snippet": r.get("body", r.get("content", "")),
                 })
         return results
     except Exception as e:
