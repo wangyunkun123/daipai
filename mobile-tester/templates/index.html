@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>带拍 v3.5</title>
+<title>带拍 LAB · 本地测试</title>
 <style>
   :root {
     --bg: #0a0a0a; --card: #141414; --card2: #1a1a1a; --text: #e8e8e8;
@@ -24,7 +24,17 @@
   .header { text-align:center; padding:16px 0 8px; }
   .header h1 { font-size:20px; font-weight:700; letter-spacing:-0.3px;
     background: linear-gradient(135deg, #4ade80, #22d3ee);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .lab-badge {
+    display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
+    padding: 2px 6px; border-radius: 4px;
+    background: rgba(167,139,250,0.2); color: var(--purple);
+    border: 1px solid rgba(167,139,250,0.35);
+    -webkit-text-fill-color: var(--purple);
+    vertical-align: middle; position: relative; top: -1px;
+  }
   .header p { font-size:12px; color:var(--dim); margin-top:2px; }
 
   /* ====== Device Bar ====== */
@@ -533,7 +543,7 @@
 <div class="app">
 
   <div class="header">
-    <h1>📷 带拍</h1>
+    <h1>📷 带拍 <span class="lab-badge">LAB</span></h1>
     <p>拍照上传 → 场景分析 → 方向选择 → 出方案</p>
   </div>
 
