@@ -56,26 +56,9 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 .fb-table .rt-like { color: var(--green); }
 .fb-table .rt-dislike { color: var(--red); }
 
-/* ── 响应式表格：窄屏自动切卡片布局 ── */
-@media (max-width: 600px) {
-  .resp-table thead { display: none; }
-  .resp-table, .resp-table tbody { display: block; }
-  .resp-table tr { display: block; margin-bottom: 8px; background: var(--card); border-radius: var(--radius-sm); padding: 10px; border: 1px solid var(--border); }
-  .resp-table td { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; border: none; font-size: 11px; gap: 8px; }
-  .resp-table td::before { content: attr(data-label); color: var(--dimmer); font-size: 10px; flex-shrink: 0; white-space: nowrap; }
-  .resp-table td .td-val { text-align: right; flex: 1; word-break: break-all; }
-}
-/* 宽屏下 data-label 不显示，保持正常表格 */
-@media (min-width: 601px) {
-  .resp-table td::before { content: none !important; }
-}
-
 /* ── 折叠/展开 ── */
 .hidden-row { display: none; }
 .hidden-row.show { display: table-row; }
-@media (max-width: 600px) {
-  .hidden-row.show { display: block; }
-}
 .collapse-btn {
   display: block; width: 100%; padding: 8px; margin: 8px 0;
   background: var(--card2); border: 1px dashed var(--border); border-radius: 8px;
@@ -139,7 +122,7 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 <div class="stats-grid" id="apiStatsGrid"></div>
 <div class="svg-chart-wrap" id="apiTrendChart"></div>
 <div style="overflow-x:auto;margin-top:8px">
-<table class="fb-table resp-table">
+<table class="fb-table">
 <thead><tr><th>时间</th><th>类型</th><th>Tokens</th><th>耗时</th><th>状态</th><th>Session</th></tr></thead>
 <tbody id="apiCallLog"></tbody>
 </table>
@@ -149,7 +132,7 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 <h2>🌐 Web 搜索追踪</h2>
 <div class="stats-grid" id="searchStatsGrid"></div>
 <div style="overflow-x:auto;margin-top:8px">
-<table class="fb-table resp-table">
+<table class="fb-table">
 <thead><tr><th>时间</th><th>类型</th><th>查询关键词</th><th>搜索结果</th><th>质量</th><th>耗时</th></tr></thead>
 <tbody id="searchLog"></tbody>
 </table>
@@ -381,12 +364,12 @@ function renderApiStats(as) {
       const icon = r.success ? '✅' : '❌';
       const sid = (r.session_id||'').slice(0,8);
       return `<tr class="${hidden?'hidden-row':''}">
-        <td data-label="时间"><span class="td-val">${time}</span></td>
-        <td data-label="类型"><span class="td-val">${typeLabel[r.call_type]||r.call_type}</span></td>
-        <td data-label="Tokens"><span class="td-val">${(r.total_tokens||0).toLocaleString()}</span></td>
-        <td data-label="耗时"><span class="td-val">${r.duration_ms||0}ms</span></td>
-        <td data-label="状态"><span class="td-val">${icon}</span></td>
-        <td data-label="Session"><span class="td-val" style="font-size:10px;color:var(--dimmer)">${sid}</span></td>
+        <td>${time}</td>
+        <td>${typeLabel[r.call_type]||r.call_type}</td>
+        <td>${(r.total_tokens||0).toLocaleString()}</td>
+        <td>${r.duration_ms||0}ms</td>
+        <td>${icon}</td>
+        <td style="font-size:10px;color:var(--dimmer)">${sid}</td>
       </tr>`;
     };
 
@@ -432,12 +415,12 @@ function renderSearchStats(ss) {
         ? esc(r.results_summary.slice(0, 80)) + (r.results_summary.length > 80 ? '…' : '')
         : ((r.source_types||'') ? esc(r.source_types).slice(0,60) : '-');
       return `<tr class="${hidden?'hidden-row':''}">
-        <td data-label="时间"><span class="td-val">${time}</span></td>
-        <td data-label="类型"><span class="td-val">${typeLabel[r.search_type]||r.search_type}</span></td>
-        <td data-label="查询关键词"><span class="td-val" style="font-size:11px;word-break:break-all">${esc(query)||'-'}</span></td>
-        <td data-label="搜索结果"><span class="td-val" style="font-size:10px;color:var(--dim);word-break:break-all">${summary}</span></td>
-        <td data-label="质量"><span class="td-val">${qualityIcon}</span></td>
-        <td data-label="耗时"><span class="td-val">${r.duration_ms||0}ms</span></td>
+        <td>${time}</td>
+        <td>${typeLabel[r.search_type]||r.search_type}</td>
+        <td style="font-size:11px;word-break:break-all">${esc(query)||'-'}</td>
+        <td style="font-size:10px;color:var(--dim);word-break:break-all">${summary}</td>
+        <td>${qualityIcon}</td>
+        <td>${r.duration_ms||0}ms</td>
       </tr>`;
     };
 
