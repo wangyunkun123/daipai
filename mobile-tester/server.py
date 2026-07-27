@@ -25,7 +25,7 @@ from PIL import Image
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation
 from search_web import search_style_inspiration, search_location_intel
-from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync
+from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS
 
 app = Flask(__name__)
 
@@ -38,6 +38,7 @@ DOUBAO_MODEL = "doubao-seed-2.0-pro"
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
 STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
+DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "10"))  # 每人每天免费次数
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
 VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
 REQUEST_TIMEOUT = 300  # 含大图上传时间
@@ -997,7 +998,7 @@ def get_location_weather(exif_result):
 # Session 管理
 # ============================================================
 
-def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier):
+def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None):
     """创建分析会话"""
     session_id = uuid.uuid4().hex[:12]
     _sessions[session_id] = {
@@ -1008,7 +1009,8 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
         'directions': directions,
         'scene_tier': scene_tier,
         'plan_cache': {},   # key: f"{direction_id}:{device_key}"
-        'created_at': time.time()
+        'created_at': time.time(),
+        'client_ip': client_ip
     }
     _cleanup_old_sessions()
     return session_id
@@ -1383,7 +1385,7 @@ def get_tier_constraint(scene_tier):
 # 流式分析生成器（v3.5：渐进式——EXIF→场景→方向，方案按需）
 # ============================================================
 
-def analyze_photo_stream(image_path, device_override=None, lens_key=None):
+def analyze_photo_stream(image_path, device_override=None, lens_key=None, client_ip=None):
     """流式照片分析——SSE 事件生成器
     阶段：EXIF → 视觉分析 → 方向卡片（不含方案）
     方案由 /analyze/plans 按需生成
@@ -1729,8 +1731,23 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             device_key=final_device_key,
             device_context=device_text,
             directions=directions,
-            scene_tier=scene_tier
+            scene_tier=scene_tier,
+            client_ip=client_ip
         )
+
+        # ── 记录使用统计 ──
+        try:
+            save_usage_session(
+                session_id=session_id,
+                ip_address=client_ip,
+                device_key=final_device_key,
+                device_name=device_ctx.get('name', '') if device_ctx else '',
+                scene_type=scene_type,
+                scene_tier=scene_tier,
+                direction_count=len(directions)
+            )
+        except Exception as e:
+            print(f"[Stats] Save usage session error: {e}", file=sys.stderr, flush=True)
 
         # ── 风格积累（异步不影响响应）──
         try:
@@ -1874,6 +1891,21 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         session['plan_cache'][cache_key] = plans
         print(f"[Plans] Generated {len(plans)} plans, cached as {cache_key}", file=sys.stderr, flush=True)
 
+        # ── 更新使用统计 ──
+        try:
+            duration = round(time.time() - session['created_at'], 1)
+            update_usage_session(
+                session_id=session_id,
+                direction_id=direction_id,
+                direction_label=direction.get('label', ''),
+                style=direction.get('style', ''),
+                plan_count=len(plans),
+                duration_seconds=duration,
+                completed=1
+            )
+        except Exception as e:
+            print(f"[Stats] Update usage session error: {e}", file=sys.stderr, flush=True)
+
         return plans, None
 
     except Exception as e:
@@ -1899,8 +1931,30 @@ def analyze():
     if not DOUBAO_API_KEY:
         return jsonify({"success": False, "error": "API Key 未配置"}), 500
 
+    # 提取客户端 IP
+    client_ip = request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or request.remote_addr or '127.0.0.1'
+
+    # ── 每日使用限制检查 ──
+    allowed, used, limit = check_and_increment_usage(client_ip, DAILY_LIMIT)
+    if not allowed:
+        return jsonify({
+            "success": False,
+            "error": "limit_reached",
+            "used": used,
+            "limit": limit,
+            "message": f"今日免费次数已用完（{used}/{limit}），可以申请更多次数"
+        }), 429
+
     if _processing:
-        return jsonify({"success": False, "error": "正在处理上一个请求，请稍候"}), 429
+        # 正在处理中——返回排队信息
+        elapsed = time.time() - getattr(analyze, '_start_time', time.time())
+        estimated = max(30, 120 - int(elapsed))
+        return jsonify({
+            "success": False,
+            "error": "queue",
+            "message": "前面有人在用，请稍候...",
+            "estimated_wait_seconds": estimated
+        }), 429
 
     if 'photo' not in request.files:
         return jsonify({"success": False, "error": "未收到照片"}), 400
@@ -1926,10 +1980,11 @@ def analyze():
     lens_key = request.form.get('lens', None) or None
 
     _processing = True
+    analyze._start_time = time.time()  # 记录开始时间供排队估算
 
     def cleanup_and_generate():
         try:
-            yield from analyze_photo_stream(tmp_path, device_override, lens_key)
+            yield from analyze_photo_stream(tmp_path, device_override, lens_key, client_ip)
         finally:
             if os.path.exists(tmp_path):
                 try:
@@ -2045,6 +2100,137 @@ def health():
         "db_stats": stats,
         "sessions_active": len(_sessions),
         "processing": _processing
+    })
+
+
+# ── v3.5: 处理中状态查询（前端排队轮询）──
+@app.route('/processing-status')
+def processing_status():
+    """查询是否正在处理中"""
+    global _processing
+    elapsed = 0
+    if _processing:
+        start = getattr(analyze, '_start_time', time.time())
+        elapsed = int(time.time() - start)
+    return jsonify({
+        "processing": _processing,
+        "elapsed_seconds": elapsed,
+        "estimated_wait_seconds": max(0, 120 - elapsed) if _processing else 0
+    })
+
+
+# ── v3.5: 方案反馈 ──
+@app.route('/feedback', methods=['POST'])
+def submit_feedback():
+    """记录方案反馈（like/dislike）"""
+    data = request.get_json() or {}
+    session_id = data.get('session_id', '')
+    direction_id = data.get('direction_id', '')
+    plan_index = data.get('plan_index')
+    rating = data.get('rating', '')
+    reason = data.get('reason', '')
+    reason_text = data.get('reason_text', '')
+
+    if not session_id or not direction_id or plan_index is None:
+        return jsonify({"success": False, "error": "缺少必填字段"}), 400
+    if rating not in ('like', 'dislike', 'none'):
+        return jsonify({"success": False, "error": "无效的 rating"}), 400
+    if rating == 'dislike' and not reason:
+        return jsonify({"success": False, "error": "请选择不满意原因"}), 400
+
+    # 从 session 提取上下文
+    sess = get_session(session_id)
+    scene_type = ''
+    style = ''
+    device_key = ''
+    if sess:
+        scene_type = sess.get('vision_json', {}).get('scene_type', '')
+        device_key = sess.get('device_key', '')
+        direction = next((d for d in sess.get('directions', []) if d.get('id') == direction_id), None)
+        if direction:
+            style = direction.get('style', '')
+
+    try:
+        save_feedback(session_id, direction_id, plan_index, rating,
+                      reason=reason, reason_text=reason_text,
+                      scene_type=scene_type, style=style, device_key=device_key)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ── v3.5: 配额申请 ──
+@app.route('/request-quota', methods=['POST'])
+def request_quota():
+    """申请更多使用次数"""
+    client_ip = request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or request.remote_addr or '127.0.0.1'
+    ok, msg = submit_quota_request(client_ip)
+    return jsonify({"success": ok, "message": msg})
+
+
+# ── v3.5: 管理面板 ──
+@app.route('/admin')
+def admin_panel():
+    """管理面板——查看反馈统计 + 审批配额申请"""
+    return render_template('admin.html')
+
+
+@app.route('/admin/approve', methods=['POST'])
+def admin_approve():
+    """管理员审批配额申请"""
+    data = request.get_json() or {}
+    request_id = data.get('request_id')
+    action = data.get('action', '')
+    amount = data.get('amount', 5)
+
+    if not request_id or action not in ('approve', 'reject'):
+        return jsonify({"success": False, "error": "参数错误"}), 400
+
+    ok, msg = approve_quota_request(request_id, action, amount)
+    return jsonify({"success": ok, "message": msg})
+
+
+@app.route('/admin/stats')
+def admin_stats():
+    """管理面板数据 API"""
+    try:
+        db_stats = get_db_stats()
+        feedback_stats = get_feedback_stats()
+        # ── 自动刷新反馈报告 Markdown ──
+        try:
+            md = export_feedback_markdown()
+            report_path = os.path.join(os.path.dirname(__file__), "feedback_report.md")
+            with open(report_path, 'w') as f:
+                f.write(md)
+        except Exception:
+            pass
+    except Exception:
+        db_stats = {}
+        feedback_stats = {}
+    return jsonify({
+        "db": db_stats,
+        "feedback": feedback_stats,
+        "pending_requests": get_pending_quota_requests(),
+        "dislike_reasons": DISLIKE_REASONS,
+        "daily_limit": DAILY_LIMIT,
+        "active_sessions": len(_sessions),
+        "processing": _processing
+    })
+
+
+# ── v3.5: 配额状态查询 ──
+@app.route('/quota-status')
+def quota_status():
+    """查询当前 IP 的用量和申请状态"""
+    client_ip = request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or request.remote_addr or '127.0.0.1'
+    usage = get_daily_usage(client_ip)
+    req_status = get_quota_request_status(client_ip)
+    return jsonify({
+        "used": usage['used'],
+        "extra": usage['extra'],
+        "limit": DAILY_LIMIT,
+        "effective_limit": DAILY_LIMIT + usage['extra'],
+        "request_status": req_status
     })
 
 

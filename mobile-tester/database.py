@@ -82,6 +82,65 @@ def _init_tables(conn):
     CREATE INDEX IF NOT EXISTS idx_scene_matches_scene ON scene_matches(scene_type);
     CREATE INDEX IF NOT EXISTS idx_scene_matches_style ON scene_matches(style_id);
     CREATE INDEX IF NOT EXISTS idx_knowledge_sync_status ON knowledge_sync(status);
+
+    -- v3.5: 使用统计与反馈
+    CREATE TABLE IF NOT EXISTS daily_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ip_address TEXT NOT NULL,
+        usage_date TEXT NOT NULL DEFAULT (date('now')),
+        count INTEGER DEFAULT 1,
+        extra_quota INTEGER DEFAULT 0,
+        UNIQUE(ip_address, usage_date)
+    );
+
+    CREATE TABLE IF NOT EXISTS quota_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ip_address TEXT NOT NULL,
+        request_date TEXT NOT NULL DEFAULT (date('now')),
+        created_at TEXT DEFAULT (datetime('now')),
+        status TEXT DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+        granted_amount INTEGER DEFAULT 5,
+        resolved_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS usage_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL UNIQUE,
+        timestamp TEXT DEFAULT (datetime('now')),
+        ip_address TEXT,
+        device_key TEXT,
+        device_name TEXT,
+        scene_type TEXT,
+        scene_tier TEXT,
+        direction_count INTEGER DEFAULT 0,
+        selected_direction_id TEXT,
+        selected_direction_label TEXT,
+        selected_style TEXT,
+        plan_count INTEGER DEFAULT 0,
+        duration_seconds REAL DEFAULT 0,
+        completed INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS plan_feedback (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        direction_id TEXT NOT NULL,
+        plan_index INTEGER NOT NULL,
+        rating TEXT NOT NULL CHECK(rating IN ('like', 'dislike')),
+        reason TEXT DEFAULT '',
+        reason_text TEXT DEFAULT '',
+        scene_type TEXT,
+        style TEXT,
+        device_key TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(session_id, direction_id, plan_index)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_daily_usage_ip ON daily_usage(ip_address, usage_date);
+    CREATE INDEX IF NOT EXISTS idx_quota_requests_status ON quota_requests(status);
+    CREATE INDEX IF NOT EXISTS idx_usage_sessions_time ON usage_sessions(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_plan_feedback_created ON plan_feedback(created_at);
     """)
     conn.commit()
 
@@ -357,9 +416,351 @@ def get_db_stats():
             "scenes": conn.execute("SELECT COUNT(DISTINCT scene_type) FROM scene_matches").fetchone()[0],
             "total_matches": conn.execute("SELECT COUNT(*) FROM scene_matches").fetchone()[0],
             "pending_sync": conn.execute("SELECT COUNT(*) FROM knowledge_sync WHERE status='pending'").fetchone()[0],
+            "usage_sessions": conn.execute("SELECT COUNT(*) FROM usage_sessions").fetchone()[0],
+            "feedback_entries": conn.execute("SELECT COUNT(*) FROM plan_feedback").fetchone()[0],
+            "today_analyses": conn.execute("SELECT COALESCE(SUM(count),0) FROM daily_usage WHERE usage_date=date('now')").fetchone()[0],
         }
     finally:
         conn.close()
+
+
+# ============================================================
+# v3.5: 每日使用限制
+# ============================================================
+
+def check_and_increment_usage(ip_address, daily_limit=10):
+    """
+    检查并增加每日使用计数。
+    返回 (allowed: bool, used: int, limit: int)
+    """
+    conn = get_db()
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        row = conn.execute(
+            "SELECT count, extra_quota FROM daily_usage WHERE ip_address=? AND usage_date=?",
+            (ip_address, today)
+        ).fetchone()
+
+        if row:
+            used = row['count']
+            extra = row['extra_quota']
+            effective_limit = daily_limit + extra
+            if used >= effective_limit:
+                return (False, used, effective_limit)
+            conn.execute(
+                "UPDATE daily_usage SET count = count + 1 WHERE ip_address=? AND usage_date=?",
+                (ip_address, today)
+            )
+        else:
+            effective_limit = daily_limit
+            conn.execute(
+                "INSERT INTO daily_usage (ip_address, usage_date, count) VALUES (?, ?, 1)",
+                (ip_address, today)
+            )
+
+        conn.commit()
+        return (True, (row['count'] if row else 0) + 1, effective_limit)
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Usage check error: {e}", file=sys.stderr, flush=True)
+        return (True, 0, daily_limit)  # 出错时放行
+    finally:
+        conn.close()
+
+
+def get_daily_usage(ip_address):
+    """获取某 IP 今天的用量"""
+    conn = get_db()
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        row = conn.execute(
+            "SELECT count, extra_quota FROM daily_usage WHERE ip_address=? AND usage_date=?",
+            (ip_address, today)
+        ).fetchone()
+        if row:
+            return {"used": row['count'], "extra": row['extra_quota']}
+        return {"used": 0, "extra": 0}
+    finally:
+        conn.close()
+
+
+# ============================================================
+# v3.5: 配额申请
+# ============================================================
+
+def submit_quota_request(ip_address):
+    """提交配额申请。返回 (ok, message)"""
+    conn = get_db()
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        # 检查是否已有待处理的申请
+        existing = conn.execute(
+            "SELECT id, status FROM quota_requests WHERE ip_address=? AND request_date=? AND status='pending'",
+            (ip_address, today)
+        ).fetchone()
+        if existing:
+            return (False, "已有待处理的申请，请耐心等待")
+
+        conn.execute(
+            "INSERT INTO quota_requests (ip_address, request_date) VALUES (?, ?)",
+            (ip_address, today)
+        )
+        conn.commit()
+        return (True, "申请已提交")
+    except Exception as e:
+        conn.rollback()
+        return (False, str(e))
+    finally:
+        conn.close()
+
+
+def get_quota_request_status(ip_address):
+    """查询某 IP 今天的申请状态"""
+    conn = get_db()
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        row = conn.execute(
+            "SELECT status FROM quota_requests WHERE ip_address=? AND request_date=? ORDER BY created_at DESC LIMIT 1",
+            (ip_address, today)
+        ).fetchone()
+        if row:
+            return row['status']
+        return None  # 没申请过
+    finally:
+        conn.close()
+
+
+def get_pending_quota_requests():
+    """获取所有待审批的申请"""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            """SELECT qr.id, qr.ip_address, qr.created_at, qr.request_date,
+                      COALESCE(du.count, 0) as used_count, COALESCE(du.extra_quota, 0) as extra
+               FROM quota_requests qr
+               LEFT JOIN daily_usage du ON du.ip_address = qr.ip_address AND du.usage_date = qr.request_date
+               WHERE qr.status = 'pending'
+               ORDER BY qr.created_at ASC"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def approve_quota_request(request_id, action, amount=5):
+    """批准或拒绝配额申请"""
+    conn = get_db()
+    try:
+        row = conn.execute("SELECT * FROM quota_requests WHERE id=?", (request_id,)).fetchone()
+        if not row:
+            conn.close()
+            return (False, "申请不存在")
+
+        status = 'approved' if action == 'approve' else 'rejected'
+        conn.execute(
+            "UPDATE quota_requests SET status=?, resolved_at=datetime('now'), granted_amount=? WHERE id=?",
+            (status, amount, request_id)
+        )
+
+        if action == 'approve':
+            # 增加额外配额
+            conn.execute(
+                """INSERT INTO daily_usage (ip_address, usage_date, count, extra_quota)
+                   VALUES (?, ?, 0, ?)
+                   ON CONFLICT(ip_address, usage_date) DO UPDATE SET extra_quota = extra_quota + ?""",
+                (row['ip_address'], row['request_date'], amount, amount)
+            )
+
+        conn.commit()
+        return (True, f"已{status}")
+    except Exception as e:
+        conn.rollback()
+        return (False, str(e))
+    finally:
+        conn.close()
+
+
+# ============================================================
+# v3.5: 使用会话统计
+# ============================================================
+
+def save_usage_session(session_id, ip_address, device_key, device_name,
+                        scene_type, scene_tier, direction_count):
+    """记录新的分析会话"""
+    conn = get_db()
+    try:
+        conn.execute("""
+            INSERT INTO usage_sessions (session_id, ip_address, device_key, device_name,
+                                        scene_type, scene_tier, direction_count, completed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+        """, (session_id, ip_address, device_key, device_name,
+              (scene_type or '')[:200], scene_tier or '', direction_count or 0))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Save usage error: {e}", file=sys.stderr, flush=True)
+    finally:
+        conn.close()
+
+
+def update_usage_session(session_id, direction_id=None, direction_label=None,
+                          style=None, plan_count=0, duration_seconds=0, completed=1):
+    """更新会话——方案生成后调用"""
+    conn = get_db()
+    try:
+        conn.execute("""
+            UPDATE usage_sessions SET
+                selected_direction_id = ?,
+                selected_direction_label = ?,
+                selected_style = ?,
+                plan_count = ?,
+                duration_seconds = ?,
+                completed = ?
+            WHERE session_id = ?
+        """, (direction_id, direction_label, style, plan_count,
+              duration_seconds, completed, session_id))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Update usage error: {e}", file=sys.stderr, flush=True)
+    finally:
+        conn.close()
+
+
+# ============================================================
+# v3.5: 方案反馈
+# ============================================================
+
+DISLIKE_REASONS = {
+    'too_slow': '⏱️ 时间太久了',
+    'style_not_match': '🎨 风格不喜欢',
+    'plan_not_good': '📋 方案不喜欢',
+    'guidance_unclear': '🤔 操作引导不清晰',
+    'want_image_gen': '🖼️ 需要生图直接示意',
+    'other': '💬 其他',
+}
+
+
+def save_feedback(session_id, direction_id, plan_index, rating,
+                   reason='', reason_text='', scene_type=None, style=None, device_key=None):
+    """保存或更新方案反馈。rating='none' 时删除反馈"""
+    conn = get_db()
+    try:
+        if rating == 'none':
+            conn.execute("""
+                DELETE FROM plan_feedback
+                WHERE session_id = ? AND direction_id = ? AND plan_index = ?
+            """, (session_id, direction_id, plan_index))
+        else:
+            conn.execute("""
+                INSERT INTO plan_feedback (session_id, direction_id, plan_index, rating,
+                                           reason, reason_text, scene_type, style, device_key)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(session_id, direction_id, plan_index) DO UPDATE SET
+                    rating = excluded.rating,
+                    reason = excluded.reason,
+                    reason_text = excluded.reason_text,
+                    updated_at = datetime('now')
+            """, (session_id, direction_id, plan_index, rating,
+                  reason or '', (reason_text or '')[:500],
+                  (scene_type or '')[:200], style or '', device_key or ''))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Save feedback error: {e}", file=sys.stderr, flush=True)
+    finally:
+        conn.close()
+
+
+def get_feedback_stats():
+    """获取反馈统计数据"""
+    conn = get_db()
+    try:
+        total_likes = conn.execute(
+            "SELECT COUNT(*) FROM plan_feedback WHERE rating='like'"
+        ).fetchone()[0]
+        total_dislikes = conn.execute(
+            "SELECT COUNT(*) FROM plan_feedback WHERE rating='dislike'"
+        ).fetchone()[0]
+
+        # 踩的原因分布
+        reason_rows = conn.execute(
+            "SELECT reason, COUNT(*) as cnt FROM plan_feedback WHERE rating='dislike' AND reason!='' GROUP BY reason ORDER BY cnt DESC"
+        ).fetchall()
+        reasons = [{"reason": r['reason'], "label": DISLIKE_REASONS.get(r['reason'], r['reason']), "count": r['cnt']} for r in reason_rows]
+
+        # 最近 50 条反馈
+        recent = conn.execute("""
+            SELECT pf.*, us.scene_type as us_scene_type, us.device_name
+            FROM plan_feedback pf
+            LEFT JOIN usage_sessions us ON pf.session_id = us.session_id
+            ORDER BY pf.updated_at DESC LIMIT 50
+        """).fetchall()
+
+        # 7 天使用趋势
+        trend = conn.execute("""
+            SELECT usage_date, SUM(count) as total
+            FROM daily_usage
+            WHERE usage_date >= date('now', '-7 days')
+            GROUP BY usage_date ORDER BY usage_date ASC
+        """).fetchall()
+
+        return {
+            "total_likes": total_likes,
+            "total_dislikes": total_dislikes,
+            "reasons": reasons,
+            "recent": [dict(r) for r in recent],
+            "trend": [dict(r) for r in trend],
+        }
+    finally:
+        conn.close()
+
+
+def export_feedback_markdown():
+    """导出反馈报告为 Markdown"""
+    stats = get_feedback_stats()
+    total = stats['total_likes'] + stats['total_dislikes']
+    like_pct = round(stats['total_likes'] / total * 100) if total > 0 else 0
+
+    md = f"""# 带拍 · 反馈报告
+> 更新时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+## 📊 概览
+- 总反馈数：{total} 条
+- 👍 满意：{stats['total_likes']} 条（{like_pct}%）
+- 👎 不满意：{stats['total_dislikes']} 条（{100 - like_pct}%）
+
+## 👎 不满意原因分布
+"""
+    if stats['reasons']:
+        for i, r in enumerate(stats['reasons'], 1):
+            md += f"{i}. {r['label']} — {r['count']}次\n"
+    else:
+        md += "暂无数据\n"
+
+    md += "\n## 📝 近期反馈\n"
+    md += "| 时间 | 场景 | 风格 | 方案 | 评价 | 原因 |\n"
+    md += "|------|------|------|------|------|------|\n"
+    for f in stats['recent'][:30]:
+        time_str = (f.get('updated_at') or '')[:16]
+        scene = (f.get('scene_type') or f.get('us_scene_type') or '-')[:15]
+        style = (f.get('style') or '-')[:12]
+        plan = f"#{f['plan_index'] + 1}"
+        rating = '👍' if f['rating'] == 'like' else '👎'
+        reason_label = DISLIKE_REASONS.get(f.get('reason', ''), f.get('reason', ''))
+        reason_str = reason_label if f['rating'] == 'dislike' else '-'
+        if f.get('reason_text'):
+            reason_str += f" ({f['reason_text'][:30]})"
+        md += f"| {time_str} | {scene} | {style} | {plan} | {rating} | {reason_str} |\n"
+
+    if stats['trend']:
+        md += "\n## 📈 7天使用趋势\n"
+        md += "| 日期 | 分析次数 |\n"
+        md += "|------|----------|\n"
+        for t in stats['trend']:
+            md += f"| {t['usage_date']} | {t['total']} |\n"
+
+    return md
 
 
 # ============================================================

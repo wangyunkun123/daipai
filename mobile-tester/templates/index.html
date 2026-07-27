@@ -372,6 +372,87 @@
   }
   .copy-btn:active { background: rgba(74,222,128,0.2); }
 
+  /* ====== v3.5: 方案反馈 ====== */
+  .plan-feedback { display: flex; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); justify-content: center; }
+  .fb-btn {
+    background: transparent; border: 1px solid var(--border); border-radius: 20px;
+    padding: 7px 18px; font-size: 15px; cursor: pointer; transition: all 0.15s;
+    opacity: 0.4; user-select: none; -webkit-user-select: none; color: var(--text);
+  }
+  .fb-btn:active { opacity: 0.8; transform: scale(1.05); }
+  .fb-btn.active { opacity: 1; }
+  .fb-btn.fb-like.active { color: var(--green); border-color: var(--green); background: rgba(74,222,128,0.08); }
+  .fb-btn.fb-dislike.active { color: var(--red); border-color: var(--red); background: rgba(239,68,68,0.08); }
+
+  /* 👎 原因面板 */
+  .fb-reasons {
+    display: none; margin-top: 12px; padding: 12px;
+    background: var(--card2); border-radius: 12px; border: 1px solid var(--border);
+  }
+  .fb-reasons.show { display: block; }
+  .fb-reasons .fb-reason-title { font-size: 13px; color: var(--dim); margin-bottom: 10px; }
+  .fb-reasons label {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--text);
+    transition: background 0.1s;
+  }
+  .fb-reasons label:active { background: var(--card); }
+  .fb-reasons label input[type=radio] { accent-color: var(--purple); }
+  .fb-reason-text {
+    width: 100%; padding: 8px 10px; margin-top: 8px; border-radius: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); font-size: 13px; display: none; box-sizing: border-box;
+  }
+  .fb-reason-text.show { display: block; }
+  .fb-reason-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
+  .fb-reason-actions button {
+    padding: 6px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; font-weight: 600;
+  }
+  .fb-reason-cancel { background: var(--card); color: var(--dim); }
+  .fb-reason-submit { background: var(--purple); color: #fff; }
+
+  /* ====== v3.5: 排队提示 ====== */
+  .queue-overlay {
+    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center;
+  }
+  .queue-overlay.show { display: flex; }
+  .queue-card {
+    background: var(--card); border-radius: 16px; padding: 24px; margin: 20px;
+    max-width: 320px; text-align: center; border: 1px solid var(--border);
+  }
+  .queue-card .queue-icon { font-size: 40px; margin-bottom: 12px; }
+  .queue-card .queue-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .queue-card .queue-sub { font-size: 13px; color: var(--dim); margin-bottom: 4px; }
+  .queue-card .queue-count { font-size: 12px; color: var(--dimmer); margin-bottom: 16px; }
+  .queue-card .queue-cancel {
+    padding: 8px 24px; border-radius: 10px; background: var(--card2);
+    border: 1px solid var(--border); color: var(--dim); font-size: 13px; cursor: pointer;
+  }
+
+  /* ====== v3.5: 限额提示条 ====== */
+  .limit-banner {
+    display: none; padding: 12px 14px; margin: 10px 0; border-radius: 12px;
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+    align-items: center; gap: 10px; font-size: 13px;
+  }
+  .limit-banner.show { display: flex; }
+  .limit-banner .lb-icon { font-size: 20px; flex-shrink: 0; }
+  .limit-banner .lb-text { flex: 1; color: var(--text); line-height: 1.4; }
+  .limit-banner .lb-text .lb-dim { color: var(--dim); font-size: 12px; }
+  .limit-banner .lb-btn {
+    padding: 6px 14px; border-radius: 8px; background: var(--green);
+    color: #000; font-size: 12px; font-weight: 600; cursor: pointer; border: none;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .limit-banner .lb-btn:active { opacity: 0.8; }
+  .limit-banner .lb-btn.done {
+    background: var(--card2); color: var(--dim); border: 1px solid var(--border);
+  }
+  .limit-banner .lb-btn.rejected {
+    background: rgba(239,68,68,0.1); color: var(--red);
+  }
+
   /* Data sections */
   .data-sections { margin-top: 20px; }
   .fold-section {
@@ -745,38 +826,130 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
     const lens = $('#lensSelect').value;
     if (lens) fd.append('lens', lens);
 
-    try {
-      const resp = await fetch('/analyze', { method:'POST', body:fd });
-      if (!resp.ok) {
-        const err = await resp.json().catch(()=>({}));
-        showError(err.error || `服务器错误 (${resp.status})`);
-        return;
-      }
-      const reader2 = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '', eventType = '';
-      while (true) {
-        const { done, value } = await reader2.read();
-        if (done) break;
-        buffer += decoder.decode(value, {stream:true});
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (!line) continue;
-          if (line.startsWith('event: ')) { eventType = line.slice(7).trim(); }
-          else if (line.startsWith('data: ')) {
-            const ds = line.slice(6);
-            if (!ds || ds === 'null') continue;
-            const t = ds.trim();
-            if (!t.startsWith('{') || !t.endsWith('}')) continue;
-            try { const d = JSON.parse(t); handleSSE(eventType, d); eventType = ''; }
-            catch(er) { console.error('SSE parse:', er.message); }
+    // v3.5: 提交分析（支持排队和限额处理）
+    let queueTimer = null;
+    let queueCount = 0;
+    const MAX_QUEUE_RETRIES = 60; // 最多等 5 分钟 (60 × 5s)
+
+    async function doAnalyze() {
+      try {
+        const resp = await fetch('/analyze', { method:'POST', body:fd });
+        if (!resp.ok) {
+          const err = await resp.json().catch(()=>({}));
+          // 排队中
+          if (err.error === 'queue') {
+            $('#queueOverlay').classList.add('show');
+            $('#queueCount').textContent = `⏱️ 预计等待约 ${Math.ceil((err.estimated_wait_seconds||120)/60)} 分钟`;
+            queuePoll();
+            return;
+          }
+          // 次数用完
+          if (err.error === 'limit_reached') {
+            showLimitBanner(err.used, err.limit);
+            return;
+          }
+          showError(err.message || err.error || `服务器错误 (${resp.status})`);
+          return;
+        }
+
+        // ── 正常响应：SSE 流式读取 ──
+        const reader2 = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '', eventType = '';
+        while (true) {
+          const { done, value } = await reader2.read();
+          if (done) break;
+          buffer += decoder.decode(value, {stream:true});
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line) continue;
+            if (line.startsWith('event: ')) { eventType = line.slice(7).trim(); }
+            else if (line.startsWith('data: ')) {
+              const ds = line.slice(6);
+              if (!ds || ds === 'null') continue;
+              const t = ds.trim();
+              if (!t.startsWith('{') || !t.endsWith('}')) continue;
+              try { const d = JSON.parse(t); handleSSE(eventType, d); eventType = ''; }
+              catch(er) { console.error('SSE parse:', er.message); }
+            }
           }
         }
+      } catch(err) {
+        showError('网络错误：'+err.message);
       }
-    } catch(err) {
-      showError('网络错误：'+err.message);
     }
+
+    // ── 排队轮询 ──
+    function queuePoll() {
+      if (queueTimer) clearTimeout(queueTimer);
+      queueCount++;
+      if (queueCount > MAX_QUEUE_RETRIES) {
+        $('#queueOverlay').classList.remove('show');
+        showError('等待超时，请稍后再试');
+        return;
+      }
+      $('#queueCount').textContent = `⏱️ 第 ${queueCount} 次检查...`;
+      queueTimer = setTimeout(async () => {
+        try {
+          const r = await fetch('/processing-status');
+          const s = await r.json();
+          if (!s.processing) {
+            $('#queueOverlay').classList.remove('show');
+            doAnalyze();
+          } else {
+            const min = Math.ceil(s.estimated_wait_seconds / 60);
+            $('#queueCount').textContent = `⏱️ 预计还要等约 ${min} 分钟`;
+            queuePoll();
+          }
+        } catch(e) { queuePoll(); }
+      }, 5000);
+    }
+
+    // 取消排队
+    $('#queueCancel').onclick = () => {
+      if (queueTimer) clearTimeout(queueTimer);
+      $('#queueOverlay').classList.remove('show');
+    };
+
+    // ── 限额提示 ──
+    function showLimitBanner(used, limit) {
+      $('#limitMsg').textContent = `今日免费次数已用完（${used}/${limit}）`;
+      $('#limitSub').textContent = '还想继续用？点击申请，等待管理员批准';
+      $('#limitBtn').textContent = '申请更多';
+      $('#limitBtn').className = 'lb-btn';
+      $('#limitBanner').classList.add('show');
+      // 插入到方案区顶部
+      const pa = $('#plansArea');
+      if (pa && !pa.contains($('#limitBanner'))) {
+        pa.insertBefore($('#limitBanner'), pa.firstChild);
+      }
+    }
+
+    $('#limitBtn').onclick = async () => {
+      const btn = $('#limitBtn');
+      btn.textContent = '...';
+      btn.disabled = true;
+      try {
+        const r = await fetch('/request-quota', { method: 'POST' });
+        const d = await r.json();
+        if (d.success) {
+          btn.textContent = '✅ 已提交';
+          btn.className = 'lb-btn done';
+          $('#limitSub').textContent = '已提交申请，等待管理员批准';
+        } else {
+          btn.textContent = d.message === '已有待处理的申请，请耐心等待' ? '⏳ 等待中' : '⚠️ 重试';
+          btn.className = 'lb-btn done';
+          $('#limitSub').textContent = d.message;
+        }
+      } catch(e) {
+        btn.textContent = '⚠️ 重试';
+        btn.disabled = false;
+      }
+    };
+
+    // ── 启动分析 ──
+    doAnalyze();
   });
 });
 
@@ -1257,6 +1430,67 @@ function renderPlans(plans, direction) {
     if (cb&&te) cb.addEventListener('click', ()=>{ doCopy(te.textContent, cb); });
     // 点击提示词文本也复制
     if (te) { te.style.cursor = 'pointer'; te.title = '点击复制'; te.addEventListener('click', ()=>{ doCopy(te.textContent, cb||te); }); }
+
+    // v3.5: 反馈按钮
+    const fbLike = document.getElementById(`fb${i}`)?.querySelector('.fb-like');
+    const fbDislike = document.getElementById(`fb${i}`)?.querySelector('.fb-dislike');
+    const fbReasons = document.getElementById(`fbr${i}`);
+    const fbReasonText = document.getElementById(`fbrt${i}`);
+
+    if (fbLike) fbLike.addEventListener('click', () => {
+      // 如果已激活 → 取消
+      if (fbLike.classList.contains('active')) {
+        fbLike.classList.remove('active');
+        sendFeedback(direction.id, i, 'none');
+        return;
+      }
+      fbLike.classList.add('active');
+      fbDislike.classList.remove('active');
+      if (fbReasons) fbReasons.classList.remove('show');
+      sendFeedback(direction.id, i, 'like');
+    });
+
+    if (fbDislike) fbDislike.addEventListener('click', () => {
+      // 如果已激活 → 取消踩，不弹面板
+      if (fbDislike.classList.contains('active')) {
+        fbDislike.classList.remove('active');
+        if (fbReasons) fbReasons.classList.remove('show');
+        sendFeedback(direction.id, i, 'none');
+        return;
+      }
+      // 弹出原因面板
+      if (fbReasons) {
+        fbReasons.classList.add('show');
+        fbLike.classList.remove('active');
+        // 清空之前的选择
+        fbReasons.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+        if (fbReasonText) { fbReasonText.value = ''; fbReasonText.classList.remove('show'); }
+        // "其他"选项显示文本输入
+        fbReasons.querySelectorAll('input[type=radio]').forEach(r => {
+          r.onchange = () => {
+            if (fbReasonText) fbReasonText.classList.toggle('show', r.value === 'other');
+          };
+        });
+      }
+    });
+
+    // 原因面板：取消
+    if (fbReasons) {
+      fbReasons.querySelector('.fb-reason-cancel')?.addEventListener('click', () => {
+        fbReasons.classList.remove('show');
+      });
+      // 原因面板：提交
+      fbReasons.querySelector('.fb-reason-submit')?.addEventListener('click', () => {
+        const selected = fbReasons.querySelector('input[type=radio]:checked');
+        if (!selected) return; // 没选原因不提交
+        const reason = selected.value;
+        const reasonText = (reason === 'other' && fbReasonText) ? fbReasonText.value.trim() : '';
+        fbDislike.classList.add('active');
+        fbLike.classList.remove('active');
+        fbReasons.classList.remove('show');
+        sendFeedback(direction.id, i, 'dislike', reason, reasonText);
+      });
+    }
   });
 
   renderDataSections();
@@ -1286,6 +1520,27 @@ function renderPlanCard(p, i, direction) {
   if (ip.notes.length>0) nh = '<div class="prompt-notes">'+ip.notes.map(n=>`<span class="note-tag">${n}</span>`).join('')+'</div>';
   c += `<button class="img-gen-btn" id="igb${i}">🖼️ 生图</button>`;
   c += `<div class="img-gen-prompt" id="igp${i}"><div class="prompt-text" id="pt${i}">${esc(ip.prompt)}</div>${nh}<button class="copy-btn" id="cp${i}">📋 复制</button></div>`;
+
+  // v3.5: 反馈按钮 + 原因面板
+  c += `<div class="plan-feedback" id="fb${i}">
+    <button class="fb-btn fb-like" data-idx="${i}" data-rating="like">👍 有用</button>
+    <button class="fb-btn fb-dislike" data-idx="${i}" data-rating="dislike">👎 不适合</button>
+  </div>`;
+  c += `<div class="fb-reasons" id="fbr${i}">
+    <div class="fb-reason-title">哪里不满意？</div>
+    <label><input type="radio" name="fbrr${i}" value="too_slow"> ⏱️ 时间太久了</label>
+    <label><input type="radio" name="fbrr${i}" value="style_not_match"> 🎨 风格不喜欢</label>
+    <label><input type="radio" name="fbrr${i}" value="plan_not_good"> 📋 方案不喜欢</label>
+    <label><input type="radio" name="fbrr${i}" value="guidance_unclear"> 🤔 操作引导不清晰</label>
+    <label><input type="radio" name="fbrr${i}" value="want_image_gen"> 🖼️ 需要生图直接示意</label>
+    <label><input type="radio" name="fbrr${i}" value="other"> 💬 其他...</label>
+    <input type="text" class="fb-reason-text" id="fbrt${i}" placeholder="说说哪里不好..." maxlength="200" />
+    <div class="fb-reason-actions">
+      <button class="fb-reason-cancel" data-idx="${i}">取消</button>
+      <button class="fb-reason-submit" data-idx="${i}">提交</button>
+    </div>
+  </div>`;
+
   c += '</div>';
   return c;
 }
@@ -1640,6 +1895,26 @@ function saveSessionId() {
   } catch {}
 }
 function clearSessionId() { try { localStorage.removeItem(STORAGE_KEY); } catch{} }
+
+// v3.5: 发送方案反馈
+async function sendFeedback(directionId, planIdx, rating, reason, reasonText) {
+  try {
+    await fetch('/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        direction_id: directionId,
+        plan_index: planIdx,
+        rating: rating,
+        reason: reason || '',
+        reason_text: reasonText || ''
+      })
+    });
+  } catch (e) {
+    console.error('Feedback error:', e);
+  }
+}
 function checkLastSession() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return;
@@ -1680,6 +1955,27 @@ $('#restoreGo').onclick = async () => {
 $('#restoreClose').onclick = () => { $('#restoreBar').classList.remove('show'); clearSessionId(); };
 checkLastSession();
 </script>
+<!-- ====== v3.5: Queue Overlay ====== -->
+<div class="queue-overlay" id="queueOverlay">
+  <div class="queue-card">
+    <div class="queue-icon">⏳</div>
+    <div class="queue-title">前面有人在用</div>
+    <div class="queue-sub">排到你之后会自动开始，不用动</div>
+    <div class="queue-count" id="queueCount">⏱️ 正在等待...</div>
+    <button class="queue-cancel" id="queueCancel">❌ 取消排队</button>
+  </div>
+</div>
+
+<!-- ====== v3.5: Limit Banner ====== -->
+<div class="limit-banner" id="limitBanner">
+  <span class="lb-icon">🎫</span>
+  <span class="lb-text">
+    <span id="limitMsg">今日免费次数已用完</span>
+    <br><span class="lb-dim" id="limitSub"></span>
+  </span>
+  <button class="lb-btn" id="limitBtn">申请更多</button>
+</div>
+
 <!-- ====== Restore Bar (bottom) ====== -->
 <div class="restore-bar" id="restoreBar">
   <img class="rb-thumb" id="restoreThumb" src="" alt="" width="40" height="40" />
