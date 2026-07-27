@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-带拍 · 移动端测试工具 v3.5
+带拍 · 移动端测试工具 v3.6
 在电脑上启动后，手机浏览器访问 http://<电脑IP>:8888
 拍照上传 → 渐进式展示（EXIF→场景→方向→方案按需生成）→ Canvas 标注 → 生图提示词
 """
@@ -25,7 +25,7 @@ from PIL import Image
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation
 from search_web import search_style_inspiration, search_location_intel
-from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH
+from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel
 
 app = Flask(__name__)
 
@@ -1085,9 +1085,10 @@ def get_location_weather(exif_result):
 # Session 管理
 # ============================================================
 
-def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context=""):
+def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", session_id=None):
     """创建分析会话"""
-    session_id = uuid.uuid4().hex[:12]
+    if session_id is None:
+        session_id = uuid.uuid4().hex[:12]
     _sessions[session_id] = {
         'vision_json': vision_json,
         'exif_summary': exif_summary,
@@ -1141,24 +1142,58 @@ def extract_exif(image_path):
         return {"error": str(e)}
 
 
-def call_doubao(messages, max_tokens=2000):
-    """调用豆包 API"""
-    payload = {
-        "model": DOUBAO_MODEL,
-        "messages": messages,
-        "max_tokens": max_tokens
-    }
-    req = urllib.request.Request(
-        DOUBAO_URL,
-        data=json.dumps(payload).encode(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {DOUBAO_API_KEY}"
+def call_doubao(messages, max_tokens=2000, call_type='unknown', session_id=None):
+    """调用豆包 API，自动记录调用日志"""
+    import time as time_mod
+    t0 = time_mod.time()
+    usage = {}
+    success = 1
+    result = None
+    try:
+        payload = {
+            "model": DOUBAO_MODEL,
+            "messages": messages,
+            "max_tokens": max_tokens
         }
-    )
-    with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
-        result = json.loads(resp.read().decode())
-    content = result['choices'][0]['message']['content'].strip()
+        req = urllib.request.Request(
+            DOUBAO_URL,
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {DOUBAO_API_KEY}"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+            result = json.loads(resp.read().decode())
+        content = result['choices'][0]['message']['content'].strip()
+        usage = result.get('usage', {})
+    except Exception as e:
+        success = 0
+        duration_ms = int((time_mod.time() - t0) * 1000)
+        # 记录失败调用
+        try:
+            log_api_call(session_id or '', call_type, DOUBAO_MODEL,
+                        0, 0, 0, duration_ms, 0)
+        except:
+            pass
+        raise
+
+    duration_ms = int((time_mod.time() - t0) * 1000)
+
+    # 记录成功调用
+    try:
+        log_api_call(
+            session_id=session_id or '',
+            call_type=call_type,
+            model=DOUBAO_MODEL,
+            prompt_tokens=usage.get('prompt_tokens', 0),
+            completion_tokens=usage.get('completion_tokens', 0),
+            total_tokens=usage.get('total_tokens', 0),
+            duration_ms=duration_ms,
+            success=1
+        )
+    except Exception:
+        pass  # 日志记录失败不影响主流程
 
     # ── 健壮的 JSON 提取 ──
     # 策略 1: 提取 ```json ... ``` 或 ``` ... ``` 之间的内容
@@ -1185,7 +1220,7 @@ def call_doubao(messages, max_tokens=2000):
             except (json.JSONDecodeError, ValueError):
                 pass
 
-    return content, result.get('usage', {})
+    return content, usage
 
 
 def normalize_creative_output(data):
@@ -1410,7 +1445,7 @@ def parse_json_safe(content, retry_prompt=None):
         try:
             retry_content, _ = call_doubao([
                 {"role": "user", "content": full_retry}
-            ], max_tokens=4000)
+            ], max_tokens=4000, call_type='vision')
             retry_content = repair_json(retry_content)
             try:
                 data = json.loads(retry_content)
@@ -1485,6 +1520,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
     """
     global _processing
     t0 = time.time()
+    trace_id = uuid.uuid4().hex[:12]  # 提前生成，用于全链路 API 调用埋点
 
     def emit(event, data):
         return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
@@ -1551,7 +1587,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
                         {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{vision_b64}"}},
                         {"type": "text", "text": VISION_PROMPT}
                     ]}
-                ], max_tokens=2000)
+                ], max_tokens=2000, call_type='vision', session_id=trace_id)
                 print(f"[SSE] Vision API done: {usage.get('total_tokens','?')} tokens", file=sys.stderr, flush=True)
                 vision_result = {"content": result, "usage": usage}
             except Exception as e:
@@ -1739,14 +1775,28 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         people_info = vision_json.get('people', '')
         try:
             # 风格搜索（最多 6 秒）
+            t_search = time.time()
             search_text, search_quality_web, search_meta = search_style_inspiration(
                 scene_type, people_info
             )
+            search_duration = int((time.time() - t_search) * 1000)
             if search_text:
                 search_context = search_text
                 print(f"[Search] Style search: {len(search_text)} chars, quality={search_quality_web}", file=sys.stderr, flush=True)
+            # 记录搜索日志
+            try:
+                source_types_str = ','.join(f"{k}:{v}" for k, v in search_meta.get('sources', {}).items())
+                log_search(trace_id, 'style', scene_type[:200],
+                          search_meta.get('total_results', 0) if isinstance(search_meta, dict) else 0,
+                          search_quality_web, source_types_str, search_duration)
+            except Exception:
+                pass
         except Exception as e:
             print(f"[Search] Style search failed: {e}", file=sys.stderr, flush=True)
+            try:
+                log_search(trace_id, 'style', scene_type[:200], 0, '🔴', '', 0)
+            except Exception:
+                pass
 
         # 位置搜索（优先用豆包识别的具体场所，fallback Nominatim 城市名）
         loc_clues = vision_json.get('location_clues', '') if isinstance(vision_json, dict) else ''
@@ -1759,14 +1809,27 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
 
         if search_place:
             try:
+                t_loc = time.time()
                 loc_text, loc_quality = search_location_intel(
                     search_place, scene_type
                 )
+                loc_duration = int((time.time() - t_loc) * 1000)
                 if loc_text:
                     search_context += "\n" + loc_text
                     print(f"[Search] Location search: {len(loc_text)} chars, quality={loc_quality}, place={search_place[:60]}", file=sys.stderr, flush=True)
+                # 记录搜索日志
+                try:
+                    log_search(trace_id, 'location', search_place[:200],
+                              len(loc_text.split('\n')) if loc_text else 0,
+                              loc_quality, '', loc_duration)
+                except Exception:
+                    pass
             except Exception as e:
                 print(f"[Search] Location search failed: {e}", file=sys.stderr, flush=True)
+                try:
+                    log_search(trace_id, 'location', search_place[:200], 0, '🔴', '', 0)
+                except Exception:
+                    pass
 
         # ── 快速路径判断（v4.0）──
         fast_path_note = ""
@@ -1846,7 +1909,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         print(f"[SSE] Directions prompt: {len(directions_prompt)} chars", file=sys.stderr, flush=True)
         directions_content, directions_usage = call_doubao([
             {"role": "user", "content": directions_prompt}
-        ], max_tokens=4000)
+        ], max_tokens=4000, call_type='directions', session_id=trace_id)
         print(f"[SSE] Directions API done: {directions_usage.get('total_tokens','?')} tokens", file=sys.stderr, flush=True)
 
         # 解析方向输出
@@ -1876,6 +1939,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
 
         # ── 创建 session（后续方案生成使用）──
         session_id = create_session(
+            session_id=trace_id,
             vision_json=vision_json,
             exif_summary=exif_summary,
             device_key=final_device_key,
@@ -2016,7 +2080,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     try:
         plans_content, plans_usage = call_doubao([
             {"role": "user", "content": plans_prompt}
-        ], max_tokens=4000)  # v4.1: 6000→4000，实际输出很少超4000
+        ], max_tokens=4000, call_type='plans', session_id=session_id)  # v4.1: 6000→4000，实际输出很少超4000
 
         plans_json, plans_error = parse_json_safe(
             plans_content,
@@ -2361,6 +2425,20 @@ def admin_stats():
     except Exception:
         db_stats = {}
         feedback_stats = {}
+    # ── v3.6 新增监控数据 ──
+    try:
+        api_stats = get_api_call_stats()
+    except Exception:
+        api_stats = {}
+    try:
+        search_stats = get_search_stats()
+    except Exception:
+        search_stats = {}
+    try:
+        style_panel = get_style_technique_panel()
+    except Exception:
+        style_panel = {}
+
     return jsonify({
         "db": db_stats,
         "feedback": feedback_stats,
@@ -2368,7 +2446,10 @@ def admin_stats():
         "dislike_reasons": DISLIKE_REASONS,
         "daily_limit": DAILY_LIMIT,
         "active_sessions": len(_sessions),
-        "processing": _processing
+        "processing": _processing,
+        "api_stats": api_stats,
+        "search_stats": search_stats,
+        "style_panel": style_panel
     })
 
 
@@ -2433,7 +2514,7 @@ if __name__ == '__main__':
 
     print(f"""
 ╔══════════════════════════════════════════╗
-║       带拍 · 移动端测试工具 v4.0      ║
+║       带拍 · 移动端测试工具 v3.6      ║
 ║                                          ║
 ║  手机浏览器访问:                          ║
 ║  → http://{local_ip}:8888          ║
@@ -2441,7 +2522,7 @@ if __name__ == '__main__':
 ║  确保手机和电脑在同一 WiFi 网络            ║
 ║  按 Ctrl+C 停止服务器                     ║
 ║                                          ║
-║  v4.0: 知识库统一 + WebSearch + SQLite  ║
+║  v3.6: 方案重构 + 图生图 + 环境感知 + 监控 ║
 ╚══════════════════════════════════════════╝
     """)
 

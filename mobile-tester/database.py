@@ -141,6 +141,39 @@ def _init_tables(conn):
     CREATE INDEX IF NOT EXISTS idx_quota_requests_status ON quota_requests(status);
     CREATE INDEX IF NOT EXISTS idx_usage_sessions_time ON usage_sessions(timestamp);
     CREATE INDEX IF NOT EXISTS idx_plan_feedback_created ON plan_feedback(created_at);
+
+    -- v3.6: AI API 调用日志
+    CREATE TABLE IF NOT EXISTS api_call_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT,
+        call_type TEXT NOT NULL CHECK(call_type IN ('vision','directions','plans')),
+        model TEXT,
+        prompt_tokens INTEGER,
+        completion_tokens INTEGER,
+        total_tokens INTEGER,
+        duration_ms INTEGER,
+        success INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- v3.6: Web 搜索执行日志
+    CREATE TABLE IF NOT EXISTS search_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT,
+        search_type TEXT NOT NULL CHECK(search_type IN ('style','location')),
+        query_text TEXT,
+        result_count INTEGER DEFAULT 0,
+        result_quality TEXT DEFAULT '🔴',
+        source_types TEXT,
+        duration_ms INTEGER,
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_api_log_session ON api_call_log(session_id);
+    CREATE INDEX IF NOT EXISTS idx_api_log_type ON api_call_log(call_type);
+    CREATE INDEX IF NOT EXISTS idx_api_log_time ON api_call_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_search_log_session ON search_log(session_id);
+    CREATE INDEX IF NOT EXISTS idx_search_log_type ON search_log(search_type);
     """)
     conn.commit()
 
@@ -419,6 +452,194 @@ def get_db_stats():
             "usage_sessions": conn.execute("SELECT COUNT(*) FROM usage_sessions").fetchone()[0],
             "feedback_entries": conn.execute("SELECT COUNT(*) FROM plan_feedback").fetchone()[0],
             "today_analyses": conn.execute("SELECT COALESCE(SUM(count),0) FROM daily_usage WHERE usage_date=date('now')").fetchone()[0],
+        }
+    finally:
+        conn.close()
+
+
+# ============================================================
+# v3.6: AI API 调用日志
+# ============================================================
+
+def log_api_call(session_id, call_type, model='', prompt_tokens=0,
+                 completion_tokens=0, total_tokens=0, duration_ms=0, success=1):
+    """记录一次豆包 API 调用"""
+    conn = get_db()
+    try:
+        conn.execute("""
+            INSERT INTO api_call_log (session_id, call_type, model, prompt_tokens,
+                                      completion_tokens, total_tokens, duration_ms, success)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (session_id, call_type, model, prompt_tokens, completion_tokens,
+              total_tokens, duration_ms, success))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] API log error: {e}", file=sys.stderr, flush=True)
+    finally:
+        conn.close()
+
+
+def log_search(session_id, search_type, query_text='', result_count=0,
+               result_quality='🔴', source_types=None, duration_ms=0):
+    """记录一次 Web 搜索执行"""
+    conn = get_db()
+    try:
+        conn.execute("""
+            INSERT INTO search_log (session_id, search_type, query_text, result_count,
+                                    result_quality, source_types, duration_ms)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (session_id, search_type, query_text[:300], result_count,
+              result_quality, source_types or '', duration_ms))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Search log error: {e}", file=sys.stderr, flush=True)
+    finally:
+        conn.close()
+
+
+def get_api_call_stats():
+    """获取 AI API 调用统计数据"""
+    conn = get_db()
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        # 今日汇总
+        today_calls = conn.execute("""
+            SELECT call_type, COUNT(*) as cnt,
+                   COALESCE(SUM(total_tokens),0) as tokens,
+                   COALESCE(AVG(duration_ms),0) as avg_ms
+            FROM api_call_log WHERE date(created_at)=?
+            GROUP BY call_type
+        """, (today,)).fetchall()
+
+        # 总计
+        total_calls = conn.execute(
+            "SELECT COUNT(*) FROM api_call_log"
+        ).fetchone()[0]
+        total_tokens = conn.execute(
+            "SELECT COALESCE(SUM(total_tokens),0) FROM api_call_log"
+        ).fetchone()[0]
+
+        # 最近 20 条明细
+        recent = [dict(r) for r in conn.execute("""
+            SELECT session_id, call_type, total_tokens, duration_ms, success, created_at
+            FROM api_call_log ORDER BY id DESC LIMIT 20
+        """).fetchall()]
+
+        # 7天 token 趋势
+        trend = [dict(r) for r in conn.execute("""
+            SELECT date(created_at) as day, COUNT(*) as cnt,
+                   COALESCE(SUM(total_tokens),0) as tokens
+            FROM api_call_log WHERE created_at >= date('now','-7 days')
+            GROUP BY day ORDER BY day
+        """).fetchall()]
+
+        return {
+            "today_calls": [dict(r) for r in today_calls],
+            "total_calls": total_calls,
+            "total_tokens": total_tokens,
+            "recent": recent,
+            "trend": trend,
+        }
+    finally:
+        conn.close()
+
+
+def get_search_stats():
+    """获取 Web 搜索执行统计数据"""
+    conn = get_db()
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        # 今日搜索
+        today_searches = conn.execute("""
+            SELECT search_type, COUNT(*) as cnt,
+                   COALESCE(AVG(result_count),0) as avg_results,
+                   AVG(CASE WHEN result_count > 0 THEN 1 ELSE 0 END) as hit_rate
+            FROM search_log WHERE date(created_at)=?
+            GROUP BY search_type
+        """, (today,)).fetchall()
+
+        # 总计
+        total_searches = conn.execute(
+            "SELECT COUNT(*) FROM search_log"
+        ).fetchone()[0]
+        total_with_results = conn.execute(
+            "SELECT COUNT(*) FROM search_log WHERE result_count > 0"
+        ).fetchone()[0]
+
+        # 最近 30 条
+        recent = [dict(r) for r in conn.execute("""
+            SELECT session_id, search_type, query_text, result_count,
+                   result_quality, source_types, duration_ms, created_at
+            FROM search_log ORDER BY id DESC LIMIT 30
+        """).fetchall()]
+
+        # 7天搜索趋势
+        trend = [dict(r) for r in conn.execute("""
+            SELECT date(created_at) as day, COUNT(*) as cnt,
+                   SUM(CASE WHEN result_count > 0 THEN 1 ELSE 0 END) as with_results
+            FROM search_log WHERE created_at >= date('now','-7 days')
+            GROUP BY day ORDER BY day
+        """).fetchall()]
+
+        return {
+            "today_searches": [dict(r) for r in today_searches],
+            "total_searches": total_searches,
+            "total_with_results": total_with_results,
+            "recent": recent,
+            "trend": trend,
+        }
+    finally:
+        conn.close()
+
+
+def get_style_technique_panel():
+    """获取风格/技法发现面板数据"""
+    conn = get_db()
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        # 风格统计
+        total_styles = conn.execute("SELECT COUNT(*) FROM styles").fetchone()[0]
+        styles_by_source = [dict(r) for r in conn.execute("""
+            SELECT source_type, COUNT(*) as cnt FROM styles GROUP BY source_type ORDER BY cnt DESC
+        """).fetchall()]
+        top_styles = [dict(r) for r in conn.execute("""
+            SELECT name, source_type, verify_count, created_at
+            FROM styles ORDER BY verify_count DESC LIMIT 15
+        """).fetchall()]
+        styles_today = conn.execute(
+            "SELECT COUNT(*) FROM styles WHERE date(created_at)=?", (today,)
+        ).fetchone()[0]
+
+        # 技法统计
+        total_techniques = conn.execute("SELECT COUNT(*) FROM techniques").fetchone()[0]
+        top_techniques = [dict(r) for r in conn.execute("""
+            SELECT name, source_type, verify_count, created_at
+            FROM techniques ORDER BY verify_count DESC LIMIT 10
+        """).fetchall()]
+        techniques_today = conn.execute(
+            "SELECT COUNT(*) FROM techniques WHERE date(created_at)=?", (today,)
+        ).fetchone()[0]
+
+        # 场景类型分布
+        scene_dist = [dict(r) for r in conn.execute("""
+            SELECT scene_type, COUNT(*) as match_count
+            FROM scene_matches GROUP BY scene_type ORDER BY match_count DESC LIMIT 10
+        """).fetchall()]
+
+        return {
+            "total_styles": total_styles,
+            "styles_today": styles_today,
+            "styles_by_source": styles_by_source,
+            "top_styles": top_styles,
+            "total_techniques": total_techniques,
+            "techniques_today": techniques_today,
+            "top_techniques": top_techniques,
+            "scene_dist": scene_dist,
         }
     finally:
         conn.close()
