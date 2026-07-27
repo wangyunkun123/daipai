@@ -673,6 +673,38 @@
 
 </div>
 
+<!-- ====== v3.5: Queue Overlay ====== -->
+<div class="queue-overlay" id="queueOverlay">
+  <div class="queue-card">
+    <div class="queue-icon">⏳</div>
+    <div class="queue-title">前面有人在用</div>
+    <div class="queue-sub">排到你之后会自动开始，不用动</div>
+    <div class="queue-count" id="queueCount">⏱️ 正在等待...</div>
+    <button class="queue-cancel" id="queueCancel">❌ 取消排队</button>
+  </div>
+</div>
+
+<!-- ====== v3.5: Limit Banner ====== -->
+<div class="limit-banner" id="limitBanner">
+  <span class="lb-icon">🎫</span>
+  <span class="lb-text">
+    <span id="limitMsg">今日免费次数已用完</span>
+    <br><span class="lb-dim" id="limitSub"></span>
+  </span>
+  <button class="lb-btn" id="limitBtn">申请更多</button>
+</div>
+
+<!-- ====== Restore Bar (bottom) ====== -->
+<div class="restore-bar" id="restoreBar">
+  <img class="rb-thumb" id="restoreThumb" src="" alt="" width="40" height="40" />
+  <div class="rb-info">
+    <div class="rb-scene" id="restoreScene"></div>
+    <div class="rb-styles" id="restoreStyles"></div>
+  </div>
+  <button class="rb-go" id="restoreGo">恢复</button>
+  <button class="rb-close" id="restoreClose">×</button>
+</div>
+
 <script>
 const $ = s => document.querySelector(s);
 function esc(s) {
@@ -1965,36 +1997,5 @@ $('#restoreGo').onclick = async () => {
 $('#restoreClose').onclick = () => { $('#restoreBar').classList.remove('show'); clearSessionId(); };
 checkLastSession();
 </script>
-<!-- ====== v3.5: Queue Overlay ====== -->
-<div class="queue-overlay" id="queueOverlay">
-  <div class="queue-card">
-    <div class="queue-icon">⏳</div>
-    <div class="queue-title">前面有人在用</div>
-    <div class="queue-sub">排到你之后会自动开始，不用动</div>
-    <div class="queue-count" id="queueCount">⏱️ 正在等待...</div>
-    <button class="queue-cancel" id="queueCancel">❌ 取消排队</button>
-  </div>
-</div>
-
-<!-- ====== v3.5: Limit Banner ====== -->
-<div class="limit-banner" id="limitBanner">
-  <span class="lb-icon">🎫</span>
-  <span class="lb-text">
-    <span id="limitMsg">今日免费次数已用完</span>
-    <br><span class="lb-dim" id="limitSub"></span>
-  </span>
-  <button class="lb-btn" id="limitBtn">申请更多</button>
-</div>
-
-<!-- ====== Restore Bar (bottom) ====== -->
-<div class="restore-bar" id="restoreBar">
-  <img class="rb-thumb" id="restoreThumb" src="" alt="" width="40" height="40" />
-  <div class="rb-info">
-    <div class="rb-scene" id="restoreScene"></div>
-    <div class="rb-styles" id="restoreStyles"></div>
-  </div>
-  <button class="rb-go" id="restoreGo">恢复</button>
-  <button class="rb-close" id="restoreClose">×</button>
-</div>
 </body>
 </html>
