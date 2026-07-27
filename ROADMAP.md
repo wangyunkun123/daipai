@@ -262,6 +262,7 @@ knowledge/
 | 4 | 恢复栏修复 | `index.html` | saveSessionId 存真实风格名（d.style）和 DOM 中 AI 洞察文字，不再 fallback direction 标签 |
 | 5 | 方案生成约束升级 | `server.py` | PLANS_PROMPT 新增环境上下文约束 + 设备约束从 where/do 迁移到 shooter/gear，禁止社交验证话术 |
 | 5 | 数据补齐 | `server.py` | normalize_creative_output + generate_plans + session restore 全面补齐新字段（subject/shooter/gear/enhance/img_gen_prompt） |
+| 6 | 🆕 管理员监控面板 | `server.py` `database.py` `admin.html` | 三项新监控：AI API调用日志(api_call_log表+call_doubao自动埋点) + Web搜索追踪(search_log表) + 风格技法发现面板 + trace_id全链路追踪 |
 
 ### 2026-07-26（v3.5 移动端测试工具）
 
