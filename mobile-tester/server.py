@@ -21,7 +21,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 load_dotenv()
-from PIL import Image
+from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation
 from search_web import search_style_inspiration, search_location_intel
@@ -1538,6 +1538,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         ext = os.path.splitext(image_path)[1].lower()
         try:
             img = Image.open(image_path)
+            img = ImageOps.exif_transpose(img)  # 应用 EXIF 旋转方向——防止找回会话时图片方向错误
             if img.mode in ('RGBA', 'P', 'LA'):
                 img = img.convert('RGB')
             w, h = img.size
