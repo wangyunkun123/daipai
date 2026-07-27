@@ -290,7 +290,8 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
     "direction": "[推测]顺光/侧光/逆光/顶光/漫射 — 判断依据",
     "quality": "[推测]硬光/软光/混合 — 判断依据（阴影边缘锐利还是柔和）",
     "color_temp": "[推测]暖/中/冷 — 估算色温K值及依据",
-    "special": "[观察]遮阳阴影区/斑驳树影/窗边漫射/混合色温/无特殊"
+    "special": "[观察]遮阳阴影区/斑驳树影/窗边漫射/混合色温/无特殊",
+    "level": "[推测]充足/一般/不足 — 基于画面内容判断的实际环境亮度。室内多盏灯+画面明亮=充足。树荫下但外部天空明亮=一般。真正暗到手持困难=不足。不要参考ISO，只看画面"
   },
   "color": {
     "primary": "[观察]最主导的颜色及位置",
@@ -304,7 +305,8 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
     "depth": "[观察]浅/中/深 — 判断依据",
     "anchors": "[观察]列出场景中可作为空间锚点的具体物体——门口盆栽、窗边沙发、路边消防栓、树荫边缘等。至少3个。这些将用于下游生成空间化拍摄指令。"
   },
-  "composition": "[观察]当前构图方式 + [观察]画面中可利用的构图元素（线条/框架/光影区域）"
+  "composition": "[观察]当前构图方式 + [观察]画面中可利用的构图元素（线条/框架/光影区域）",
+  "location_clues": "从画面识别位置线索。检查：招牌文字、建筑风格/颜色、地标轮廓、植被类型、山形地貌、室内装修风格、菜单/包装/标识。能推断具体场所就写场所名（如'太舞滑雪场山顶餐厅后方观景台'），只能到城区级就写级别，完全无法识别写'无法识别'"
 }
 
 只输出JSON，不要任何额外文字。不要markdown代码块包裹。"""
@@ -333,15 +335,38 @@ DIRECTIONS_PROMPT = """你是带拍的摄影知识引擎。用户是普通人，
 
 {fast_path_note}
 
+{env_context}
+
 ## 工作流程
 
-### Step 1: 场景沉浸 + 等级评估
-读视觉分析，沉浸进去。问自己：这个场景最动人的地方在哪？有什么具体的东西可以指着说"你看这里"？
+### Step 0: 环境约束感知
+根据环境上下文调整风格策略：
+- 黄金时刻剩<30分钟 → 🔥最出片优先推荐立刻可拍的风格，标注时间窗口
+- 未来有降雨 → 自动避开需阳光直射的硬光风格，标注"建议30分钟内完成"
+- 夜间 → 自动推荐夜景/灯光/闪光可用风格
+- 即将蓝调时刻 → ✨脑洞大开可推荐"等蓝调时刻拍"的方案
+- AI亮度评估=不足 → 推荐暗光风格，标注稳定需求；❌不要给需快速快门的方案
+- AI亮度评估=充足或一般 → 正常推荐，不瞎报"光线弱"
+- 识别到具体场所 → 风格推荐中融入场所特异性
 
-输出：
-- presence: 2-3句在场感受（口语化，有画面感）
-- insight: 一句话洞察——必须有视觉锚点（一束光、一个弧度、一个颜色）
-- scene_tier: 🥉一般 / 🥈不错 / 🥇丰富
+### Step 1: 场景观察 + 等级评估
+
+读视觉分析，沉浸进去。找画面里最具体的一个细节说出来——
+可以是一束光、一个眼神、一个颜色、一个意外发现。
+
+insight: 1-2句话，像小红书发照片时的配文：
+  - 具体——有能指出的东西（"树叶的影子刚好落在她肩膀上"）
+  - 像说话——用"你看""刚好""其实"这类自然语气
+  - 不评价——不说"好看""动人""完美""太美了"
+  - 不强凑——一句话说清楚就不用硬写两句
+  - 可以承认意外——"拍完才发现..."
+
+  ❌ 空洞： "午后阳光营造出温暖慵懒的氛围，构图的平衡与光线的层次相得益彰"
+  ✅ 好的： "刚好有一束光从窗帘缝里漏进来，在桌上画了一道线"
+           "你看她的影子——比真人还好看"
+           "拍完才发现那只猫一直在画面角落盯着镜头"
+
+scene_tier: 🥉一般 / 🥈不错 / 🥇丰富（内部使用，控制方案数量，不展示给用户）
 
 场景等级判定：
 🥉 一般场景（普通客厅/随手拍/信息量少/光线平淡/空间浅）
@@ -385,15 +410,14 @@ reason 字段应该足够详细，让用户理解为什么推荐这个方向（8
     c) 摄影师风格名（如滨田英明风/川内伦子风/Saul Leiter风/Crewdson式）
   · translated = 搜索到的英文风格名（如"Moody Landscape""Golden Hour Portrait"），由AI翻译为中文
   · generated = 不属于以上两类——搜索结果为空且不是知识库已有风格名，AI完全基于摄影原理自创的中文风格名（如"清冷森系""暗调都市叙事"这类从没在摄影圈出现过的名字）
-- 长度：presence≤80字 insight≤30字 reason≤120字 how≤50字
+- 长度：insight≤60字 reason≤120字 how≤50字
 
 ## 输出格式
 
 严格JSON，不要markdown包裹。directions 必须是 ARRAY 不是 OBJECT：
 
 {{
-  "presence": "2-3句在场感受",
-  "insight": "一句话洞察",
+  "insight": "1-2句话，小红书配文风格",
   "scene_tier": "🥉/🥈/🥇",
   "directions": [
     {{
@@ -468,7 +492,10 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。为已选定的风格�
 ## 🚨 设备约束（最高优先级——每套方案的 where/do 必须遵守）
 {device_constraints}
 
-在写 where 和 do 时，必须逐一检查：
+## 🌤 环境上下文（辅助约束）
+{env_context}
+
+在写 shooter 和 gear 时，必须逐一检查：
 - 如果设备没有长焦镜头 → 不能写"用长焦压缩空间""拉近拍"
 - 如果设备没有超广角 → 不能写"超广角低角度仰拍"
 - 如果设备是定焦 → 所有方案用同一焦段思考，靠走位变化
@@ -479,20 +506,79 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。为已选定的风格�
 
 ① name: 方案名——能让人记住的，"让阳光给你打光"不是"方案1"
 ② prep: 要准备什么——"什么都不用准备，站过去就行"
-③ where: 你站这——必须引用视觉分析中[观察]到的具体场景元素。❌ 禁止距离数字。必须考虑设备焦段
-④ do: 这样做——零摄影术语，纯动作语言。必须基于设备实际能力
-⑤ result: 拍出来——效果预览，用效果语言
-⑥ why: 为什么好看——摄影原理，2-3句
-⑦ posture: 有人物必写，无人物为空。给"做一件事"的指令不说"摆造型"：
-   - 脊柱与重心 / 手部任务 / 眼神方向 / 表情触发（不说"笑"，给动作触发）
-   - L1叙事→L2感受→L3物理，三层递进
-⑧ annotations: 视觉标注——只标注文字说不精确的，1-2个，最多3个：
+③ subject: 被拍摄者——有人物必写，无人物为空
+   给"做一件事"的指令，不说"摆造型""摆姿势"
+   包含：站/坐的具体位置（引用 anchors）、身体重心、手部任务、
+         眼神方向、表情触发（不说"笑"，给动作触发）
+   2-3句话，纯动作语言
+④ shooter: 摄影师——每套必写
+   包含：站哪个位置（引用 space.anchors 的具体元素）、
+         离多远、什么高度（平视/蹲下/高处俯拍）、什么角度
+   必须考虑设备焦段限制
+   2-3句话
+⑤ gear: 设备调试——每套必写
+   包含：用哪个焦段、对焦点在哪、曝光补偿怎么调、
+         是否用人像模式/闪光灯
+   基于当前设备的实际能力，不需要特别操作就写"全自动就行"
+   1-2句话
+⑥ enhance: 增色技巧——可选，有真正能增色的想法才写
+   包含：打光建议、现场道具利用、服装/发型调整、
+         滤镜方向、后期思路、AI处理想法
+   不强凑，没有就诚实不写
+   1-3句话
+⑦ result: 拍出来——效果预览，用效果语言
+⑧ why: 为什么好看——摄影原理，2-3句
+⑨ annotations: 视觉标注——只标注文字说不精确的，1-2个，最多3个：
    - subject: 被摄者位置 {{"type":"subject","x":0.35,"y":0.72,"label":"站这","color":"#4ade80"}}
    - shooter: 拍摄者站位 {{"type":"shooter","from":{{"x":0.05,"y":0.85}},"to":{{"x":0.4,"y":0.5}},"angle":"蹲下·45°仰拍","color":"#4ade80"}}
    - frame: 取景范围，加w/h字段
    - crop: 裁剪建议，加w/h字段
    - color: #4ade80(绿)/#f59e0b(金)/#a78bfa(紫)
-⑨ perspective: 换个思路——有真正差异才写，可选
+⑩ perspective: 换个思路——有真正差异才写，可选
+⑪ img_gen_prompt: 豆包图生图提示词——每套必写（⚠️ 图生图模式）
+
+   这是图生图提示词——用户会上传原图作为参考图，豆包需要基于原图生成调整后的画面。
+
+   🚨 图生图核心原则：
+   - 开头必写"参考上传的照片，保持[人物特征]和[场景环境]不变"
+   - 然后写"做以下调整："逐项列出姿势、机位、光线的变化
+   - 风格用视觉特征描述，不堆砌风格标签
+   - 禁止写相机品牌型号参数（Canon/85mm/f1.4/iPhone）——用视觉语言描述透视和景别
+   - ≤300 汉字，中文完整句式，禁止否定描述
+   - 末尾统一加：无文字、无水印、无签名、自然肤质、真实摄影感
+
+   图生图模板：
+   ```
+   参考上传的照片，保持人物的面部特征、发型、[从vision分析提取的服装描述]不变，
+   保持[从vision分析提取的场景关键元素]不变。
+
+   做以下调整：
+   - 人物：[subject字段内容——新姿势/表情/眼神]
+   - 机位：[shooter字段内容——拍摄位置/高度/角度，用视觉语言写]
+   - 光线：[光线方向+光质+特殊光影效果，用视觉语言写]
+     [如有enhance字段的打光建议，融入光线描述]
+
+   画面风格：[风格名]——[具体视觉特征：色调/影调/质感/颗粒感，2-3个可感知的视觉属性]
+   景别与空间：[用视觉语言描述距离感和空间关系，不写焦段数字]
+
+   无文字、无水印、无签名、自然肤质、真实摄影感
+   ```
+
+   参考示例：
+   "参考上传的照片，保持人物的面部特征、发型、白色卫衣和牛仔裤不变，
+    保持客厅灰色沙发和落地窗的场景环境不变。
+
+    做以下调整：
+    - 人物：站起来走到落地窗边，侧身靠窗框，右手拿马克杯垂在腰旁，
+      脸转向窗外看外面的树，嘴唇自然闭合
+    - 机位：退到电视柜旁边，蹲下到胸口高度，低角度往窗户方向仰拍
+    - 光线：午后阳光从左侧窗外斜照进来，在头发边缘形成金色轮廓光，
+      窗边白墙作为天然反光板给脸部补柔光
+
+    画面风格：日系清新——明亮通透，低饱和度，阴影偏蓝，柔和高光过渡
+    景别与空间：中景构图，人物占据画面三分之二，背景窗外虚化成绿色光斑
+
+    无文字、无水印、无签名、自然肤质、真实摄影感"
 
 ## 🚨 两道追问（每套方案生成后立刻自问——不通过不输出）
 □ 叙事完整性：这套方案有清晰的视觉叙事吗？→ 不是机械指令
@@ -500,10 +586,10 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。为已选定的风格�
 不通过 → 修正后再输出。修不了 → 诚实跳过这套。
 
 ## 🚨 约束
-- 场景锚点：where/do 必须引用视觉分析 space.anchors 中的具体元素，不得使用通用描述
+- 场景锚点：subject/shooter 必须引用视觉分析 space.anchors 中的具体元素，不得使用通用描述
 - 口吻：朋友分享观察，❌摄影术语 ❌"我"第一人称 ✅"你"视角
 - result 必须是画面视觉预览——拍出来能看到什么。❌禁止社交验证话术（"发朋友圈会被赞""小红书同款""让人羡慕""被问在哪拍的"）。✅好的例子："整个人被暖光包住，头发丝是金色的，背景化成一片奶油色的模糊"
-- 长度：prep≤50字 where 1-2句 do 2-4句 result 2-3句 why 2-3句
+- 长度：prep≤50字 subject 2-3句 shooter 2-3句 gear 1-2句 enhance 1-3句 result 2-3句 why 2-3句
 
 ## 输出格式
 
@@ -512,8 +598,9 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。为已选定的风格�
 {{
   "plans": [
     {{
-      "name": "", "prep": "", "where": "", "do": "", "result": "",
-      "why": "", "posture": "", "annotations": [], "perspective": ""
+      "name": "", "prep": "", "subject": "", "shooter": "", "gear": "",
+      "enhance": "", "result": "", "why": "", "annotations": [], "perspective": "",
+      "img_gen_prompt": ""
     }}
   ]
 }}"""
@@ -998,7 +1085,7 @@ def get_location_weather(exif_result):
 # Session 管理
 # ============================================================
 
-def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None):
+def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context=""):
     """创建分析会话"""
     session_id = uuid.uuid4().hex[:12]
     _sessions[session_id] = {
@@ -1010,7 +1097,8 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
         'scene_tier': scene_tier,
         'plan_cache': {},   # key: f"{direction_id}:{device_key}"
         'created_at': time.time(),
-        'client_ip': client_ip
+        'client_ip': client_ip,
+        'env_context': env_context
     }
     _cleanup_old_sessions()
     return session_id
@@ -1135,8 +1223,13 @@ def normalize_creative_output(data):
             d.setdefault('name_source', '')
             for p in d.get('plans', []):
                 if isinstance(p, dict):
-                    p.setdefault('posture', '')
+                    p.setdefault('subject', '')
+                    p.setdefault('shooter', '')
+                    p.setdefault('gear', '')
+                    p.setdefault('enhance', '')
                     p.setdefault('annotations', [])
+                    p.setdefault('perspective', '')
+                    p.setdefault('img_gen_prompt', '')
         return data
 
     # v2 object 格式 → 转换为 array
@@ -1655,15 +1748,23 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         except Exception as e:
             print(f"[Search] Style search failed: {e}", file=sys.stderr, flush=True)
 
-        # 位置搜索（如果有 GPS）
-        if location_weather and location_weather.get('place'):
+        # 位置搜索（优先用豆包识别的具体场所，fallback Nominatim 城市名）
+        loc_clues = vision_json.get('location_clues', '') if isinstance(vision_json, dict) else ''
+        search_place = None
+        if loc_clues and loc_clues != '无法识别' and len(loc_clues) >= 3:
+            search_place = loc_clues
+            print(f"[Search] Using vision location_clues: {loc_clues}", file=sys.stderr, flush=True)
+        elif location_weather and location_weather.get('place'):
+            search_place = location_weather['place']
+
+        if search_place:
             try:
                 loc_text, loc_quality = search_location_intel(
-                    location_weather['place'], scene_type
+                    search_place, scene_type
                 )
                 if loc_text:
                     search_context += "\n" + loc_text
-                    print(f"[Search] Location search: {len(loc_text)} chars, quality={loc_quality}", file=sys.stderr, flush=True)
+                    print(f"[Search] Location search: {len(loc_text)} chars, quality={loc_quality}, place={search_place[:60]}", file=sys.stderr, flush=True)
             except Exception as e:
                 print(f"[Search] Location search failed: {e}", file=sys.stderr, flush=True)
 
@@ -1682,6 +1783,55 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         if not search_context:
             search_context = "（本次未触发社区搜索——场景匹配主要基于专业知识库推理。）\n"
 
+        # ── 🌤 环境上下文（注入方向+方案 prompt，让推荐更智能）──
+        env_context = ""
+        if location_weather:
+            st = location_weather.get('sun_times', {})
+            if st:
+                env_context += f"- 光照时段：{st.get('emoji','')} {st.get('label','')}（{st.get('desc','')}）\n"
+                env_context += f"- 日出 {st.get('sunrise','?')} / 日落 {st.get('sunset','?')}\n"
+                # 日落倒计时
+                if st.get('sunset'):
+                    try:
+                        from datetime import datetime
+                        sunset_t = datetime.strptime(st['sunset'], '%H:%M').time()
+                        now_t = datetime.now().time()
+                        mins_left = (sunset_t.hour * 60 + sunset_t.minute) - (now_t.hour * 60 + now_t.minute)
+                        if 0 < mins_left < 120:
+                            env_context += f"- ⚠️ 距日落约{mins_left}分钟——时间窗口有限\n"
+                    except:
+                        pass
+            # 光线评估（豆包 AI）
+            light_level = vision_json.get('light', {}).get('level', '')
+            if light_level:
+                env_context += f"- AI亮度评估：{light_level}\n"
+            # 识别地点
+            loc_clues = vision_json.get('location_clues', '')
+            if loc_clues and loc_clues != '无法识别':
+                env_context += f"- 画面识别地点：{loc_clues}\n"
+            elif location_weather.get('place'):
+                env_context += f"- GPS地点：{location_weather['place']}\n"
+            # 天气预报摘要
+            fc = location_weather.get('forecast', [])
+            if fc:
+                fc_parts = []
+                for f_item in fc[:6]:
+                    part = f"{f_item.get('time','')} {f_item.get('emoji','')}"
+                    if f_item.get('temp') is not None:
+                        part += f" {int(f_item['temp'])}°"
+                    if f_item.get('precip_prob', 0) >= 30:
+                        part += f" 🌧{f_item['precip_prob']}%"
+                    fc_parts.append(part)
+                env_context += f"- 未来天气：{' · '.join(fc_parts)}\n"
+                # 雨警
+                rain_items = [f for f in fc if f.get('precip_prob', 0) >= 30]
+                if rain_items:
+                    env_context += "- ⚠️ 未来有降雨概率——风格推荐需考虑天气变化\n"
+        if env_context:
+            env_context = "## 🌤 拍摄环境上下文\n" + env_context
+        else:
+            env_context = "（无可用环境数据）\n"
+
         directions_prompt = DIRECTIONS_PROMPT.format(
             vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
             exif_summary=exif_summary,
@@ -1690,7 +1840,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             style_context=style_context,
             knowledge_context=knowledge_context,
             search_context=search_context,
-            fast_path_note=fast_path_note
+            fast_path_note=fast_path_note,
+            env_context=env_context
         )
         print(f"[SSE] Directions prompt: {len(directions_prompt)} chars", file=sys.stderr, flush=True)
         directions_content, directions_usage = call_doubao([
@@ -1716,7 +1867,6 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
                     directions_json['_format_warning'] = f'directions 格式异常（{dir_type}），已重置为空数组'
 
         # 提取元数据
-        presence = directions_json.get('presence', '')
         insight = directions_json.get('insight', '')
         scene_tier = directions_json.get('scene_tier', '🥈')
         directions = directions_json.get('directions', [])
@@ -1732,7 +1882,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             device_context=device_text,
             directions=directions,
             scene_tier=scene_tier,
-            client_ip=client_ip
+            client_ip=client_ip,
+            env_context=env_context
         )
 
         # ── 记录使用统计 ──
@@ -1757,7 +1908,6 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
 
         # ── 发送方向结果给前端 ──
         yield emit("directions_ready", {
-            "presence": presence,
             "insight": insight,
             "scene_tier": scene_tier,
             "directions": directions,
@@ -1772,7 +1922,6 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         if sess:
             sess['img_b64'] = img_b64
             sess['exif_data'] = exif_display
-            sess['presence'] = presence
             sess['insight'] = insight
             sess['discovered_styles'] = discovered_styles
             sess['techniques_used'] = techniques_used
@@ -1858,7 +2007,8 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         how=direction.get('how', ''),
         scene_tier=session['scene_tier'],
         tier_constraint=tier_constraint,
-        device_constraints=device_constraints
+        device_constraints=device_constraints,
+        env_context=session.get('env_context', '')
     )
 
     print(f"[Plans] Prompt: {len(plans_prompt)} chars, direction={direction_id}, device={device_key}", file=sys.stderr, flush=True)
@@ -1883,9 +2033,13 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         # 补齐字段
         for p in plans:
             if isinstance(p, dict):
-                p.setdefault('posture', '')
+                p.setdefault('subject', '')
+                p.setdefault('shooter', '')
+                p.setdefault('gear', '')
+                p.setdefault('enhance', '')
                 p.setdefault('annotations', [])
                 p.setdefault('perspective', '')
+                p.setdefault('img_gen_prompt', '')
 
         # 缓存
         session['plan_cache'][cache_key] = plans
@@ -2244,7 +2398,6 @@ def restore_session(session_id):
         "img_b64": sess.get('img_b64', ''),
         "exif_data": sess.get('exif_data', {}),
         "vision_json": sess.get('vision_json', {}),
-        "presence": sess.get('presence', ''),
         "insight": sess.get('insight', ''),
         "scene_tier": sess.get('scene_tier', '🥈'),
         "directions": sess.get('directions', []),

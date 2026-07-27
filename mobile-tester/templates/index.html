@@ -326,10 +326,11 @@
   .plan-section .sec-icon { flex-shrink: 0; font-size: 14px; width: 20px; }
   .plan-section .sec-text { flex: 1; }
   .sec-prep .sec-text { color: var(--dim); }
-  .sec-where .sec-text { color: var(--green); font-weight: 500; }
-  .sec-do .sec-text { color: var(--text); }
+  .sec-subject .sec-text { color: #c084fc; font-weight: 500; }
+  .sec-shooter .sec-text { color: var(--green); font-weight: 500; }
+  .sec-gear .sec-text { color: var(--fire); }
+  .sec-enhance .sec-text { color: var(--dim); }
   .sec-result .sec-text { color: var(--fire); }
-  .sec-posture .sec-text { color: #c084fc; }
 
   .why-toggle {
     display: flex; align-items: center; gap: 6px; padding: 8px 0;
@@ -1103,79 +1104,45 @@ function showExifInfo(data) {
     html += `<div class="info-row"><span class="ir-icon">📍</span><span class="ir-text">${lw.gps.lat.toFixed(4)}, ${lw.gps.lon.toFixed(4)}</span></div>`;
   }
 
-  // ── Row 3: 时间 + 光照时段 ──
-  let timeHtml = '';
-  if (exif.datetime) {
-    const dt = exif.datetime;
-    timeHtml += `<span>🕐 ${esc(dt)}</span>`;
-    if (lw && lw.sun_times && lw.sun_times.label) {
-      const st = lw.sun_times;
-      timeHtml += ` <span class="light-badge">${esc(st.emoji)} ${esc(st.label)}</span>`;
-      if (st.desc) timeHtml += ` <span class="light-desc">${esc(st.desc)}</span>`;
-      timeHtml += ` <span class="light-sub">日出 ${esc(st.sunrise)} · 日落 ${esc(st.sunset)}</span>`;
+  // ── Row 3: 日出日落 + 光照时段 ──
+  if (lw && lw.sun_times && lw.sun_times.label) {
+    const st = lw.sun_times;
+    let lightHtml = '';
+    // 顶部：日出日落时间
+    lightHtml += `<div class="light-sub" style="margin-bottom:2px">日出 ${esc(st.sunrise)} · 日落 ${esc(st.sunset)}`;
+    // 日落倒计时
+    if (st.sunset) {
+      try {
+        const [h, m] = st.sunset.split(':').map(Number);
+        const now = new Date();
+        const sunsetMin = h * 60 + m;
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const left = sunsetMin - nowMin;
+        if (left > 0 && left < 120) {
+          lightHtml += ` <span style="color:var(--fire)">· 还剩约${left}分钟</span>`;
+        }
+      } catch(e) {}
     }
-    html += `<div class="info-row info-row-wrap"><span class="ir-icon">🕐</span><div class="ir-multiline">${timeHtml}</div></div>`;
-  } else {
-    html += '<div class="info-row"><span class="ir-icon">🕐</span><span class="ir-text" style="color:var(--dimmer)">时间未知</span></div>';
+    lightHtml += '</div>';
+    // 下方：光照时段徽章
+    lightHtml += `<span class="light-badge">${esc(st.emoji)} ${esc(st.label)}</span>`;
+    if (st.desc) lightHtml += ` <span class="light-desc">${esc(st.desc)}</span>`;
+    html += `<div class="info-row"><span class="ir-icon">🌟</span><span class="ir-text">${lightHtml}</span></div>`;
   }
 
-  // ── Row 4: 天气（拍摄时）──
-  if (lw && lw.historical) {
-    const hw = lw.historical;
-    let wh = `<span>${esc(hw.emoji)} ${esc(hw.desc)}</span>`;
-    if (hw.temp != null) wh += ` <span>🌡 ${hw.temp}°C</span>`;
-    if (hw.cloud != null) wh += ` <span>☁️ ${hw.cloud}%</span>`;
-    if (hw.wind != null && hw.wind > 0) wh += ` <span>💨 ${hw.wind}km/h</span>`;
-    html += `<div class="info-row"><span class="ir-icon">🌤</span><span class="ir-text">${wh}</span></div>`;
-  }
-
-  // ── Row 5: 预报（最近48h的照片）──
+  // ── Row 4: 未来6小时预报（每时段一行）──
   if (lw && lw.forecast && lw.forecast.length > 0) {
     const fc = lw.forecast;
-    // 找降雨概率最高的时刻提示
-    const rainWarn = fc.find(f => f.precip_prob != null && f.precip_prob >= 30);
-    let fcHtml = '<div class="forecast-bar">';
-    fc.forEach(f => {
-      const rainClass = (f.precip_prob != null && f.precip_prob >= 30) ? 'rain' : '';
-      fcHtml += `<span class="fc-item ${rainClass}">${esc(f.time)}<br>${esc(f.emoji)}${f.temp!=null?esc(Math.round(f.temp))+'°':''}${f.precip_prob!=null?'<small>'+esc(f.precip_prob)+'%</small>':''}</span>`;
+    let fcHtml = '';
+    fc.slice(0, 6).forEach(f => {
+      const isRain = f.precip_prob != null && f.precip_prob >= 30;
+      const rainStyle = isRain ? 'color:var(--fire);font-weight:500' : '';
+      fcHtml += `<div style="font-size:11px;${rainStyle}">`;
+      fcHtml += `${esc(f.time)} ${esc(f.emoji)} ${f.temp!=null?Math.round(f.temp)+'°':''}`;
+      if (isRain) fcHtml += ` 🌧${f.precip_prob}% <span style="color:var(--fire);font-size:10px">注意降雨</span>`;
+      fcHtml += '</div>';
     });
-    fcHtml += '</div>';
-    html += `<div class="info-row info-row-wrap"><span class="ir-icon">📡</span><div class="ir-multiline"><span style="font-size:11px;color:var(--dimmer)">未来6小时预报</span>${fcHtml}${rainWarn?`<div style="font-size:11px;color:var(--fire);margin-top:4px">🌧 提示：${rainWarn.time} 起降雨概率 ${rainWarn.precip_prob}%</div>`:''}</div></div>`;
-  }
-
-  // ── Row 6: 光线判断（合并 ISO/快门/闪光）──
-  const iso = exif.iso;
-  const shutter = exif.exposure_time || '';
-  const flashFired = exif.flash && exif.flash.includes('已触发');
-  let lightJudge = '';
-  if (iso != null || shutter) {
-    const isoNum = parseInt(iso);
-    const shutterNum = shutter.includes('/') ? 1/parseFloat(shutter.split('/')[1]) : parseFloat(shutter);
-    if (flashFired) {
-      lightJudge = '⚡ 有人工补光';
-    } else if (isoNum >= 1600) {
-      lightJudge = '🌙 光线很暗 · 建议稳定支撑';
-    } else if (isoNum >= 800 || (shutterNum && shutterNum < 1/60)) {
-      lightJudge = '🌅 光线较弱 · 手持注意稳定';
-    } else if (isoNum >= 200) {
-      lightJudge = '⛅ 中等光线 · 正常拍摄';
-    } else if (isoNum < 200 && isoNum >= 32) {
-      lightJudge = '☀️ 光线充足 · 可随意拍';
-    } else {
-      lightJudge = '💡 光线条件未知';
-    }
-  } else if (!flashFired) {
-    lightJudge = '💡 光线条件未知（请根据画面判断）';
-  }
-  if (lightJudge) {
-    html += `<div class="info-row"><span class="ir-icon">💡</span><span class="ir-text">${lightJudge}</span></div>`;
-  }
-
-  // ── EXIF 备注（仅低光/慢快门等硬证据）──
-  if (exif._notes && exif._notes.length > 0) {
-    html += '<div class="exif-pills-bar" style="margin-top:8px">';
-    exif._notes.forEach(n => { html += `<span class="exif-pill exif-warn">${esc(n)}</span>`; });
-    html += '</div>';
+    html += `<div class="info-row"><span class="ir-icon">📡</span><span class="ir-text">${fcHtml}</span></div>`;
   }
 
   html += '</div>';
@@ -1208,6 +1175,16 @@ function showSceneInfo(data) {
     if (l.quality) lh += `光质：${esc(l.quality)} · `;
     if (l.color_temp) lh += `色温：${esc(l.color_temp)}`;
     if (l.special && l.special !== '无特殊') lh += `<br>特殊：${esc(l.special)}`;
+    // AI 亮度评估
+    if (l.level) {
+      const levelMap = {
+        '充足': '☀️ 光线充足 · 放心手持拍摄',
+        '一般': '🌥 散射光/暗光室内 · 注意手持稳定',
+        '不足': '⚠️ 低光环境 · 建议稳定支撑，高ISO会带来噪点'
+      };
+      const levelText = levelMap[l.level] || `💡 ${esc(l.level)}`;
+      lh += `<br><span style="color:var(--green)">${levelText}</span>`;
+    }
     html += `<div class="scene-section"><div class="ss-label">💡 光线</div><div class="ss-text">${lh}</div></div>`;
   }
 
@@ -1270,10 +1247,9 @@ function showDirectionsResult(data) {
   searchQuality = data.search_quality || null;
 
   const tier = data.scene_tier || '🥈';
-  $('#insightBlock').innerHTML = `
-    <span class="tier-badge" style="background:rgba(34,211,238,0.08);color:var(--cyan)">${esc(tier)}</span>
-    <div class="presence">${esc(data.presence||'')}</div>
-    <div class="insight">💡 ${esc(data.insight||'')}</div>`;
+  $('#insightBlock').innerHTML = data.insight
+    ? `<div class="insight">${esc(data.insight)}</div>`
+    : '';
 
   allDirs = (data.directions||[]).filter(d => d && (d.style || d.reason));
   if (allDirs.length === 0) { showError('未找到合适的方向'); return; }
@@ -1535,7 +1511,7 @@ function renderPlans(plans, direction) {
     }
   });
 
-  renderDataSections();
+  // renderDataSections();  // v3.6: 底部三栏（搜索质量/发现风格/使用技法）移至管理面板
   togglePreviewForPlan(0);
   $('#plansArea').classList.add('active');
   $('#reshootBtn').style.display = 'block';
@@ -1550,18 +1526,26 @@ function renderPlanCard(p, i, direction) {
   let c = `<div class="plan-card"><div class="plan-name"><span class="idx" style="background:${cb};color:${cv}">${i+1}</span>${esc(p.name||'方案'+(i+1))}</div>`;
   if (p.annotations && p.annotations.length>0) c += `<div class="annotated-photo"><canvas id="ac${i}"></canvas></div>`;
   if (p.prep) c += `<div class="plan-section sec-prep"><span class="sec-icon">📋</span><span class="sec-text">${esc(p.prep)}</span></div>`;
-  if (p.where) c += `<div class="plan-section sec-where"><span class="sec-icon">📍</span><span class="sec-text">${esc(p.where)}</span></div>`;
-  if (p.do) c += `<div class="plan-section sec-do"><span class="sec-icon">🎬</span><span class="sec-text">${esc(p.do)}</span></div>`;
-  if (p.posture) c += `<div class="plan-section sec-posture"><span class="sec-icon">🧍</span><span class="sec-text">${esc(p.posture)}</span></div>`;
+  if (p.subject) c += `<div class="plan-section sec-subject"><span class="sec-icon">👤</span><span class="sec-text">${esc(p.subject)}</span></div>`;
+  if (p.shooter) c += `<div class="plan-section sec-shooter"><span class="sec-icon">📷</span><span class="sec-text">${esc(p.shooter)}</span></div>`;
+  if (p.gear) c += `<div class="plan-section sec-gear"><span class="sec-icon">⚙️</span><span class="sec-text">${esc(p.gear)}</span></div>`;
+  if (p.enhance) c += `<div class="plan-section sec-enhance"><span class="sec-icon">🎨</span><span class="sec-text">${esc(p.enhance)}</span></div>`;
   if (p.result) c += `<div class="plan-section sec-result"><span class="sec-icon">✨</span><span class="sec-text">${esc(p.result)}</span></div>`;
   if (p.why) { c += `<div class="why-toggle" id="wt${i}"><span class="arrow">▶</span> 💡 为什么这样好看？</div>`; c += `<div class="why-content" id="wc${i}">${esc(p.why)}</div>`; }
   if (p.perspective) c += `<div class="plan-perspective">🎯 ${esc(p.perspective)}</div>`;
 
-  const ip = genImgPrompt(p, direction);
+  // 生图提示词：优先用 AI 生成的 img_gen_prompt，fallback 前端拼接
+  let imgPromptText = p.img_gen_prompt || '';
+  let imgNotes = [];
+  if (!imgPromptText) {
+    const ip = genImgPrompt(p, direction);
+    imgPromptText = ip.prompt;
+    imgNotes = ip.notes;
+  }
   let nh = '';
-  if (ip.notes.length>0) nh = '<div class="prompt-notes">'+ip.notes.map(n=>`<span class="note-tag">${n}</span>`).join('')+'</div>';
+  if (imgNotes.length>0) nh = '<div class="prompt-notes">'+imgNotes.map(n=>`<span class="note-tag">${n}</span>`).join('')+'</div>';
   c += `<button class="img-gen-btn" id="igb${i}">🖼️ 生图</button>`;
-  c += `<div class="img-gen-prompt" id="igp${i}"><div class="prompt-text" id="pt${i}">${esc(ip.prompt)}</div>${nh}<button class="copy-btn" id="cp${i}">📋 复制</button></div>`;
+  c += `<div class="img-gen-prompt" id="igp${i}"><div class="prompt-text" id="pt${i}">${esc(imgPromptText)}</div>${nh}<button class="copy-btn" id="cp${i}">📋 复制</button></div>`;
 
   // v3.5: 反馈按钮 + 原因面板
   c += `<div class="plan-feedback" id="fb${i}">
@@ -1648,59 +1632,65 @@ function buildDeviceDesc() {
 }
 
 function genImgPrompt(plan, direction) {
-  // ── 豆包官方公式：主体→动作→场景→光线→镜头语言→风格/质感→画质→约束词 ──
-  const elements = [];
+  // ── 图生图格式：参考原图 + 保留不变 + 逐项调整 ──
+  const parts = [];
 
-  // 1. 主体+动作（有人物时最优先）
-  if (plan.posture) elements.push(plan.posture);
-  else if (plan.do) elements.push(plan.do);
+  // 开头：声明参考原图
+  parts.push('参考上传的照片，保持人物外貌、服装和场景环境不变。\n\n做以下调整：');
 
-  // 2. 场景位置
-  if (plan.where) elements.push(plan.where);
+  // 1. 人物姿势
+  const postureOrSubject = plan.posture || plan.subject || '';
+  if (postureOrSubject) parts.push(`- 人物：${postureOrSubject}`);
 
-  // 3. 光线条件（天气光照时段 + Vision 光质方向）
+  // 2. 机位
+  const shooterOrWhere = plan.shooter || plan.where || '';
+  if (shooterOrWhere) parts.push(`- 机位：${shooterOrWhere}`);
+
+  // 3. 光线
   const lightDesc = buildLightDesc();
-  if (lightDesc) elements.push(lightDesc);
+  if (lightDesc) {
+    let lightText = `- 光线：${lightDesc}`;
+    // 融入 enhance 中的打光建议
+    if (plan.enhance && /反光|补光|柔光|遮光|打光/.test(plan.enhance)) {
+      lightText += `，${plan.enhance}`;
+    }
+    parts.push(lightText);
+  } else if (plan.enhance && /反光|补光|柔光|遮光|打光/.test(plan.enhance)) {
+    parts.push(`- 光线：${plan.enhance}`);
+  }
 
-  // 4. 拍摄角度与景别（do 还没被 posture 用过时加入）
-  if (plan.do && plan.posture) elements.push(plan.do);
-
-  // 5. 设备描述（相机型号 + 镜头）
-  const deviceDesc = buildDeviceDesc();
-  if (deviceDesc) elements.push(deviceDesc);
-
-  // 6. 画面效果
-  if (plan.result) elements.push(plan.result);
-
-  // 7. 风格承诺（过滤抽象感受词）
+  // 4. 画面风格
   let style = (direction.style_promise || '');
   style = style.replace(/[，,。.][^，,。.]*[感觉得像][^，,。.]*/g, '');
   style = style.replace(/发出去.*?评论/g, '');
   style = style.replace(/发圈.*?评论/g, '');
-  style = style.replace(/干净高级的/g, '');
   style = style.trim();
-  if (style) elements.push(style);
-  elements.push('写实摄影风格');
+  if (style) parts.push(`\n画面风格：${style}`);
 
-  // 8. 色调（来自 Vision 色彩分析）
-  let colorDesc = '';
-  if (currentColorInfo && currentColorInfo.color_temp) {
-    if (currentColorInfo.color_temp.includes('暖')) colorDesc = '暖色调';
-    else if (currentColorInfo.color_temp.includes('冷')) colorDesc = '冷色调';
-    else if (currentColorInfo.color_temp.includes('中')) colorDesc = '中性色调';
+  // 5. 景别与空间（gear 字段用视觉语言）
+  if (plan.gear) {
+    let gearVis = plan.gear
+      .replace(/2×裁切.*?mm\)/, '中等焦距视角')
+      .replace(/1×主摄/, '接近人眼视角')
+      .replace(/0\.5×超广角/, '超广角透视')
+      .replace(/3×长焦.*?mm\)/, '远距离压缩视角')
+      .replace(/全自动就行/, '')
+      .replace(/对焦点在.*?[，,]/g, '')
+      .replace(/曝光补偿.*?[，,]/g, '')
+      .trim();
+    if (gearVis) parts.push(`景别与空间：${gearVis}`);
   }
-  if (colorDesc && !((style||'').includes('暖色调') || (style||'').includes('冷色调'))) {
-    elements.push(colorDesc);
-  }
 
-  // 9. 画质兜底 + 负面约束词
-  elements.push('高清细节，自然肤色，无模糊，无畸变，无多余杂物，无水印');
+  // 6. 画面效果
+  if (plan.result) parts.push(`\n画面效果：${plan.result}`);
 
-  // 逗号拼接
-  const prompt = elements.filter(Boolean).join('，');
+  // 7. 约束词
+  parts.push('\n无文字，无水印，无签名，自然肤质，真实摄影感');
+
+  const prompt = parts.filter(Boolean).join('\n');
 
   // ── 智能标注（保持不变）──
-  const operational = [plan.do||'', plan.where||'', plan.prep||'', plan.result||'', plan.posture||'', plan.perspective||''].join(' ');
+  const operational = [plan.subject||'', plan.shooter||'', plan.gear||'', plan.do||'', plan.where||'', plan.prep||'', plan.result||'', plan.posture||'', plan.perspective||''].join(' ');
 
   const notes = [];
 
@@ -1762,12 +1752,8 @@ function genImgPrompt(plan, direction) {
   aiPatterns.forEach(({re, label}) => { if (re.test(operational)) foundAI.push(label); });
   if (foundAI.length > 0) notes.push(`🤖 AI/合成：${foundAI.join('、')}`);
 
-  // 设备标注（新增：告知用户当前用的设备信息）
-  const devNote = buildDeviceDesc();
-  if (devNote) notes.push(`📷 ${devNote}`);
-
   // 参考图提示
-  notes.push('📎 建议用原图做参考图（图生图模式），保持人物和场景不变');
+  notes.push('📎 图生图模式：上传原图作为参考图，豆包会保持人物和场景不变');
 
   return {prompt, notes};
 }
@@ -1918,8 +1904,9 @@ const STORAGE_KEY = 'daipai_sid';
 function saveSessionId() {
   if (!sessionId) return;
   try {
-    const styles = allDirs.map(d => d.style || d.style_promise || '').filter(Boolean).slice(0, 3);
-    const insight = (allDirs[0]?.reason || '').slice(0, 50);
+    // 存真实 AI 洞察 + 匹配到的风格名
+    const styles = allDirs.map(d => d.style || '').filter(Boolean).slice(0, 3);
+    const insight = ($('#insightBlock').textContent || '').trim().slice(0, 60);
     // 生成 64px 缩略图
     let thumb = '';
     const img = $('#previewImg');
@@ -1988,7 +1975,7 @@ $('#restoreGo').onclick = async () => {
     if (d.vision_json && Object.keys(d.vision_json).length>0) showSceneInfo(d.vision_json);
     sessionId = lastSessionId;
     allDirs = d.directions||[]; discoveredStyles = d.discovered_styles||[]; techniquesUsed = d.techniques_used||[]; searchQuality = d.search_quality||null;
-    if (allDirs.length>0) showDirectionsResult({ session_id:lastSessionId, presence:d.presence||'', insight:d.insight||'', scene_tier:d.scene_tier||'🥈', directions:allDirs, discovered_styles:discoveredStyles, techniques_used:techniquesUsed, search_quality:searchQuality });
+    if (allDirs.length>0) showDirectionsResult({ session_id:lastSessionId, insight:d.insight||'', scene_tier:d.scene_tier||'🥈', directions:allDirs, discovered_styles:discoveredStyles, techniques_used:techniquesUsed, search_quality:searchQuality });
     planCache = d.plan_cache||{};
     $('#processing').classList.remove('active'); finishLoading();
     clearSessionId();
