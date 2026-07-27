@@ -481,6 +481,9 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。你的唯一任务：�
 ## 场景信息
 {vision_json}
 
+## 🌐 社区搜索参考（本次搜索到的真实技法——在方案中直接利用）
+{search_context}
+
 ## 设备信息
 {device_context}
 
@@ -515,6 +518,8 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。你的唯一任务：�
   （挥拍瞬间、发球姿态、球网作前景虚化、底线低角度仰拍、利用场地线条引导视线）
 - 如果在特定场所（咖啡馆/书店/地铁/展馆）→ 利用该场所的设计元素做构图
 - 至少1个方案必须有"只有这个场景才有的专属元素"——换了地方这个方案就不成立
+	- 🌐 社区搜索参考中有真实拍摄技法时 → 方案中至少引用1个搜索到的具体技法（构图建议/机位/姿势），并在方案中自然融入
+	  （例如搜索到"网球人像用低角度仰拍突出力量感" → 方案里就写"蹲低，让球网线条从下往上延伸到人物"）
 
 ## 🚨 设备约束（最高优先级——每套方案的 where/do 必须遵守）
 {device_constraints}
@@ -1112,7 +1117,7 @@ def get_location_weather(exif_result):
 # Session 管理
 # ============================================================
 
-def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", session_id=None):
+def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", search_context="", session_id=None):
     """创建分析会话"""
     if session_id is None:
         session_id = uuid.uuid4().hex[:12]
@@ -1126,7 +1131,8 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
         'plan_cache': {},   # key: f"{direction_id}:{device_key}"
         'created_at': time.time(),
         'client_ip': client_ip,
-        'env_context': env_context
+        'env_context': env_context,
+        'search_context': search_context
     }
     _cleanup_old_sessions()
     return session_id
@@ -1977,7 +1983,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             directions=directions,
             scene_tier=scene_tier,
             client_ip=client_ip,
-            env_context=env_context
+            env_context=env_context,
+            search_context=search_context
         )
 
         # ── 记录使用统计 ──
@@ -2134,6 +2141,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
 
     plans_prompt = PLANS_PROMPT.format(
         vision_json=json.dumps(session['vision_json'], ensure_ascii=False, indent=2),
+        search_context=session.get('search_context', '（无社区搜索数据）'),
         device_context=device_text,
         style_knowledge=style_knowledge,
         device_knowledge=device_knowledge,
