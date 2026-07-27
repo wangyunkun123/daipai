@@ -22,17 +22,19 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 load_dotenv()
 from PIL import Image
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation
 from search_web import search_style_inspiration, search_location_intel
 from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
 # ============================================================
 # 配置
 # ============================================================
 DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "daipai2026")
 DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
 DOUBAO_MODEL = "doubao-seed-2.0-pro"
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
@@ -2386,14 +2388,50 @@ def request_quota():
     return jsonify({"success": ok, "message": msg})
 
 
-# ── v3.5: 管理面板 ──
+# ── v3.5: 管理面板（v3.6: 密码保护）──
+
+def login_required(f):
+    """装饰器：要求管理员登录。页面路由重定向到登录页，API 路由返回 401"""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            # API 路由（/admin/approve, /admin/stats）返回 JSON 401
+            if request.path.startswith('/admin/') and request.path != '/admin':
+                return jsonify({"error": "未登录", "redirect": "/admin/login"}), 401
+            # 页面路由重定向到登录页
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """管理员登录"""
+    error = ''
+    if request.method == 'POST':
+        pw = (request.form.get('password') or '').strip()
+        if pw == ADMIN_PASSWORD:
+            session['admin_logged_in'] = True
+            return redirect(url_for('admin_panel'))
+        error = '密码错误'
+        # 避免暴力破解：延迟一下
+        time.sleep(1)
+    # 已登录就直接进面板
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin_panel'))
+    return render_template('login.html', error=error)
+
+
 @app.route('/admin')
+@login_required
 def admin_panel():
     """管理面板——查看反馈统计 + 审批配额申请"""
     return render_template('admin.html')
 
 
 @app.route('/admin/approve', methods=['POST'])
+@login_required
 def admin_approve():
     """管理员审批配额申请"""
     data = request.get_json() or {}
@@ -2409,6 +2447,7 @@ def admin_approve():
 
 
 @app.route('/admin/stats')
+@login_required
 def admin_stats():
     """管理面板数据 API"""
     try:
