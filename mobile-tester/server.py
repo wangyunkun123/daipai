@@ -378,9 +378,12 @@ reason 字段应该足够详细，让用户理解为什么推荐这个方向（8
 - 风格翻译：style必须使用中文风格名（如"安静真实""日系清新""胶片复古"），style_promise翻译为效果语言（"干净透亮，像日剧里的画面"）。禁止英文风格名如"casual_pet_daily""minimal_warm"。
 - style_promise 必须是视觉效果描述——画面里能看到的东西。❌禁止社交验证话术（如"发出去会被问在哪拍的""朋友圈会被赞""小红书爆款""让人羡慕"）。✅好的例子："暖黄光从侧面打过来，头发丝是金色的""逆光下整个人像在发光，背景化成一片模糊的绿""干净得像刚下过雨，空气都是透明的"。
 - name_source 诚实标注风格名的来源：
-  · discovered = 中文名直接从搜索结果中获得（如实记录，不需翻译）
-  · translated = 搜索到的是英文风格名，由AI翻译为中文
-  · generated = 搜索结果为空或source_type=inference，AI基于摄影原理生成风格名
+  · discovered = 中文名来自以下任一来源，不需要翻译：
+    a) 搜索结果中直接获得
+    b) 💡 知识库已有风格名（日系清新/电影感/胶片复古/极简高级/纪实粗粝/杂志时尚/梦幻柔美/Lofi直闪/县城记忆/安静真实/Grunge脏感/微观微距/便利店美学/港风复古/森系/法式慵懒/新中式）——这些是中文摄影圈的成熟词汇，属于discovered
+    c) 摄影师风格名（如滨田英明风/川内伦子风/Saul Leiter风/Crewdson式）
+  · translated = 搜索到的英文风格名（如"Moody Landscape""Golden Hour Portrait"），由AI翻译为中文
+  · generated = 不属于以上两类——搜索结果为空且不是知识库已有风格名，AI完全基于摄影原理自创的中文风格名（如"清冷森系""暗调都市叙事"这类从没在摄影圈出现过的名字）
 - 长度：presence≤80字 insight≤30字 reason≤120字 how≤50字
 
 ## 输出格式
@@ -1747,21 +1750,16 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None):
             "session_id": session_id
         })
 
-        # ── 保存完整恢复数据到 session（用户误关页面后可找回）──
+        # ── 保存恢复数据到 session（用户误关后可找回）──
         sess = _sessions.get(session_id)
         if sess:
-            sess['photo_b64'] = img_b64
+            sess['img_b64'] = img_b64
             sess['exif_data'] = exif_display
-            sess['location_weather'] = location_weather
             sess['presence'] = presence
             sess['insight'] = insight
             sess['discovered_styles'] = discovered_styles
             sess['techniques_used'] = techniques_used
             sess['search_quality'] = search_quality
-            sess['device_name'] = device_ctx['name']
-            sess['device_lenses'] = device_ctx['lenses']
-            sess['is_camera'] = is_camera
-            sess['device_source'] = device_source
 
         # ── 完成 ──
         total_time = round(time.time() - t0, 1)
@@ -2052,30 +2050,24 @@ def health():
 
 @app.route('/api/restore/<session_id>')
 def restore_session(session_id):
-    """恢复分析结果——用户误关页面后找回上次结果"""
-    session = get_session(session_id)
-    if not session:
-        return jsonify({"success": False, "error": "会话已过期（超过30分钟），请重新上传照片"}), 404
-
-    return jsonify({"success": True, "data": {
-        "photo_b64": session.get('photo_b64', ''),
-        "exif_data": session.get('exif_data', {}),
-        "location_weather": session.get('location_weather'),
-        "vision_json": session.get('vision_json', {}),
-        "presence": session.get('presence', ''),
-        "insight": session.get('insight', ''),
-        "scene_tier": session.get('scene_tier', '🥈'),
-        "directions": session.get('directions', []),
-        "discovered_styles": session.get('discovered_styles', []),
-        "techniques_used": session.get('techniques_used', []),
-        "search_quality": session.get('search_quality'),
-        "device_key": session.get('device_key', ''),
-        "device_name": session.get('device_name', ''),
-        "device_lenses": session.get('device_lenses', ''),
-        "is_camera": session.get('is_camera', False),
-        "device_source": session.get('device_source', 'none'),
-        "plan_cache": session.get('plan_cache', {}),
-        "created_at": session.get('created_at', 0)
+    """精简恢复——返回 session 中已有的分析结果"""
+    sess = get_session(session_id)
+    if not sess:
+        return jsonify({"ok": False, "error": "会话已过期"}), 404
+    return jsonify({"ok": True, "data": {
+        "img_b64": sess.get('img_b64', ''),
+        "exif_data": sess.get('exif_data', {}),
+        "vision_json": sess.get('vision_json', {}),
+        "presence": sess.get('presence', ''),
+        "insight": sess.get('insight', ''),
+        "scene_tier": sess.get('scene_tier', '🥈'),
+        "directions": sess.get('directions', []),
+        "discovered_styles": sess.get('discovered_styles', []),
+        "techniques_used": sess.get('techniques_used', []),
+        "search_quality": sess.get('search_quality'),
+        "device_key": sess.get('device_key', ''),
+        "device_context": sess.get('device_context', {}),
+        "plan_cache": sess.get('plan_cache', {})
     }})
 
 

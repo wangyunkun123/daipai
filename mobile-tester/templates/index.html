@@ -418,28 +418,34 @@
   }
   .error-msg.show { display: block; }
 
-  /* ====== Restore Banner ====== */
-  .restore-banner {
-    display: none; background: linear-gradient(135deg, rgba(34,211,238,0.12), rgba(74,222,128,0.08));
-    border: 1px solid rgba(34,211,238,0.3); border-radius: var(--radius-sm);
-    padding: 14px 16px; margin-bottom: 12px; animation: fadeUp 0.35s ease;
+  /* ====== Restore Bar (bottom) ====== */
+  .restore-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(20,20,20,0.92); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    padding: 10px 14px; display: none;
+    align-items: center; gap: 10px;
   }
-  .restore-banner.show { display: flex; align-items: center; gap: 10px; }
-  .restore-banner .rb-icon { font-size: 24px; flex-shrink: 0; }
-  .restore-banner .rb-info { flex: 1; min-width: 0; }
-  .restore-banner .rb-title { font-size: 14px; font-weight: 600; color: var(--cyan); }
-  .restore-banner .rb-detail { font-size: 11px; color: var(--dim); margin-top: 2px; }
-  .restore-banner .rb-actions { display: flex; gap: 6px; flex-shrink: 0; }
-  .rb-btn {
-    padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600;
-    cursor: pointer; border: none; white-space: nowrap;
+  .restore-bar.show { display: flex; }
+  .restore-bar .rb-thumb {
+    width: 40px; height: 40px; border-radius: 6px; object-fit: cover;
+    background: var(--card2); flex-shrink: 0; border: 1px solid var(--border);
   }
-  .rb-btn-restore { background: rgba(34,211,238,0.2); color: var(--cyan); }
-  .rb-btn-restore:active { background: rgba(34,211,238,0.35); }
-  .rb-btn-dismiss { background: transparent; color: var(--dimmer); border: 1px solid var(--border); }
-  .rb-btn-dismiss:active { color: var(--text); }
-  .restore-status { text-align: center; padding: 8px; font-size: 12px; color: var(--dim); display: none; }
-  .restore-status.show { display: block; }
+  .restore-bar .rb-info { flex: 1; min-width: 0; }
+  .restore-bar .rb-scene { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .restore-bar .rb-styles { font-size: 11px; color: var(--dimmer); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .restore-bar .rb-go {
+    font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 8px;
+    border: none; cursor: pointer; background: rgba(74,222,128,0.15); color: var(--green);
+    flex-shrink: 0;
+  }
+  .restore-bar .rb-go:active { background: rgba(74,222,128,0.25); }
+  .restore-bar .rb-close {
+    font-size: 16px; color: var(--dimmer); cursor: pointer;
+    background: none; border: none; padding: 0 2px; line-height: 1; flex-shrink: 0;
+  }
+
 </style>
 </head>
 <body>
@@ -449,20 +455,6 @@
     <h1>📷 带拍</h1>
     <p>拍照上传 → 场景分析 → 方向选择 → 出方案</p>
   </div>
-
-  <!-- ====== Restore Banner ====== -->
-  <div class="restore-banner" id="restoreBanner">
-    <span class="rb-icon">💾</span>
-    <div class="rb-info">
-      <div class="rb-title">检测到上次的分析结果</div>
-      <div class="rb-detail" id="restoreDetail"></div>
-    </div>
-    <div class="rb-actions">
-      <button class="rb-btn rb-btn-restore" id="restoreBtn">恢复</button>
-      <button class="rb-btn rb-btn-dismiss" id="dismissRestoreBtn">忽略</button>
-    </div>
-  </div>
-  <div class="restore-status" id="restoreStatus"></div>
 
   <!-- ====== Device Bar (appears after EXIF, stays at top) ====== -->
   <div class="device-bar" id="deviceBar">
@@ -600,10 +592,11 @@ function esc(s) {
 }
 const SOURCE_LABELS = {community:'👥 社区验证', tutorial:'📚 专业教程', portfolio:'🎨 作品集', inference:'🤖 AI推理'};
 function sourceLabel(st) { return SOURCE_LABELS[st] || st || ''; }
+// name_source 标注：只在非 discovered（非空）时显示
 function nameSourceBadge(ns) {
   if (ns === 'translated') return ' <span class="ai-badge">🤖 AI翻译</span>';
   if (ns === 'generated') return ' <span class="ai-badge">🤖 AI总结</span>';
-  return '';
+  return '';  // discovered 或空 → 不显示标签
 }
 
 // State
@@ -623,143 +616,6 @@ let discoveredStyles = [];
 let techniquesUsed = [];
 let searchQuality = null;
 let currentPlans = [];  // 当前方案列表，用于切换时判断标注
-
-const STORAGE_KEY = 'daipai_last_session';
-const STORAGE_TTL = 24 * 60 * 60 * 1000;  // 24小时
-
-// ============================================================
-// Session 持久化——误关页面后找回
-// ============================================================
-function saveSessionState(phase) {
-  if (!sessionId) return;
-  try {
-    const d = allDirs[activeDirIdx] || {};
-    const data = {
-      sessionId, phase,
-      deviceName: currentDeviceName || d.style || '',
-      insight: ($('#insightBlock').textContent || '').slice(0, 60),
-      timestamp: Date.now()
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch(e) { /* localStorage 不可用时静默失败 */ }
-}
-
-function checkSavedSession() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (!data.sessionId || !data.timestamp) return;
-    // 过期检查
-    if (Date.now() - data.timestamp > STORAGE_TTL) {
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-    // 显示恢复横幅
-    const detail = [];
-    if (data.deviceName) detail.push(`📱 ${data.deviceName}`);
-    if (data.insight) detail.push(`💡 ${data.insight}`);
-    const elapsed = Math.round((Date.now() - data.timestamp) / 60000);
-    detail.push(`⏱ ${elapsed < 1 ? '刚刚' : elapsed + '分钟前'}`);
-    $('#restoreDetail').textContent = detail.join(' · ');
-    $('#restoreBanner').classList.add('show');
-    // 绑定按钮
-    $('#restoreBtn').onclick = () => restoreSession(data.sessionId);
-    $('#dismissRestoreBtn').onclick = () => { $('#restoreBanner').classList.remove('show'); };
-  } catch(e) { /* 静默 */ }
-}
-
-function clearSavedSession() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-  $('#restoreBanner').classList.remove('show');
-  $('#restoreStatus').classList.remove('show');
-  $('#restoreStatus').textContent = '';
-}
-
-async function restoreSession(sid) {
-  $('#restoreBanner').classList.remove('show');
-  $('#restoreStatus').classList.add('show');
-  $('#restoreStatus').textContent = '⏳ 正在恢复上次的分析结果...';
-  try {
-    const resp = await fetch(`/api/restore/${sid}`);
-    if (!resp.ok) {
-      const err = await resp.json().catch(()=>({}));
-      $('#restoreStatus').textContent = '❌ ' + (err.error || '恢复失败');
-      clearSavedSession();
-      return;
-    }
-    const result = await resp.json();
-    if (!result.success || !result.data) {
-      $('#restoreStatus').textContent = '❌ 恢复数据异常';
-      clearSavedSession();
-      return;
-    }
-    const d = result.data;
-
-    // 1. 恢复照片
-    if (d.photo_b64) {
-      photoDataUrl = `data:image/jpeg;base64,${d.photo_b64}`;
-      $('#previewImg').src = photoDataUrl;
-      $('#previewThumb').classList.add('show');
-    }
-
-    // 2. 恢复设备栏
-    if (d.device_key && d.device_key !== 'unknown') {
-      showDeviceBar({
-        device_key: d.device_key,
-        device_name: d.device_name || '',
-        device_lenses: d.device_lenses || '',
-        is_camera: d.is_camera || false,
-        source: d.device_source || 'none',
-        exif: d.exif_data || {}
-      });
-      // 展示 EXIF 信息
-      if (d.exif_data && Object.keys(d.exif_data).length > 0) {
-        showExifInfo({ exif: d.exif_data, location_weather: d.location_weather, device_name: d.device_name, device_lenses: d.device_lenses });
-      }
-    }
-
-    // 3. 恢复场景分析
-    if (d.vision_json && Object.keys(d.vision_json).length > 0) {
-      showSceneInfo(d.vision_json);
-    }
-
-    // 4. 恢复 session_id
-    sessionId = sid;
-
-    // 5. 恢复方向结果
-    allDirs = d.directions || [];
-    discoveredStyles = d.discovered_styles || [];
-    techniquesUsed = d.techniques_used || [];
-    searchQuality = d.search_quality || null;
-    if (allDirs.length > 0) {
-      // 需要构造完整数据给 showDirectionsResult
-      showDirectionsResult({
-        session_id: sid,
-        presence: d.presence || '',
-        insight: d.insight || '',
-        scene_tier: d.scene_tier || '🥈',
-        directions: allDirs,
-        discovered_styles: discoveredStyles,
-        techniques_used: techniquesUsed,
-        search_quality: searchQuality
-      });
-    }
-
-    // 6. 恢复方案缓存
-    planCache = d.plan_cache || {};
-
-    // 7. 隐藏加载态
-    $('#processing').classList.remove('active');
-    finishLoading();
-
-    $('#restoreStatus').classList.remove('show');
-    // 滚动到结果区
-    $('#resultArea').scrollIntoView({ behavior: 'smooth' });
-  } catch(err) {
-    $('#restoreStatus').textContent = '❌ 网络错误：' + err.message;
-  }
-}
 
 // ============================================================
 // Loading UI
@@ -873,7 +729,7 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
     planCache = {}; currentDeviceKey = null; currentDeviceName = ''; currentDeviceLenses = '';
     currentLightInfo = null; currentColorInfo = null; currentLightPeriod = null;
     discoveredStyles = []; techniquesUsed = []; searchQuality = null; currentPlans = [];
-    clearSavedSession();  // 新上传开始，清除旧存档
+    clearSessionId(); $('#restoreBar').classList.remove('show');
     $('#planCarouselTrack').innerHTML = '';
     $('#planCarouselDots').innerHTML = '';
     $('#dataSections').innerHTML = '';
@@ -1212,7 +1068,7 @@ function showDirectionsResult(data) {
   $('#resultArea').classList.add('active');
   $('#reshootBtn').style.display = 'block';
   $('#resultArea').scrollIntoView({ behavior:'smooth' });
-  saveSessionState('directions');  // 自动保存——方便误关后找回
+  saveSessionId();
 }
 
 function renderDirectionCarousel() {
@@ -1227,7 +1083,8 @@ function renderDirectionCarousel() {
     if (d.fit_rationale) meta += `<span class="meta-fit">${esc(d.fit_rationale)}</span>`;
     if (d.light_annotation) meta += `<span class="meta-light">光线 ${esc(d.light_annotation)}</span>`;
     if (d.device_annotation) meta += `<span class="meta-device">设备 ${esc(d.device_annotation)}</span>`;
-    if (d.source_type === 'inference') meta += `<span class="meta-source">🤖 AI推理</span>`;
+    // 只在 name_source 也是 AI 生成时标注——避免真实风格被误标
+    if (d.source_type === 'inference' && d.name_source && d.name_source !== 'discovered') meta += `<span class="meta-source">🤖 AI推理</span>`;
     cardsHtml += `
       <div class="carousel-card">
         <div class="dir-card-single">
@@ -1262,19 +1119,13 @@ function renderDirectionCarousel() {
   // 滚动到当前 active
   scrollCarouselTo('dirCarouselTrack', activeDirIdx);
 
-  // 底部按钮——去掉啰嗦的"就选这个"，只保留方向标签
+  // 底部按钮——简洁操作，不重复卡片上的标签
   const d = allDirs[activeDirIdx];
   $('#dirActions').innerHTML = `
-    <button class="btn-select primary" id="btnSelectDir" style="width:100%">📸 ${esc(d.emoji)} ${esc(d.label)} → 出方案</button>`;
+    <button class="btn-select primary" id="btnSelectDir" style="width:100%">📸 出方案</button>`;
   $('#btnSelectDir').addEventListener('click', ()=>{ loadPlans(allDirs[activeDirIdx]); });
 
-  // 滑动时更新按钮文字
-  track.addEventListener('scroll', () => {
-    const d2 = allDirs[activeDirIdx];
-    if (d2 && $('#btnSelectDir')) {
-      $('#btnSelectDir').textContent = `📸 ${d2.emoji} ${d2.label} → 出方案`;
-    }
-  }, {passive: true});
+  // 滑动时保持按钮文字不变（不管切到哪个方向，操作语义都一样）
 }
 
 function scrollCarouselTo(trackId, idx) {
@@ -1388,27 +1239,32 @@ function renderPlans(plans, direction) {
     }
     const btn = document.getElementById(`igb${i}`), pnl = document.getElementById(`igp${i}`);
     if (btn&&pnl) btn.addEventListener('click', ()=>{ pnl.classList.toggle('open'); if(pnl.classList.contains('open')) pnl.scrollIntoView({behavior:'smooth'}); });
-    const cb = document.getElementById(`cp${i}`);
-    if (cb) cb.addEventListener('click', ()=>{
-      const te = document.getElementById(`pt${i}`);
-      if (te) {
-        const txt = te.textContent;
-        if (navigator.clipboard&&navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(txt).then(()=>{ cb.textContent='✅ 已复制'; setTimeout(()=>{cb.textContent='📋 复制'},2000); });
-        } else {
-          const r = document.createRange(); r.selectNode(te); window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
-          cb.textContent='✅ 已选中'; setTimeout(()=>{cb.textContent='📋 复制'},2000);
-        }
+    // 复制提示词——兼容 HTTP 局域网
+    const doCopy = (txt, el) => {
+      if (navigator.clipboard&&navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(()=>{ el.textContent='✅ 已复制'; setTimeout(()=>{el.textContent='📋 复制'},2000); });
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = txt; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select(); ta.setSelectionRange(0, txt.length);
+        try { document.execCommand('copy'); el.textContent = '✅ 已复制'; } catch(e) { el.textContent = '⚠️ 请手动复制'; }
+        setTimeout(()=>{el.textContent='📋 复制'}, 2000);
+        document.body.removeChild(ta);
       }
-    });
+    };
+    const cb = document.getElementById(`cp${i}`), te = document.getElementById(`pt${i}`);
+    if (cb&&te) cb.addEventListener('click', ()=>{ doCopy(te.textContent, cb); });
+    // 点击提示词文本也复制
+    if (te) { te.style.cursor = 'pointer'; te.title = '点击复制'; te.addEventListener('click', ()=>{ doCopy(te.textContent, cb||te); }); }
   });
 
   renderDataSections();
-  togglePreviewForPlan(0);  // 首套方案：有标注则隐藏原图
+  togglePreviewForPlan(0);
   $('#plansArea').classList.add('active');
   $('#reshootBtn').style.display = 'block';
   $('#plansArea').scrollIntoView({ behavior:'smooth' });
-  saveSessionState('plans');  // 自动保存——方案已生成，方便误关后找回
+  saveSessionId();
 }
 
 function renderPlanCard(p, i, direction) {
@@ -1731,7 +1587,6 @@ function resetAll() {
   planCache={}; currentDeviceKey=null; currentDeviceName=''; currentDeviceLenses='';
   currentLightInfo=null; currentColorInfo=null; currentLightPeriod=null;
   discoveredStyles=[]; techniquesUsed=[]; searchQuality=null; currentPlans=[];
-  clearSavedSession();  // 主动重置，清除存档
   $('#errorMsg').classList.remove('show');
   $('#previewThumb').classList.remove('show');
   $('#uploadZone').classList.remove('hidden');
@@ -1758,8 +1613,82 @@ function resetAll() {
   window.scrollTo({top:0,behavior:'smooth'});
 }
 $('#reshootBtn').style.display='none';
-// 页面加载时检查是否有上次未完成的分析
-checkSavedSession();
+
+// ============================================================
+// 精简恢复——localStorage 存预览信息，底部小条提醒
+// ============================================================
+const STORAGE_KEY = 'daipai_sid';
+function saveSessionId() {
+  if (!sessionId) return;
+  try {
+    const styles = allDirs.map(d => d.style || d.style_promise || '').filter(Boolean).slice(0, 3);
+    const insight = (allDirs[0]?.reason || '').slice(0, 50);
+    // 生成 64px 缩略图
+    let thumb = '';
+    const img = $('#previewImg');
+    if (img && img.complete && img.naturalWidth) {
+      try {
+        const c = document.createElement('canvas'); c.width = c.height = 64;
+        const ctx = c.getContext('2d');
+        const s = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - s) / 2, sy = (img.naturalHeight - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, 64, 64);
+        thumb = c.toDataURL('image/jpeg', 0.6);
+      } catch {}
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sid:sessionId, ts:Date.now(), insight, styles, thumb }));
+  } catch {}
+}
+function clearSessionId() { try { localStorage.removeItem(STORAGE_KEY); } catch{} }
+function checkLastSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data.sid || Date.now() - data.ts > 24*60*60*1000) { clearSessionId(); return; }
+    lastSessionId = data.sid;
+    if (data.thumb) $('#restoreThumb').src = data.thumb;
+    $('#restoreScene').textContent = data.insight || '场景分析结果';
+    $('#restoreStyles').textContent = (data.styles||[]).join(' · ') || '风格方向';
+    $('#restoreBar').classList.add('show');
+  } catch {}
+}
+let lastSessionId = null;
+$('#restoreGo').onclick = async () => {
+  if (!lastSessionId) return;
+  $('#restoreBar').classList.remove('show');
+  startLoading(); $('#processing').classList.add('active'); updatePhase('directions');
+  try {
+    const resp = await fetch(`/api/restore/${lastSessionId}`);
+    const json = await resp.json();
+    if (!json.ok) { showError(json.error||'恢复失败'); finishLoading(); return; }
+    const d = json.data;
+    if (d.img_b64) { photoDataUrl = `data:image/jpeg;base64,${d.img_b64}`; $('#previewImg').src = photoDataUrl; $('#previewThumb').classList.add('show'); }
+    if (d.device_key && d.device_key !== 'unknown') {
+      const ctx = d.device_context || {};
+      showDeviceBar({ device_key: d.device_key, device_name: ctx.name||'', device_lenses: ctx.lenses||'', is_camera: ctx.is_camera||false, source: 'none', exif: d.exif_data||{} });
+      if (d.exif_data && Object.keys(d.exif_data).length>0) showExifInfo({ exif: d.exif_data, location_weather: null, device_name: ctx.name||'', device_lenses: ctx.lenses||'' });
+    }
+    if (d.vision_json && Object.keys(d.vision_json).length>0) showSceneInfo(d.vision_json);
+    sessionId = lastSessionId;
+    allDirs = d.directions||[]; discoveredStyles = d.discovered_styles||[]; techniquesUsed = d.techniques_used||[]; searchQuality = d.search_quality||null;
+    if (allDirs.length>0) showDirectionsResult({ session_id:lastSessionId, presence:d.presence||'', insight:d.insight||'', scene_tier:d.scene_tier||'🥈', directions:allDirs, discovered_styles:discoveredStyles, techniques_used:techniquesUsed, search_quality:searchQuality });
+    planCache = d.plan_cache||{};
+    $('#processing').classList.remove('active'); finishLoading();
+    clearSessionId();
+  } catch(e) { showError('恢复失败: '+e.message); finishLoading(); }
+};
+$('#restoreClose').onclick = () => { $('#restoreBar').classList.remove('show'); clearSessionId(); };
+checkLastSession();
 </script>
+<!-- ====== Restore Bar (bottom) ====== -->
+<div class="restore-bar" id="restoreBar">
+  <img class="rb-thumb" id="restoreThumb" src="" alt="" width="40" height="40" />
+  <div class="rb-info">
+    <div class="rb-scene" id="restoreScene"></div>
+    <div class="rb-styles" id="restoreStyles"></div>
+  </div>
+  <button class="rb-go" id="restoreGo">恢复</button>
+  <button class="rb-close" id="restoreClose">×</button>
+</div>
 </body>
 </html>
