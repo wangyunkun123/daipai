@@ -1,6 +1,6 @@
 # 带拍 · 项目状态与操作手册
 
-> 最后更新：2026-07-26 | 当前版本：daipai v3.5
+> 最后更新：2026-07-27 | 当前版本：daipai v3.6
 
 ---
 
@@ -204,9 +204,23 @@ knowledge/
 
 ---
 
-## 五、方案生成规范 v3.5
+## 五、方案生成规范 v3.6
 
-### 5.1 生成前
+### 5.1 方案字段结构（v3.6 重构）
+
+| 字段 | 图标 | 面向 | 说明 |
+|------|:--:|------|------|
+| prep | 📋 | 通用 | 拍摄前的准备工作 |
+| subject | 👤 | 被拍摄者 | 站哪、重心、手部任务、眼神方向、表情触发（纯动作语言） |
+| shooter | 📷 | 摄影师 | 站位、距离、高度、角度（考虑设备焦段限制） |
+| gear | ⚙️ | 设备调试 | 焦段选择、对焦点、曝光补偿、人像模式/闪光灯 |
+| enhance | 🎨 | 增色技巧 | 打光建议、道具利用、滤镜方向、后期思路（可选） |
+| result | ✨ | 效果预览 | 拍出来的画面视觉预览 |
+| why | 💡 | 摄影原理 | 为什么这样好看 |
+| perspective | 🎯 | 换个思路 | 有真正差异才写（可选） |
+| img_gen_prompt | 🖼️ | 图生图 | 豆包 Seedream 格式——参考原图 + 逐项调整 |
+
+### 5.2 生成前（v3.6 更新）
 
 - [ ] 场景评估完成（🥉🥈🥇）
 - [ ] 方案数量与场景等级匹配（1-3 / 3-6 / 6-9）
@@ -230,6 +244,24 @@ knowledge/
 ---
 
 ## 六、最近更新记录
+
+### 2026-07-27（v3.6 方案卡片重构 + 环境感知注入）
+
+| 批次 | 变更 | 文件 | 说明 |
+|:--:|------|------|------|
+| 1 | 方案卡片四段式重构 | `server.py` `index.html` | where/do/posture → subject(被拍摄者)/shooter(摄影师)/gear(设备调试)/enhance(增色技巧)，prep 保持独立 |
+| 1 | 洞察文字重写 | `server.py` `index.html` | 合并 presence+insight 为单一 insight，小红书配文风格，移除 AI 味和空洞模板句式 |
+| 1 | 移除场景等级展示 | `index.html` | 🥉🥈🥇 场景等级仅内部使用（控制方案数量），不再展示给用户 |
+| 1 | 移除底部三栏 | `index.html` | 搜索质量/发现风格/使用技法 三栏注释掉，数据保留，后续移至管理面板 |
+| 2 | 图生图提示词 | `server.py` `index.html` | 新增 `img_gen_prompt` 字段，豆包 Seedream 图生图格式："参考上传的照片，保持xxx不变" + 逐项调整，禁止相机型号参数，用视觉语言描述 |
+| 2 | 前端 fallback 图生图 | `index.html` | AI 生成的 img_gen_prompt 优先使用，前端 genImgPrompt() 改为图生图格式作为 fallback |
+| 3 | 环境感知注入 | `server.py` | 新增 `env_context` 构建逻辑：光照时段/日落倒计时/AI亮度评估/识别地点/天气雨警，注入 DIRECTIONS_PROMPT + PLANS_PROMPT |
+| 3 | 豆包视觉字段扩展 | `server.py` | `location_clues`（画面识别场所）+ `light.level`（AI 环境亮度评估：充足/一般/不足） |
+| 3 | 位置搜索增强 | `server.py` | 位置搜索优先用豆包识别的具体场所（如"太舞滑雪场山顶餐厅"），fallback GPS 逆地理编码城市名 |
+| 4 | EXIF 信息卡调整 | `index.html` | 日出日落时间移至光照时段行顶部，日落倒计时内联显示；天气预报每时段独立一行，雨警直接跟在对应行后面；移除冗余的 ISO/快门光线判断行 |
+| 4 | 恢复栏修复 | `index.html` | saveSessionId 存真实风格名（d.style）和 DOM 中 AI 洞察文字，不再 fallback direction 标签 |
+| 5 | 方案生成约束升级 | `server.py` | PLANS_PROMPT 新增环境上下文约束 + 设备约束从 where/do 迁移到 shooter/gear，禁止社交验证话术 |
+| 5 | 数据补齐 | `server.py` | normalize_creative_output + generate_plans + session restore 全面补齐新字段（subject/shooter/gear/enhance/img_gen_prompt） |
 
 ### 2026-07-26（v3.5 移动端测试工具）
 
