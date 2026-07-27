@@ -2532,6 +2532,7 @@ def admin_export_data():
     import sqlite3
     try:
         db = sqlite3.connect(DB_PATH)
+        db.row_factory = sqlite3.Row
         styles = [dict(r) for r in db.execute('SELECT name, one_liner, source_type, fit_rationale, created_at, updated_at, verify_count FROM styles').fetchall()]
         techniques = [dict(r) for r in db.execute('SELECT name, source_type, description, created_at, updated_at, verify_count FROM techniques').fetchall()]
         db.close()
