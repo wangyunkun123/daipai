@@ -1824,6 +1824,7 @@ function genImgPrompt(plan, direction) {
 function showDirections() {
   if (allDirs.length===0) return;
   $('#plansArea').classList.remove('active');
+  $('#previewThumb').classList.add('show');  // 返回方向页时恢复原图预览
   renderDirectionCarousel();
   $('#resultArea').classList.add('active');
   $('#resultArea').scrollIntoView({ behavior:'smooth' });
@@ -1832,9 +1833,15 @@ function showDirections() {
 // ============================================================
 // Canvas Annotations
 // ============================================================
-// 切换原图预览：始终显示原图预览，标注图已在方案卡片内渲染
+// 切换原图预览：有标注图（引导图）时隐藏原图，标注图已在方案卡片内渲染
+// 无标注图时才展示原图作为参考
 function togglePreviewForPlan(idx) {
-  $('#previewThumb').classList.add('show');
+  const plan = currentPlans[idx];
+  if (plan && plan.annotations && plan.annotations.length > 0) {
+    $('#previewThumb').classList.remove('show');
+  } else {
+    $('#previewThumb').classList.add('show');
+  }
 }
 
 function renderAnnotations(cid, annotations) {
