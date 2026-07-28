@@ -25,7 +25,7 @@ from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map
 from search_web import search_style_inspiration, search_location_intel
-from database import accumulate, query_scene_context, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base
+from database import accumulate, query_scene_context, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -2766,6 +2766,10 @@ if __name__ == '__main__':
         seeded = seed_from_knowledge_base()
         if seeded:
             print(f"[Init] Seeded {seeded} styles/techniques from knowledge_base", file=sys.stderr, flush=True)
+        # v4.2: 实战技法种子（社交媒体验证的高频场景技法）
+        practical_seeded = seed_practical_techniques()
+        if practical_seeded:
+            print(f"[Init] Seeded {practical_seeded} practical techniques from social media patterns", file=sys.stderr, flush=True)
     except Exception as e:
         print(f"[Init] Migration/sync error (non-fatal): {e}", file=sys.stderr, flush=True)
 

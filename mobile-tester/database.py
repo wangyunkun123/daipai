@@ -919,6 +919,211 @@ def seed_from_knowledge_base():
 
 
 # ============================================================
+# v4.2: 实战技法种子——来自社交媒体验证的高频场景技法
+# ============================================================
+
+PRACTICAL_TECHNIQUES = [
+    # ── 美食/咖啡厅 (f_and_b) ──
+    {"name": "窗边侧光拍食物质感", "source_type": "social_media",
+     "description": "食物放窗边，光从侧面来（不是顶灯不是闪光灯）。侧光产生立体阴影让蛋糕层次、咖啡油脂、沙拉纹理全部清晰可见。正面光拍出来像外卖App图片。",
+     "scene_category": "f_and_b"},
+    {"name": "45°俯拍桌面ins风", "source_type": "social_media",
+     "description": "手机完全平行于桌面从正上方拍。画面里不仅要有食物，还要有桌面材质（木纹/大理石）、餐具、一只手入镜。不超过3个东西——盘子+杯子+手就够了。开九宫格，盘子放上交叉点。",
+     "scene_category": "f_and_b"},
+    {"name": "手持食物特写拍出刚做好感", "source_type": "social_media",
+     "description": "一只手拿食物/杯子举到胸口高度。背景是咖啡厅环境虚化。用2×镜头靠近拍，杯子边缘可能被人像模式吃掉——先用普通模式拍一张保底。",
+     "scene_category": "f_and_b"},
+    {"name": "趁热拍食物状态最好", "source_type": "social_media",
+     "description": "刚上桌时热菜有蒸汽、咖啡有油脂、沙拉还脆。等聊完天再拍就晚了。先拍再吃，不要先用筷子翻。",
+     "scene_category": "f_and_b"},
+    {"name": "食物做减法桌面清理", "source_type": "social_media",
+     "description": "拍照前把纸巾/账单/手机/钥匙拿走——画面里只留食物+餐具+1-2个装饰物。颜色越多越廉价，越少越高级。不要用滤镜预设——食物照片的滤镜感=塑料感，原生色彩+稍微提亮就够了。",
+     "scene_category": "f_and_b"},
+
+    # ── 情侣互拍 (urban_street + commercial) ──
+    {"name": "蹲下低机位显高拍法", "source_type": "social_media",
+     "description": "男生给女生拍照最常见翻车：站着从上往下拍→拍成1米5。正确做法：蹲下来，手机与对方腰部齐平甚至更低，画面下边缘刚好切到脚，头顶留1/3空白。透视原理：镜头越低，腿离镜头越近→腿被拉长。",
+     "scene_category": "urban_street"},
+    {"name": "侧身回头连拍抓自然表情", "source_type": "social_media",
+     "description": "让TA往前走，然后喊名字回头——真的走真的回头，连拍。摆拍的回头90%不自然。身体和镜头成45°时身体轮廓最修长。这个姿势同时解决了表情僵硬+体型显胖两个问题。",
+     "scene_category": "urban_street"},
+    {"name": "坐姿只坐1/3显腿细", "source_type": "social_media",
+     "description": "坐椅子/台阶边缘只坐1/3，大腿不压平（压平的大腿比站立宽30%）。腿往前伸脚尖朝下点地，一只前一只后。手机与胸口同高平拍。",
+     "scene_category": "commercial"},
+    {"name": "窗边半剪影高级感拍法", "source_type": "social_media",
+     "description": "人物站在窗边背对窗户，从室内往外拍。点击屏幕上窗户最亮处，画面自动变暗→人物变成半剪影。不需要表情管理、不需要化妆、不需要后期——光线本身做了一切。窗框给画面加了天然框架结构。",
+     "scene_category": "commercial"},
+    {"name": "走路跟拍连拍自然感", "source_type": "social_media",
+     "description": "人物在前面正常走，摄影师在后面跟。手指按住快门不放连拍，走10步选最好的。走路的动作让全身处于自然状态——手在摆、头发在飘、裙摆在动。这种'活着的照片'比任何摆拍都有生命力。",
+     "scene_category": "urban_street"},
+    {"name": "道具互动转移注意力拍自然表情", "source_type": "social_media",
+     "description": "给TA一个道具（咖啡杯/花/书/手机/宠物）让TA和道具互动。人的注意力一次只能放一个地方——在想'这个咖啡好香'时表情自然，在想'我的表情对不对'时一定僵。两只手都被占用的道具最好——身体姿态更放松。",
+     "scene_category": "urban_street"},
+
+    # ── 闺蜜/多人合影 (urban_street + park_nature) ──
+    {"name": "三角形站位代替一排站", "source_type": "social_media",
+     "description": "3-4人不要站成一排——一排=所有人到镜头距离相同=扁平无层次=谁站最边上谁显胖（边缘畸变）。三角形站位：1人前（坐/蹲）+2人后（站），每个人都有自己到镜头的距离。后面的人侧身站不要正面。",
+     "scene_category": "urban_street"},
+    {"name": "阶梯高度差让每个人都能看到脸", "source_type": "social_media",
+     "description": "5人以上：找台阶/坡道/沙发+椅子+地面制造高度差，每排至少差30cm。前排坐地、中排蹲/半蹲、后排站。没有高度差的合影=后面的人只剩一颗头。手机退后3-5步用1×主摄不要超广角。",
+     "scene_category": "urban_street"},
+    {"name": "互动散落不盯镜头拍电影感", "source_type": "social_media",
+     "description": "不让所有人看镜头——全都看镜头=毕业照，有人不看=生活感。让她们一起干杯/一起看手机/一起指一个方向。连拍不喊1-2-3。拍照者成为'不存在的观察者'。",
+     "scene_category": "park_nature"},
+    {"name": "V字型时尚站位", "source_type": "social_media",
+     "description": "中间的人靠后，两边的人往前探形成V字。不是对称的——一边比另一边更靠前随意。大家身体都微微转向中间那个人。手机高度和后面那人的眼睛齐平。这是时尚杂志拍群像的经典站法。",
+     "scene_category": "urban_street"},
+
+    # ── 单人旅行/打卡 (cultural_site + park_nature) ──
+    {"name": "大景小人大法拍出旅行感", "source_type": "social_media",
+     "description": "退远——至少离人物10步以上。人物占画面5-15%，站在画面下1/3处，上方2/3留给环境。用1×主摄不要超广角（超广角会让远景变平）。让人物做简单动作——举手/侧身/跳跃增加趣味。这类照片收藏率最高——让人想去。",
+     "scene_category": "cultural_site"},
+    {"name": "手机架设代替自拍杆", "source_type": "social_media",
+     "description": "找任何和你腰部差不多高的平面（栏杆/桌子/窗台/花坛/背包叠起来），手机竖着靠在水杯/背包上——不是平放是靠起来有角度。倒计时3秒够退一步，10秒够走远。退3-5步到画面里做自然动作。用1×主摄不要0.5×。",
+     "scene_category": "cultural_site"},
+    {"name": "镜子反射创意打卡", "source_type": "social_media",
+     "description": "利用镜子/玻璃窗/水面/墨镜镜片——一个画面里同时看到反射+实景。手机靠近反光面从侧面拍，让反射占画面1/3-1/2。手机不要出现在镜子里。这种双重空间感不像普通游客照。",
+     "scene_category": "cultural_site"},
+    {"name": "延时视频取帧法零失败", "source_type": "social_media",
+     "description": "录30秒-1分钟视频（不是拍照），在画面里自然地做一件事（走路/转身/撩头发/看风景）。事后从视频截最好一帧。30秒视频=900帧=900次选择机会，总有一帧完美的。视频截帧画质略差但发朋友圈完全够用。",
+     "scene_category": "park_nature"},
+
+    # ── 显瘦显高通用 (all outdoor) ──
+    {"name": "侧身45°立刻显瘦", "source_type": "social_media",
+     "description": "正面站立=身体宽度=画面最大宽度。侧身45°=身体宽度≈正面70%。同时侧身制造身体前后层次（胸-腰-臀），轮廓线更有变化。重心放后腿，前腿微曲脚尖点地，肩膀往后展开。",
+     "scene_category": "urban_street"},
+    {"name": "高机位俯拍显脸小自拍法", "source_type": "social_media",
+     "description": "手机举到额头以上（不是眼睛高度），从上往下拍。下巴微收眼睛往上看手机。俯拍=下巴离镜头最近→脸下半部分变小→下颌线更明显→显脸小。拿手机的手往前伸——手臂不贴身显细。另一只手撩头发或放下巴旁加画面层次。",
+     "scene_category": "urban_street"},
+    {"name": "暗调光影遮肉瘦身法", "source_type": "social_media",
+     "description": "不靠姿势靠光线。站在明暗交界处——身体正面在暗处，侧面轮廓有一道光（轮廓光）。光=视觉焦点，暗=视觉退后。身体大部分在暗处→观众只能看到轮廓看不到具体宽度。点击屏幕最亮处让画面变暗。",
+     "scene_category": "urban_street"},
+    {"name": "低机位脚下少留白显腿长", "source_type": "social_media",
+     "description": "手机在被拍者腰部到胸口高度（不是拍照者眼睛高度），微微仰拍。画面下边缘贴近脚底——脚下不要留大片空地。透视原理：镜头越低→脚离镜头越近（相对于头）→腿部占比越大。这就是为什么摄影师拍照总蹲着。",
+     "scene_category": "urban_street"},
+
+    # ── 氛围增色通用技法 ──
+    {"name": "降曝光营造氛围感", "source_type": "social_media",
+     "description": "点击屏幕最亮处→画面暗1-2档。暗=氛围，亮=记录。让光线穿过东西再进入镜头（窗帘/树叶/玻璃/雾气）→光线被柔化后有空气感。画面不需要什么都看清楚——暗的地方就让它暗着，那是氛围。",
+     "scene_category": "urban_street"},
+    {"name": "色彩做减法≤3色显高级", "source_type": "social_media",
+     "description": "画面里颜色不超过3个色系。颜色越多越热闹越廉价，越少越安静越高级。穿纯色衣服（白/卡其/浅蓝等低饱和度色），背景干净的优先（白墙/蓝天/纯色窗帘）。保留皮肤纹理质感不磨皮——磨皮=塑料感=廉价感。",
+     "scene_category": "urban_street"},
+    {"name": "逆光发丝光金边效果", "source_type": "social_media",
+     "description": "人物背对阳光，光线穿过头发→发丝边缘发光像漫画高光效果。同时脸在暗处→皮肤瑕疵自动被遮掉。这是朋友圈被问'什么相机'最多的技巧。日落前1小时是拍发丝光的最佳时段。",
+     "scene_category": "park_nature"},
+    {"name": "前景虚化制造电影感", "source_type": "social_media",
+     "description": "找一片叶子/一朵花/一杯水放在镜头前5-10cm→自动变模糊。这个模糊是故意的不是拍砸了。它让画面有了'透过什么在看'的感觉——就像电影镜头。前景占画面1/3-1/2，焦点在远处人物上。",
+     "scene_category": "park_nature"},
+    {"name": "光影交界法自动瘦身", "source_type": "social_media",
+     "description": "站在明暗交界处——脸在亮处身体在暗处。树荫边缘/窗边/路灯下都行。光线本身帮你瘦了身体+打了面光。手机点击屏幕最亮处锁定曝光。一张照片同时解决瘦身+氛围两个需求。",
+     "scene_category": "urban_street"},
+    {"name": "阴天是天然柔光箱拍人像最佳", "source_type": "social_media",
+     "description": "云层把太阳直射光散射为漫射光——没有刺眼影子，光线从四面八方均匀照过来。这是最好的天然美颜灯——拍人像皮肤最干净最柔和。晴天反而容易拍出脸上硬阴影。阴天≠不适合拍照，阴天=不需要找角度光就对了。",
+     "scene_category": "park_nature"},
+    {"name": "黄金时刻拍什么都不用修", "source_type": "verified",
+     "description": "日出后1小时和日落前1小时——太阳角度低，光线穿过更厚大气层，蓝光被过滤只剩暖金色。这时候拍照不用加滤镜就是天然暖色调。色温约3000-4000K。这是摄影界公认的最出片时段。",
+     "scene_category": "park_nature"},
+
+    # ── 姿势引导核心技法 ──
+    {"name": "手有道具不悬空解决姿势僵硬", "source_type": "social_media",
+     "description": "手不知道放哪=最常见拍照焦虑。给手一个任务：拿咖啡杯/撩头发/扶帽檐/插口袋。拇指必须露外面——全插进去像手消失了。两只手不同动作=画面更丰富。空手=焦虑，手有任务=自然。",
+     "scene_category": "urban_street"},
+    {"name": "走路代替站着解决表情僵硬", "source_type": "social_media",
+     "description": "走路时身体在动——手在摆、头发在飘、衣服在动。这些动的元素让照片有了生命力。站着不动时身体会自动紧张进入'被观察'状态。连拍模式下走10步选最好的那张。比任何摆拍站姿都有生命力。",
+     "scene_category": "urban_street"},
+    {"name": "不看镜头更自然有故事感", "source_type": "social_media",
+     "description": "看镜头=和观众对视→有社交压力。不看镜头=观众变成路过的观察者→可以安静地看。看远方/看地面/看手里的东西/闭上眼睛——任何一个方向都比盯着镜头自然。这个技巧解决90%的表情僵硬。",
+     "scene_category": "urban_street"},
+    {"name": "伸脖子收下巴显瘦显气质", "source_type": "social_media",
+     "description": "拍照时放松肩膀向后拉，头微微前伸一点——颈项立刻显瘦一圈。下巴微侧向镜头让轮廓线条更突出。不要过度收下巴（反而挤出双下巴），也不要过度抬下巴（鼻孔朝天）。这个微调立刻提升气质。",
+     "scene_category": "urban_street"},
+    {"name": "人像模式虚化背景突出主体", "source_type": "tutorial",
+     "description": "手机人像模式模拟大光圈虚化。人物与背景保持1米以上距离→虚化更明显。选纯色背景增强识别。如果头发边缘被虚化吃掉→后期调低虚化强度。这是手机拍人像最常用也最有效的功能。",
+     "scene_category": "urban_street"},
+
+    # ── 避雷技法 ──
+    {"name": "按快门前扫一眼背景避开杂物戳头", "source_type": "social_media",
+     "description": "最常见的毁片原因：电线杆从头顶长出来/垃圾桶入镜/路人抢镜。按快门之前花1秒扫一眼画面四角和人物背景——移动站位或让人物挪一步就能避开。拍完再P背景杂物很难P干净。",
+     "scene_category": "urban_street"},
+    {"name": "数码变焦硬拉不如走近拍", "source_type": "tutorial",
+     "description": "手指放大画面=数码变焦=裁切=画质变渣。走两步靠近用光学变焦（1×/2×/3×按钮）。光学变焦画质无损，数码变焦只是裁切。实在不能走近→用2×或3×原生光学焦段，不要用手指滑动放大。",
+     "scene_category": "urban_street"},
+    {"name": "禁用闪光灯直打找窗边自然光", "source_type": "social_media",
+     "description": "手机闪光灯直打=油光满面+红眼+大白脸。室内暗时先找窗边/路灯/台灯/手机屏幕反光——任何自然光源都比直闪好。必须补光时→开另一台手机的手电筒从侧面照。晚上用人像模式夜景模式代替闪光灯。",
+     "scene_category": "urban_street"},
+    {"name": "逆光不补光脸全黑要拉小太阳", "source_type": "social_media",
+     "description": "逆光拍人最常见的翻车：背景正常脸全黑。解决方法：点击屏幕人脸→出现小太阳图标→手指向上滑动提亮1-2档。逆光不是不能拍——逆光是最出片的氛围光——只是需要提亮暗部。",
+     "scene_category": "park_nature"},
+    {"name": "正午顶光别硬拍移到树荫下", "source_type": "verified",
+     "description": "正午11-15点太阳在头顶正上方→眼窝黑洞、鼻子下浓重阴影、额头反光。不是光线不好——是光的方向不对。移到树荫/建筑阴影/走廊下，光线立刻变柔。或者等黄金时刻（日出后/日落前1小时）再拍。",
+     "scene_category": "park_nature"},
+    {"name": "连拍代替单张告别闭眼和表情崩坏", "source_type": "social_media",
+     "description": "按住快门不放=连拍模式→每秒10-30张。拍动态/表情/回头/跳跃时用连拍，事后再选最好的那张。1张单拍=1次机会，连拍3秒=30-90次机会。拍小孩/宠物/运动时这是必备技能。",
+     "scene_category": "urban_street"},
+    {"name": "擦干净镜头最简单的画质提升", "source_type": "tutorial",
+     "description": "手机镜头常年有指纹和油污——这是照片发灰发雾的第一大原因。用眼镜布或棉质衣角擦，不要用手指/纸巾擦。每次拍照前养成习惯花2秒擦一下。这个动作对画质的提升超过任何参数设置。",
+     "scene_category": "urban_street"},
+]
+
+
+def seed_practical_techniques():
+    """
+    v4.2: 写入社交媒体验证的高频场景技法。
+    门控：检测已有 social_media 来源的记录后跳过。
+    返回写入数量。
+    """
+    conn = get_db()
+    try:
+        existing = conn.execute(
+            "SELECT COUNT(*) FROM techniques WHERE source_type = 'social_media'"
+        ).fetchone()[0]
+        if existing > 0:
+            print(f"[DB] Seed practical: {existing} social_media techniques already exist, skipping",
+                  file=sys.stderr, flush=True)
+            return 0
+
+        count_techs = 0
+        count_matches = 0
+
+        for tech in PRACTICAL_TECHNIQUES:
+            # upsert technique
+            conn.execute("""
+                INSERT INTO techniques (name, source_type, description, verify_count)
+                VALUES (?, ?, ?, 5)
+                ON CONFLICT(name) DO UPDATE SET
+                    description = CASE WHEN LENGTH(excluded.description) > LENGTH(techniques.description)
+                                  THEN excluded.description ELSE techniques.description END,
+                    source_type = excluded.source_type,
+                    updated_at = datetime('now')
+            """, (tech['name'], tech['source_type'], tech['description']))
+            if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                count_techs += 1
+
+            # link to scene
+            tech_id = conn.execute(
+                "SELECT id FROM techniques WHERE name=?", (tech['name'],)
+            ).fetchone()[0]
+            conn.execute("""
+                INSERT OR IGNORE INTO scene_matches (scene_type, technique_id, match_type, scene_category)
+                VALUES (?, ?, 'technique', ?)
+            """, (tech['scene_category'], tech_id, tech['scene_category']))
+            if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                count_matches += 1
+
+        conn.commit()
+        print(f"[DB] Seed practical: inserted {count_techs} techniques + {count_matches} scene_matches",
+              file=sys.stderr, flush=True)
+        return count_techs + count_matches
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Seed practical error: {e}", file=sys.stderr, flush=True)
+        return 0
+    finally:
+        conn.close()
+
+
+# ============================================================
 # v3.5: 每日使用限制
 # ============================================================
 

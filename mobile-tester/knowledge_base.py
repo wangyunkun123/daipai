@@ -129,6 +129,120 @@ USER_CAPABILITY = """
 """
 
 
+_social_patterns_cache = None
+_posing_router_cache = None
+
+
+def load_social_patterns():
+    """加载社交媒体验证拍摄模式（social-media-patterns/ 目录）"""
+    global _social_patterns_cache
+    if _social_patterns_cache is not None:
+        return _social_patterns_cache
+
+    smp_dir = os.path.join(_KNOWLEDGE_DIR, "social-media-patterns")
+    if not os.path.isdir(smp_dir):
+        _social_patterns_cache = {}
+        return _social_patterns_cache
+
+    result = {"scene_techniques": {}, "atmosphere_hacks": []}
+
+    # ── 场景技法提取 ──
+    scene_files = {
+        "🍜 美食/咖啡厅": "food-cafe.md",
+        "💑 情侣互拍": "couple-posing.md",
+        "👯 闺蜜/多人合影": "group-photo.md",
+        "🧳 单人旅行/打卡": "solo-travel.md",
+        "📐 显瘦显高角度": "slimming-angles.md",
+    }
+    for scene_name, filename in scene_files.items():
+        fpath = os.path.join(smp_dir, filename)
+        if not os.path.exists(fpath):
+            continue
+        try:
+            with open(fpath, "r") as f:
+                content = f.read()
+            # 去掉 YAML frontmatter
+            content = re.sub(r'^---\n.*?\n---\n', '', content, flags=re.DOTALL)
+            # 提取 ## 开头的公式标题作为技法
+            techniques = []
+            for m in re.finditer(r'###?\s+\d+\.\s+(.+?)(?:\n|$)', content):
+                title = m.group(1).strip()
+                # 提取第一段描述
+                desc_start = m.end()
+                desc_match = re.search(r'\n\n(.+?)(?:\n\n|$)', content[desc_start:desc_start+500], re.DOTALL)
+                desc = desc_match.group(1).strip()[:120] if desc_match else ""
+                # 去掉 markdown 加粗标记
+                desc = re.sub(r'\*\*', '', desc)
+                techniques.append({"name": title, "desc": desc})
+            if techniques:
+                result["scene_techniques"][scene_name] = techniques
+        except Exception:
+            pass
+
+    # ── 氛围增色技法提取 ──
+    fpath = os.path.join(smp_dir, "atmosphere-hacks.md")
+    if os.path.exists(fpath):
+        try:
+            with open(fpath, "r") as f:
+                content = f.read()
+            content = re.sub(r'^---\n.*?\n---\n', '', content, flags=re.DOTALL)
+            for m in re.finditer(r'###?\s+\d+\.\s+(.+?)(?:\n|$)', content):
+                title = m.group(1).strip()
+                desc_start = m.end()
+                desc_match = re.search(r'\n\n(.+?)(?:\n\n|$)', content[desc_start:desc_start+500], re.DOTALL)
+                desc = desc_match.group(1).strip()[:120] if desc_match else ""
+                desc = re.sub(r'\*\*', '', desc)
+                result["atmosphere_hacks"].append({"name": title, "desc": desc})
+        except Exception:
+            pass
+
+    _social_patterns_cache = result
+    return result
+
+
+def load_posing_router():
+    """加载姿势路由表（posing-router.md）"""
+    global _posing_router_cache
+    if _posing_router_cache is not None:
+        return _posing_router_cache
+
+    fpath = os.path.join(_KNOWLEDGE_DIR, "matching", "posing-router.md")
+    if not os.path.exists(fpath):
+        _posing_router_cache = []
+        return _posing_router_cache
+
+    try:
+        with open(fpath, "r") as f:
+            content = f.read()
+        content = re.sub(r'^---\n.*?\n---\n', '', content, flags=re.DOTALL)
+
+        result = []
+        # 提取场景类型 → 姿势策略表
+        table_section = False
+        for line in content.split("\n"):
+            line = line.strip()
+            if "场景类型" in line and "姿势核心策略" in line:
+                table_section = True
+                continue
+            if table_section and line.startswith("|") and "场景类型" not in line:
+                cells = [c.strip() for c in line.split("|") if c.strip()]
+                if len(cells) >= 4:
+                    result.append({
+                        "scene": cells[0],
+                        "strategy": cells[1],
+                        "do": cells[2] if len(cells) > 2 else "",
+                        "avoid": cells[3] if len(cells) > 3 else "",
+                    })
+            elif table_section and not line.startswith("|"):
+                table_section = False
+
+        _posing_router_cache = result
+        return result
+    except Exception:
+        _posing_router_cache = []
+        return _posing_router_cache
+
+
 def load_knowledge_core():
     """加载压缩知识核心文件（如果存在）"""
     core_path = os.path.join(_KNOWLEDGE_DIR, "_compressed", "knowledge-core.md")
@@ -291,7 +405,31 @@ def get_knowledge_context(scene_type="", device_key="", light_condition=""):
             parts.append("\n\n".join(sections))
             parts.append("")
 
-    # ── 9. 使用说明 ──
+    # ── 9. 实战拍摄技法（来自社交媒体验证，v4.2）──
+    patterns = load_social_patterns()
+    if patterns:
+        parts.append("## 📱 实战拍摄技法（社交媒体验证 · 普通用户可直接操作）\n")
+        # 按场景匹配注入相关技法
+        for scene_key, techniques in patterns.get("scene_techniques", {}).items():
+            parts.append(f"### {scene_key}")
+            for t in techniques[:3]:  # 每个场景最多3条
+                parts.append(f"- **{t['name']}**：{t['desc']}")
+            parts.append("")
+        # 通用增色技法
+        parts.append("### 🎨 氛围增色（适用所有场景）\n")
+        for a in patterns.get("atmosphere_hacks", [])[:5]:
+            parts.append(f"- **{a['name']}**：{a['desc']}")
+        parts.append("")
+
+    # ── 10. 姿势引导（v4.2）──
+    posing = load_posing_router()
+    if posing:
+        parts.append("## 🧍 姿势引导（场景匹配 · 可直接转化为拍摄指令）\n")
+        for p in posing[:6]:
+            parts.append(f"- **{p['scene']}**：{p['strategy']}（✅ {p['do']} / ❌ {p['avoid']}）")
+        parts.append("")
+
+    # ── 11. 使用说明 ──
     parts.append("""
 ## 🚨 知识库使用规则
 
@@ -302,6 +440,8 @@ def get_knowledge_context(scene_type="", device_key="", light_condition=""):
 4. **场景匹配参照**：参考场景→风格矩阵，但不要被限制——如果场景有独特之处，可以超出矩阵推荐
 5. **优势思维**：不说"没有长焦所以裁切凑合"——说"手机最近对焦距离比相机更近，可以靠得更近拍微距"
 6. **one_liner 优先**：引用风格时，使用上述 one_liner 的描述，不要自己重新描述
+7. **实战技法优先**：上述「实战拍摄技法」来自社交媒体验证——方案中优先采用这些技法，它们比教科书理论更直接有效
+8. **姿势指令翻译**：上述「姿势引导」需转化为具体动作指令——不说"站姿放松"，说"重心放单腿，手插口袋拇指露外面"
 """)
 
     return "\n".join(parts)
