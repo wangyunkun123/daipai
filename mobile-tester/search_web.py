@@ -189,10 +189,35 @@ def search_location_intel(place_name, scene_type=""):
     if not place_short or len(place_short) < 2:
         place_short = place_name[:30]
 
-    queries = [
-        f"{place_short} 拍照 最佳机位",
-        f"{place_short} 摄影 推荐 打卡",
+    # 排除旅游攻略类关键词，只搜摄影相关
+    travel_blocklist = [
+        "旅游", "攻略", "行程", "几日游", "天游", "旅行社", "酒店", "住宿",
+        "门票", "美食", "小吃", "购物", "特产", "交通指南", "包车", "导游",
+        "跟团", "自由行", "周边游", "一日游", "两日游", "三日游", "周末游",
+        "度假", "温泉", "民宿推荐", "必去景点", "十大", "排名",
     ]
+    travel_exclude = " ".join(f"-{kw}" for kw in travel_blocklist)
+
+    queries = [
+        f"{place_short} 拍照 最佳机位 {travel_exclude}",
+        f"{place_short} 摄影 构图 技巧 {travel_exclude}",
+    ]
+
+    # 旅游内容二次过滤关键词
+    TRAVEL_PATTERNS = [
+        "日游", "天游", "行程", "攻略", "旅行社", "酒店", "住宿", "门票",
+        "美食推荐", "必吃", "小吃街", "购物", "包车", "导游", "跟团",
+        "自由行", "周边游", "度假", "温泉", "民宿", "必去景点",
+    ]
+
+    def _is_travel_guide(title, snippet):
+        """判断搜索结果是否为旅游攻略而非摄影内容"""
+        text = f"{title} {snippet}"
+        # 如果标题/摘要主要是旅游攻略关键词，排除
+        travel_score = sum(1 for p in TRAVEL_PATTERNS if p in text)
+        photo_score = sum(1 for p in ["拍照", "摄影", "机位", "构图", "光线", "打卡", "出片", "pose", "相机", "镜头", "焦段"] if p in text)
+        # 旅游关键词多且摄影关键词少 → 判定为旅游攻略
+        return travel_score > photo_score
 
     all_results = []
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -201,7 +226,12 @@ def search_location_intel(place_name, scene_type=""):
             try:
                 results = future.result()
                 if results:
-                    all_results.append(results)
+                    # 过滤旅游攻略类结果
+                    filtered = [r for r in results if not _is_travel_guide(r.get("title",""), r.get("snippet",""))]
+                    if filtered:
+                        all_results.append(filtered)
+                    else:
+                        print(f"[Search] Location: all results filtered as travel guides, dropped", file=sys.stderr, flush=True)
             except Exception:
                 pass
 

@@ -513,9 +513,13 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。你的唯一任务：�
 - 你是摄影指导——输出的是"怎么拍"的拍摄指令
 - ❌ 你不是旅行规划师——禁止生成任何行程安排、天数计划、目的地推荐
 - ❌ 你不是活动策划——禁止生成活动流程、路线计划、住宿餐饮建议
+- ❌ 你不是游记作者——禁止生成"第X天去哪里""周边有哪些景点""推荐美食""交通方式"等内容
 - 用户要的是："站在网球场底线，低角度仰拍发球瞬间" ✅
 - 用户不要的是："Day1 三亚湾，Day2 亚龙湾..." ❌
-- 如果发现自己开始写"第X天"、"行程"、"路线"、"景点"、"交通"、"住宿"，立刻停下来——这完全错了
+- 用户不要的是："西湖周边3日休闲游""推荐路线""必去打卡点" ❌
+- 📍 位置情报 只是告诉你"这个地点有什么可拍的"——用它来写机位和构图，不是写旅游攻略
+- 如果发现自己开始写"第X天"、"行程"、"路线"、"景点"、"交通"、"住宿"、"美食"、"周边游"、"一日游"、"几日游"，立刻停下来——这完全错了
+- 自检：输出的每一句话都是"拍摄指令"吗？如果有一句话是"旅行建议"，删除它。
 
 ## 场景信息
 {vision_json}
@@ -1811,6 +1815,24 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
 
         if not search_context:
             search_context = "（本次未触发社区搜索——场景匹配主要基于专业知识库推理。）\n"
+
+        # ── 🚨 安全网：过滤搜索上下文中的旅游攻略污染（v4.4）──
+        _travel_pollution_kw = [
+            "日游", "天游", "行程安排", "旅游攻略", "旅行计划", "住宿推荐",
+            "美食推荐", "必吃", "必去景点", "交通指南", "包车", "导游",
+            "跟团", "自由行", "周边游", "一日游", "两日游", "三日游",
+            "度假村", "温泉酒店", "民宿推荐", "购物指南", "休闲游",
+        ]
+        _cleaned = search_context
+        for _kw in _travel_pollution_kw:
+            if _kw in _cleaned:
+                _cleaned = "\n".join(
+                    line for line in _cleaned.split("\n")
+                    if _kw not in line
+                )
+        if _cleaned != search_context:
+            print(f"[Sanitize] Stripped travel pollution from search_context", file=sys.stderr, flush=True)
+            search_context = _cleaned
 
         # ── 🌤 环境上下文（注入方向+方案 prompt，让推荐更智能）──
         env_context = ""
