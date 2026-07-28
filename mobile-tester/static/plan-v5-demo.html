@@ -327,11 +327,14 @@ function update(i){
 }
 
 function copyPrompt(){
-  navigator.clipboard.writeText(plans[cur].prompt).then(()=>toast('✅ 提示词已复制！打开 Seedream 粘贴即可生图')).catch(()=>toast('⚠️ 复制失败，请手动长按选择文字复制'));
+  navigator.clipboard.writeText(plans[cur].prompt).then(()=>toast('✅ 已复制，打开豆包粘贴即可生图')).catch(()=>toast('⚠️ 复制失败，请手动长按选择文字'));
 }
 function goGenerate(){
-  copyPrompt();
-  toast('🛠️ 在线生图开发中，提示词已复制，可打开 Seedream 粘贴生成');
+  navigator.clipboard.writeText(plans[cur].prompt).then(()=>{
+    toast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成');
+  }).catch(()=>{
+    toast('🛠️ 在线生图开发中，请手动复制提示词，打开豆包粘贴生成');
+  });
 }
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
