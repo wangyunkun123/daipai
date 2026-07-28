@@ -207,6 +207,7 @@ DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "daipai2026")
 DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
 DOUBAO_MODEL = "doubao-seed-2.0-pro"
+DOUBAO_FAST_MODEL = "doubao-seed-2.0-lite"  # 方案生成用快速模型——结构化JSON不需要最强推理
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
 STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")  # v4.3: 已弃用，保留变量以防旧引用
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
@@ -1294,16 +1295,18 @@ def extract_exif(image_path):
         return {"error": str(e)}
 
 
-def call_doubao(messages, max_tokens=2000, call_type='unknown', session_id=None):
-    """调用豆包 API，自动记录调用日志"""
+def call_doubao(messages, max_tokens=2000, call_type='unknown', session_id=None, model=None):
+    """调用豆包 API，自动记录调用日志。model=None 则用默认 DOUBAO_MODEL"""
     import time as time_mod
     t0 = time_mod.time()
     usage = {}
     success = 1
     result = None
+    if model is None:
+        model = DOUBAO_MODEL
     try:
         payload = {
-            "model": DOUBAO_MODEL,
+            "model": model,
             "messages": messages,
             "max_tokens": max_tokens
         }
@@ -1324,7 +1327,7 @@ def call_doubao(messages, max_tokens=2000, call_type='unknown', session_id=None)
         duration_ms = int((time_mod.time() - t0) * 1000)
         # 记录失败调用
         try:
-            log_api_call(session_id or '', call_type, DOUBAO_MODEL,
+            log_api_call(session_id or '', call_type, model,
                         0, 0, 0, duration_ms, 0)
         except:
             pass
@@ -1924,22 +1927,42 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         )
         print(f"[SSE] Knowledge context: {len(knowledge_context)} chars", file=sys.stderr, flush=True)
 
-        # ── 🌐 Web 搜索（社区验证，v4.0）──
+        # ── 🌐 Web 搜索（并行：风格 + 位置，v4.6）──
         search_context = ""
         search_quality_web = "🔴"
         people_info = vision_json.get('people', '')
-        try:
-            # 风格搜索（最多 6 秒）
-            t_search = time.time()
-            search_text, search_quality_web, search_meta = search_style_inspiration(
-                scene_type, people_info,
-                primary_subject=vision_json.get('primary_subject', '')
+        loc_clues = vision_json.get('location_clues', '') if isinstance(vision_json, dict) else ''
+
+        # 确定位置搜索词
+        search_place = None
+        if loc_clues and loc_clues != '无法识别' and len(loc_clues) >= 3:
+            search_place = loc_clues
+        elif location_weather and location_weather.get('place'):
+            search_place = location_weather['place']
+
+        # 并行跑风格搜索 + 位置搜索
+        from concurrent.futures import ThreadPoolExecutor as _SearchExecutor
+        search_futures = {}
+        with _SearchExecutor(max_workers=2) as _search_ex:
+            # 风格搜索
+            search_futures['style'] = _search_ex.submit(
+                search_style_inspiration, scene_type, people_info,
+                vision_json.get('primary_subject', '')
             )
+            # 位置搜索
+            if search_place:
+                search_futures['location'] = _search_ex.submit(
+                    search_location_intel, search_place, scene_type
+                )
+
+        # 收集风格搜索结果
+        try:
+            t_search = time.time()
+            search_text, search_quality_web, search_meta = search_futures['style'].result()
             search_duration = int((time.time() - t_search) * 1000)
             if search_text:
                 search_context = search_text
                 print(f"[Search] Style search: {len(search_text)} chars, quality={search_quality_web}", file=sys.stderr, flush=True)
-            # 记录搜索日志
             try:
                 source_types_str = ','.join(f"{k}:{v}" for k, v in search_meta.get('sources', {}).items())
                 log_search(trace_id, 'style', scene_type[:200],
@@ -1958,30 +1981,17 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             except Exception:
                 pass
 
-        # 位置搜索（优先用豆包识别的具体场所，fallback Nominatim 城市名）
-        loc_clues = vision_json.get('location_clues', '') if isinstance(vision_json, dict) else ''
-        search_place = None
-        if loc_clues and loc_clues != '无法识别' and len(loc_clues) >= 3:
-            search_place = loc_clues
-            print(f"[Search] Using vision location_clues: {loc_clues}", file=sys.stderr, flush=True)
-        elif location_weather and location_weather.get('place'):
-            search_place = location_weather['place']
-
-        if search_place:
+        # 收集位置搜索结果
+        if 'location' in search_futures:
             try:
-                t_loc = time.time()
-                loc_text, loc_quality = search_location_intel(
-                    search_place, scene_type
-                )
-                loc_duration = int((time.time() - t_loc) * 1000)
+                loc_text, loc_quality = search_futures['location'].result()
                 if loc_text:
                     search_context += "\n" + loc_text
                     print(f"[Search] Location search: {len(loc_text)} chars, quality={loc_quality}, place={search_place[:60]}", file=sys.stderr, flush=True)
-                # 记录搜索日志
                 try:
                     log_search(trace_id, 'location', search_place[:200],
                               len(loc_text.split('\n')) if loc_text else 0,
-                              loc_quality, '', loc_duration,
+                              loc_quality, '', 0,
                               results_summary=loc_text[:500] if loc_text else None)
                 except Exception:
                     pass
@@ -2088,7 +2098,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         print(f"[SSE] Directions prompt: {len(directions_prompt)} chars", file=sys.stderr, flush=True)
         directions_content, directions_usage = call_doubao([
             {"role": "user", "content": directions_prompt}
-        ], max_tokens=4000, call_type='directions', session_id=trace_id)
+        ], max_tokens=2500, call_type='directions', session_id=trace_id)  # 方向输出通常<1500 tokens
         print(f"[SSE] Directions API done: {directions_usage.get('total_tokens','?')} tokens", file=sys.stderr, flush=True)
 
         # 解析方向输出
@@ -2330,7 +2340,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     try:
         plans_content, plans_usage = call_doubao([
             {"role": "user", "content": plans_prompt}
-        ], max_tokens=4000, call_type='plans', session_id=session_id)  # v4.1: 6000→4000，实际输出很少超4000
+        ], max_tokens=3000, call_type='plans', session_id=session_id, model=DOUBAO_FAST_MODEL)  # 快速模型——结构化方案不需要最强推理
 
         plans_json, plans_error = parse_json_safe(
             plans_content,
@@ -2537,6 +2547,30 @@ def analyze_plans():
             # 没有生成在进行中（首次请求可能根本没到服务器）
             # → 降级为正常模式，触发生成
             print(f"[Plans] Poll found no in-progress generation, falling back to full generation", file=sys.stderr, flush=True)
+
+    # prewarm 模式：后台异步生成，立即返回（前端预热用）
+    prewarm = data.get('prewarm', False)
+    if prewarm:
+        global_key = f"{session_id}:{cache_key}"
+        with _plan_generating_lock:
+            if global_key in _plan_generating:
+                return jsonify({"success": True, "prewarm": "already_running"})
+            _plan_generating[global_key] = time.time()
+
+        def _prewarm():
+            try:
+                plans, err = generate_plans_for_direction(session_id, direction_id, device_override, lens_key)
+                if err:
+                    print(f"[Prewarm] Failed for {global_key}: {err}", file=sys.stderr, flush=True)
+                else:
+                    print(f"[Prewarm] Completed {global_key}: {len(plans) if plans else 0} plans", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"[Prewarm] Error for {global_key}: {e}", file=sys.stderr, flush=True)
+
+        import threading as _prewarm_threading
+        _prewarm_threading.Thread(target=_prewarm, daemon=True).start()
+        print(f"[Prewarm] Started background generation for {global_key}", file=sys.stderr, flush=True)
+        return jsonify({"success": True, "prewarm": "started", "direction_id": direction_id})
 
     # 正常模式：触发 LLM 生成（可能耗时 30-90 秒，移动网络 NAT 可能断开）
     plans, error = generate_plans_for_direction(session_id, direction_id, device_override, lens_key)

@@ -1261,6 +1261,23 @@ function showDirectionsResult(data) {
   $('#reshootBtn').style.display = 'block';
   $('#resultArea').scrollIntoView({ behavior:'smooth' });
   saveSessionId();
+
+  // ── 后台预生成：用户看方向时提前生成最可能被选的方案 ──
+  const prewarmDir = allDirs.find(d => d.id === 'best') || allDirs[0];
+  if (prewarmDir && sessionId) {
+    const deviceKey = currentDeviceKey || 'unknown';
+    const lensKey = (document.getElementById('lensSelect')?.value) || '';
+    fetch('/analyze/plans', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        direction_id: prewarmDir.id,
+        device: deviceKey !== 'unknown' ? deviceKey : null,
+        lens: lensKey || null,
+        prewarm: true
+      })
+    }).catch(() => {}); // 静默失败，不影响主流程
+  }
 }
 
 function renderDirectionCarousel() {
