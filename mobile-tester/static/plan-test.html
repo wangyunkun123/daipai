@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>方案卡片 · 手机适配测试</title>
+<style>
+:root {
+  --bg:#0a0a0a; --card:#141414; --card2:#1a1a1a; --text:#e8e8e8;
+  --dim:#8a8a8a; --dimmer:#555; --green:#4ade80; --fire:#f59e0b;
+  --purple:#a78bfa; --cyan:#22d3ee; --red:#ef4444; --border:#262626;
+  --radius:18px; --radius-sm:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100dvh;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+.app{max-width:480px;margin:0 auto;padding:20px 16px 40px;overflow-x:hidden}
+
+/* Header */
+h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;background:rgba(34,211,238,0.06);border-radius:8px}
+h2.good{color:var(--green);background:rgba(74,222,128,0.06)}
+h2.bad{color:var(--red);background:rgba(239,68,68,0.06)}
+
+/* ═══ A. 旧版方案卡片（改版前·确定能用）═══ */
+.plan-card{
+  background:var(--card);border-radius:var(--radius);padding:18px;
+  border:1px solid var(--border);min-height:180px;
+}
+.plan-card .plan-name{
+  font-size:16px;font-weight:700;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.plan-card .plan-name .idx{
+  width:24px;height:24px;border-radius:50%;font-size:12px;
+  font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.annotated-photo{
+  position:relative;border-radius:var(--radius-sm);overflow:hidden;
+  margin-bottom:14px;background:#000;line-height:0;
+}
+.annotated-photo img{width:100%;display:block}
+.plan-section{margin-bottom:10px;font-size:13px;line-height:1.75;display:flex;gap:8px}
+.plan-section .sec-icon{flex-shrink:0;font-size:14px;width:20px}
+.plan-section .sec-text{flex:1}
+.sec-prep .sec-text{color:var(--dim)}
+.sec-subject .sec-text{color:#c084fc;font-weight:500}
+.sec-shooter .sec-text{color:var(--green);font-weight:500}
+.sec-gear .sec-text{color:var(--fire)}
+.sec-enhance .sec-text{color:var(--dim)}
+.sec-result .sec-text{color:var(--fire)}
+
+/* ═══ B. v5 方案卡片（当前线上版本）═══ */
+.plan-card-v5{
+  background:var(--card);border-radius:var(--radius);overflow:hidden;
+  border:1px solid var(--border);word-wrap:break-word;overflow-wrap:break-word;
+  max-width:100%;width:100%;
+}
+.plan-card-v5 .plan-img-wrap{
+  position:relative;line-height:0;background:#000;overflow:hidden;
+}
+.plan-card-v5 .plan-img-wrap img{width:100%;max-width:100%;height:auto;display:block}
+
+.v5-row{padding:10px 12px;display:flex;align-items:flex-start;gap:6px;overflow:hidden}
+.v5-row+.v5-row{border-top:1px solid rgba(255,255,255,0.04)}
+.v5-row .v5-ic{font-size:17px;flex-shrink:0;line-height:1.4}
+.v5-row .v5-bd{flex:1;min-width:0;overflow:hidden}
+.v5-row .v5-lb{font-size:10px;color:var(--dimmer);letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase}
+.v5-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;overflow:hidden}
+.v5-tg{display:inline-flex;align-items:center;gap:2px;padding:3px 7px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.v5-tg.mv{background:rgba(34,211,238,0.10);color:var(--cyan)}
+.v5-tg.ht{background:rgba(167,139,250,0.10);color:var(--purple)}
+.v5-tg.gr{background:rgba(138,138,138,0.10);color:var(--dim)}
+.v5-tg.ps{background:rgba(74,222,128,0.08);color:var(--green)}
+.v5-row.vibe{background:rgba(245,158,11,0.03)}
+.v5-row.vibe .v5-bd{color:var(--fire);font-size:13px;line-height:1.6;font-weight:500}
+.v5-desc{font-size:12px;color:var(--dim);margin-top:3px;line-height:1.5;word-break:break-word}
+
+.v5-detail{border-top:1px solid rgba(255,255,255,0.04)}
+.v5-dhead{padding:9px 12px;font-size:12px;color:var(--dim);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.v5-dhead .ar{font-size:10px;transition:transform .2s}
+.v5-detail.open .v5-dhead .ar{transform:rotate(180deg)}
+.v5-dbody{max-height:0;overflow:hidden;transition:max-height .3s}
+.v5-detail.open .v5-dbody{max-height:800px;overflow-y:auto}
+.v5-drow{padding:8px 12px;font-size:12px;line-height:1.6;color:var(--dim);display:flex;gap:6px;border-top:1px solid rgba(255,255,255,0.03);word-break:break-word}
+
+.v5-post{border-top:1px solid rgba(255,255,255,0.04);padding:10px 12px}
+.v5-post-grid{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.v5-post-item{display:flex;align-items:flex-start;gap:5px;font-size:11px;line-height:1.5}
+.v5-pcat{flex-shrink:0;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:600;white-space:nowrap}
+.v5-pcat.color{background:rgba(245,158,11,.12);color:var(--fire)}
+.v5-pcat.ai{background:rgba(167,139,250,.12);color:var(--purple)}
+.v5-pcat.add{background:rgba(74,222,128,.10);color:var(--green)}
+.v5-post-text{color:var(--dim);padding-top:1px;word-break:break-word}
+
+.v5-gen{border-top:1px solid rgba(34,211,238,0.10);padding:10px 12px}
+.v5-pbox{background:rgba(0,0,0,.3);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--dim);line-height:1.7;max-height:120px;overflow-y:auto;margin-bottom:8px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-family:"SF Mono","Menlo","Consolas",monospace}
+.v5-pact{display:flex;gap:8px;flex-wrap:wrap}
+.v5-btn{padding:8px 12px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;min-height:40px;white-space:nowrap}
+.v5-btn.copy{background:rgba(138,138,138,.15);color:var(--dim)}
+.v5-btn.gen{background:rgba(34,211,238,.08);color:var(--cyan)}
+
+/* ═══ Carousel wrapper（模拟线上轮播）═══ */
+.carousel-track{
+  display:flex;overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.carousel-track::-webkit-scrollbar{display:none}
+.carousel-card{
+  flex:0 0 100%;min-width:0;scroll-snap-align:start;
+  padding:0 2px;box-sizing:border-box;
+  max-width:100%;overflow:hidden;
+}
+
+/* Debug outlines */
+.debug .plan-card-v5,.debug .plan-card,.debug .carousel-card,.debug .carousel-track{border:1px solid rgba(255,0,0,0.4)!important}
+.debug .plan-img-wrap{border:1px solid rgba(0,255,0,0.4)!important}
+.debug .plan-img-wrap img{border:1px solid rgba(0,0,255,0.4)!important}
+.debug .v5-row{border:1px solid rgba(255,255,0,0.3)!important}
+
+/* Width indicator */
+. width-indicator {
+  position:sticky;top:0;z-index:99;background:rgba(239,68,68,0.9);
+  color:#fff;font-size:10px;text-align:center;padding:2px;
+}
+</style>
+</head>
+<body>
+
+<div class="width-indicator" id="widthInd"></div>
+<div class="app" id="app">
+
+<h1 style="font-size:16px;text-align:center;padding:10px 0;color:var(--fire)">🔬 方案卡片手机适配测试</h1>
+<p style="font-size:11px;color:var(--dim);text-align:center;margin-bottom:12px">
+  屏幕宽度: <span id="screenW"></span>px ·
+  容器宽度: <span id="containerW"></span>px ·
+  <button onclick="toggleDebug()" style="background:var(--card2);color:var(--cyan);border:1px solid var(--border);padding:2px 8px;border-radius:4px;font-size:10px">🔍 Debug边框</button>
+</p>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- A. 旧版方案卡片（基线·改版前能用的样式）-->
+<!-- ═══════════════════════════════════════════ -->
+<h2 class="good">✅ A. 旧版方案卡片（改版前·应该正常）</h2>
+<div class="carousel-track"><div class="carousel-card">
+<div class="plan-card">
+  <div class="plan-name"><span class="idx" style="background:rgba(74,222,128,0.08);color:var(--green)">1</span>中景互动方案</div>
+  <div class="annotated-photo"><img src="plan_v5_plan1.jpg" alt="方案示意图" style="width:100%"></div>
+  <div class="plan-section sec-subject"><span class="sec-icon">👤</span><span class="sec-text">被摄者侧身45°站立，手自然垂放，眼神看远处——"刚好被拍到"的自然感</span></div>
+  <div class="plan-section sec-shooter"><span class="sec-icon">📷</span><span class="sec-text">向前靠近一步，蹲下至胸口高度，与人物保持平视——让观众感觉就站在她面前</span></div>
+  <div class="plan-section sec-gear"><span class="sec-icon">⚙️</span><span class="sec-text">iPhone 17 Pro 主摄（24mm等效）· 轻点人脸锁定对焦，连拍3张选眼神最好的</span></div>
+  <div class="plan-section sec-enhance"><span class="sec-icon">🎨</span><span class="sec-text">暖调提亮+暗角模拟柯达Portra 400胶片色·背景增强虚化至f/2.0·发丝高光强化+左上角光斑</span></div>
+  <div class="plan-section sec-result"><span class="sec-icon">✨</span><span class="sec-text">柔和侧光打亮人物侧脸和发丝，金棕色暖调。像一张有温度的日常胶片，不是摆拍</span></div>
+</div>
+</div></div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- B. 纯v5卡片（无增强图·模拟旧版逻辑）-->
+<!-- ═══════════════════════════════════════════ -->
+<h2>B. v5卡片结构 · 无增强图（无plan_image）</h2>
+<div class="carousel-track"><div class="carousel-card">
+<div class="plan-card-v5">
+  <div class="v5-row vibe"><div class="v5-ic">✨</div><div class="v5-bd"><div class="v5-lb">效果预期</div>柔和侧光打亮人物侧脸和发丝，金棕色暖调。人物和狗安静待在画面里，像一张有温度的日常胶片。</div></div>
+  <div class="v5-row"><div class="v5-ic">📍</div><div class="v5-bd"><div class="v5-lb">你怎么拍</div><div class="v5-tags">
+    <span class="v5-tg mv">→ 向前靠近一步，蹲下至胸口高度</span>
+    <span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄（24mm等效）</span>
+  </div></div></div>
+  <div class="v5-row"><div class="v5-ic">🧍</div><div class="v5-bd"><div class="v5-lb">被摄者动作</div><div class="v5-tags">
+    <span class="v5-tg ps">🧍 站姿</span><span class="v5-tg ps">👀 眼神</span>
+  </div><div class="v5-desc">侧身 45° 站立，手自然垂放，眼神看向远处——不是摆拍，是"刚好被拍到"的自然感。</div></div></div>
+  <div class="v5-detail open"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div><div class="v5-dbody">
+    <div class="v5-drow"><span>👤</span><span>人物放在画面左 1/3 竖线上，身体占画面中下约 40%</span></div>
+    <div class="v5-drow"><span>💡</span><span>光线从左上树叶缝隙射入，照亮人物侧脸</span></div>
+    <div class="v5-drow"><span>⚙️</span><span>轻点人脸锁定对焦，连拍 3 张选眼神最好的</span></div>
+  </div></div>
+</div>
+</div></div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- C. v5卡片 + 750px增强图（当前线上方案）-->
+<!-- ═══════════════════════════════════════════ -->
+<h2 class="bad">🔴 C. v5卡片 + 750px增强图（当前线上·问题版本）</h2>
+<div class="carousel-track"><div class="carousel-card">
+<div class="plan-card-v5">
+  <div class="plan-img-wrap"><img src="plan_v5_plan1.jpg" alt="方案示意图" loading="lazy"></div>
+  <div class="v5-row vibe"><div class="v5-ic">✨</div><div class="v5-bd"><div class="v5-lb">效果预期</div>柔和侧光打亮人物侧脸和发丝，金棕色暖调。人物和狗安静待在画面里，像一张有温度的日常胶片。</div></div>
+  <div class="v5-row"><div class="v5-ic">📍</div><div class="v5-bd"><div class="v5-lb">你怎么拍</div><div class="v5-tags">
+    <span class="v5-tg mv">→ 向前靠近一步，蹲下至胸口高度，与人物保持平视</span>
+    <span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄（24mm等效）· 连拍3张</span>
+  </div></div></div>
+  <div class="v5-row"><div class="v5-ic">🧍</div><div class="v5-bd"><div class="v5-lb">被摄者动作</div><div class="v5-tags">
+    <span class="v5-tg ps">🧍 站姿</span><span class="v5-tg ps">👀 眼神</span><span class="v5-tg ps">😊 表情</span>
+  </div><div class="v5-desc">侧身 45° 站立，手自然垂放，眼神看向远处——不是摆拍，是"刚好被拍到"的自然感。</div></div></div>
+  <div class="v5-detail open"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div><div class="v5-dbody">
+    <div class="v5-drow"><span>👤</span><span>人物放在画面左 1/3 竖线上，身体占画面中下约 40%</span></div>
+    <div class="v5-drow"><span>💡</span><span>光线从左上树叶缝隙射入，照亮人物侧脸和狗的红衣</span></div>
+    <div class="v5-drow"><span>⚙️</span><span>轻点人脸锁定对焦，连拍 3 张选眼神最好的</span></div>
+  </div></div>
+  <div class="v5-post"><div class="v5-lb" style="font-size:10px;color:var(--dimmer);letter-spacing:.5px;margin-bottom:6px">🎨 后期 & AI 增强</div><div class="v5-post-grid">
+    <div class="v5-post-item"><span class="v5-pcat color">调色</span><span class="v5-post-text">暖调提亮 + 暗角，模拟柯达 Portra 400 胶片色</span></div>
+    <div class="v5-post-item"><span class="v5-pcat ai">AI 虚化</span><span class="v5-post-text">背景增强虚化至 f/2.0，分离人物与背景的层次</span></div>
+    <div class="v5-post-item"><span class="v5-pcat add">添加</span><span class="v5-post-text">发丝高光强化 + 左上角光斑（模拟树叶漏光）</span></div>
+  </div></div>
+  <div class="v5-gen"><div class="v5-lb" style="font-size:10px;color:var(--dimmer);letter-spacing:.5px;margin-bottom:6px">🖼️ AI 生图提示词 <span style="color:var(--cyan);font-weight:400">（豆包 · 图生图模式）</span></div>
+    <div class="v5-pbox">参考上传的照片，保持人物的面部特征、发型、服装不变，保持春日河边坡地、绿叶柳枝的场景环境不变。做以下调整：人物侧身45°站立，手自然垂放，眼神看远处。机位向前靠近一步，蹲下至胸口高度。光线从左上树叶缝隙射入形成金色轮廓光。画面风格温暖日常，柔和暖调低对比度。无文字、无水印、无签名、自然肤质、真实摄影感</div>
+    <div class="v5-pact"><button class="v5-btn copy">📋 复制提示词</button><button class="v5-btn gen">🖼️ 生图</button></div>
+  </div>
+</div>
+</div></div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- D. v5卡片 + 375px小图（缩小图片测试）-->
+<!-- ═══════════════════════════════════════════ -->
+<h2>D. v5卡片 + 375px小图（测试：缩小图片能否解决）</h2>
+<div class="carousel-track"><div class="carousel-card">
+<div class="plan-card-v5">
+  <div class="plan-img-wrap"><img src="plan_v5_plan1.jpg" alt="方案示意图" style="width:100%;max-width:375px" loading="lazy"></div>
+  <div class="v5-row vibe"><div class="v5-ic">✨</div><div class="v5-bd"><div class="v5-lb">效果预期</div>此卡片用 max-width:375px 约束图片，测试是不是图片过大导致溢出。</div></div>
+  <div class="v5-row"><div class="v5-ic">📍</div><div class="v5-bd"><div class="v5-lb">你怎么拍</div><div class="v5-tags">
+    <span class="v5-tg mv">→ 向前靠近一步，蹲下至胸口高度</span>
+    <span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄</span>
+  </div></div></div>
+</div>
+</div></div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- E. 旧版卡片 + 750px图（对比：旧结构+大图）-->
+<!-- ═══════════════════════════════════════════ -->
+<h2>E. 旧版卡片结构 + 750px图（对比：大图在旧结构中是否溢出）</h2>
+<div class="carousel-track"><div class="carousel-card">
+<div class="plan-card">
+  <div class="plan-name"><span class="idx" style="background:rgba(245,158,11,0.08);color:var(--fire)">2</span>旧版结构+750px大图</div>
+  <div class="annotated-photo"><img src="plan_v5_plan1.jpg" alt="方案示意图" style="width:100%"></div>
+  <div class="plan-section sec-subject"><span class="sec-icon">👤</span><span class="sec-text">测试：旧版卡片结构 + 750px大图，检查是否溢出</span></div>
+</div>
+</div></div>
+
+<p style="text-align:center;padding:40px 0;color:var(--dimmer);font-size:11px">↑ 上滑查看所有测试场景 ↑<br>对比 A(旧版) vs C(v5+大图) 的差异</p>
+
+</div>
+
+<script>
+// Width debug
+function updateWidths(){
+  document.getElementById('screenW').textContent = window.innerWidth;
+  document.getElementById('containerW').textContent = document.querySelector('.app').clientWidth;
+  document.getElementById('widthInd').textContent =
+    '屏幕:'+window.innerWidth+'px · 容器:'+document.querySelector('.app').clientWidth+'px · '+
+    '卡片:'+document.querySelector('.carousel-card')?.clientWidth+'px';
+}
+updateWidths();
+window.onresize = updateWidths;
+
+function toggleDebug(){
+  document.getElementById('app').classList.toggle('debug');
+}
+
+// Report overflow
+window.onload = function(){
+  updateWidths();
+  const bodyW = document.body.scrollWidth;
+  const vw = window.innerWidth;
+  if (bodyW > vw + 2){
+    document.getElementById('widthInd').style.background = 'rgba(239,68,68,0.95)';
+    document.getElementById('widthInd').textContent += ' ⚠️ 页面溢出! body:'+bodyW+'px > 屏幕:'+vw+'px';
+  }
+};
+</script>
+</body>
+</html>
