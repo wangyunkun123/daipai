@@ -37,6 +37,37 @@ STYLE_ONE_LINERS = {
     "新中式": "既有东方的骨，又有鲜活的气。低饱和、留白、青绿棕、静中有动",
 }
 
+# ── 跨媒介风格 one_liner 表（来自 cross-media-styles/*.md）──
+# 导演/画派/互联网原生美学 → 摄影可执行描述
+CROSS_MEDIA_STYLE_ONE_LINERS = {
+    "宫崎骏吉卜力": "像宫崎骏动画里的一帧——天空的比例、草地的绿色、光穿过树叶的样子，都有一种『这个世界是温柔的』的感觉。",
+    "王家卫电影": "霓虹灯在晃动、人物有残影、绿色覆盖了所有阴影——像王家卫电影里一个记不住的瞬间。",
+    "韦斯安德森": "画面绝对对称、颜色像马卡龙、所有人都站在正中间——像韦斯·安德森电影里的一帧。",
+    "新海诚天空": "蓝天蓝到不真实、光晕大到像在做梦、城市的每一个细节都在发光——像新海诚动画里的壁纸级天空。",
+    "张艺谋色彩": "大块的纯红、金黄、翠绿——颜色不是点缀，是主角。像张艺谋电影里的色彩——人不是画面中最重要的东西，色彩才是。",
+    "莫奈印象派": "像莫奈画的那样——光被分解成一块一块的颜色，水面不是水面，是一千片碎掉的光。",
+    "莫兰迪色系": "所有的颜色都像被蒙了一层灰——粉色不再是粉色，是灰粉；蓝色不再是蓝色，是灰蓝。世界像被温柔地静音了。",
+    "霍普式孤独": "窗边一个人、晨光或暮光从窗户斜照进来、很长的影子——你不知道她在想什么，但你觉得你想知道。",
+    "赛博朋克": "霓虹紫+蓝+粉、永远在下雨、湿路面反射着全息光——像站在2077年东亚城市的街头。",
+    "蒸汽波": "粉紫蓝渐变+希腊石膏像+Windows 95弹窗+棕榈树剪影——像某个已经消失的80年代未来的明信片。",
+    "中国水墨": "大面积留白、只有黑白灰、山在远处人在小处——像一幅宋画山水。",
+    "中式梦核": "像你小时候做的一个梦——熟悉的场景，但有些不正常的细节。2003年的客厅、老式电视机、窗外的蓝绿色光——你感觉快要醒了，但又没有。",
+    "伦勃朗光": "一束光从左侧的窗户照进来，人物的半边脸在光里、半边在暗里——脸颊上有一个小小的三角形光斑。像维米尔画里的人，像伦勃朗画里的光。",
+    "暗调学院": "旧图书馆的深棕木桌、羊皮纸色的旧书、深金+深绿+深棕——像在牛津大学某个百年图书馆里、窗外是阴天、只有一盏台灯。",
+    "田园生活": "野花、棉麻裙子、手工面包、午后阳光从树叶间洒下来——像逃离城市以后、在乡下过上了最简单但最美的那种生活。",
+    "宋画山水": "一座大山占据了画面2/3、山脚下一个人小到几乎看不见——像范宽的《溪山行旅图》——天地巨大，人很渺小，但人在天地中是安定的。",
+    "浮世绘": "平面化的构图、清晰的轮廓线、大块的普鲁士蓝——像葛饰北斋的《神奈川冲浪里》——世界被简化成线条和纯色块。",
+    "蜘蛛侠漫风": "像漫画书里的一格——有半调网点、有对话框的视觉痕迹、高饱和撞色、动态模糊线——世界被印刷在纸上。",
+    "阈限空间": "空荡的走廊、深夜无人加油站、闭店后的商场——这些地方不是恐怖的，但有一种『不应该一个人在这里』的不安。你觉得这个地方你好像来过。",
+    "品牌视觉": "最好的品牌已经把摄影语言提炼成了一套可复制的公式。MUJI的照片不需要Logo你就知道是MUJI。这就是品牌摄影语言的力量。",
+    "奶油风": "画面里所有颜色都像被加了一勺牛奶——米白、奶咖、浅杏、燕麦，光线柔和到几乎没有阴影。",
+    "老钱静奢": "画面里的一切都很『贵』但没有一样东西在喊『我很贵』——中性大地色调、天然材质纹理、人物姿态松弛从容。",
+}
+
+def _all_styles():
+    """返回所有风格（style-recipes + cross-media）的合并 dict"""
+    return {**STYLE_ONE_LINERS, **CROSS_MEDIA_STYLE_ONE_LINERS}
+
 # ── 光线 → 风格匹配矩阵（来自 knowledge-core.md §二）──
 LIGHT_STYLE_MATRIX = """
 光线→风格匹配规则（诚实标注 🟢🟡🔴）：
@@ -261,7 +292,7 @@ def load_knowledge_core():
 def _match_scene_styles(scene_type):
     """从场景类型中提取关键词，匹配场景→风格矩阵，返回相关风格名集合。"""
     if not scene_type:
-        return set(STYLE_ONE_LINERS.keys())
+        return set(_all_styles().keys())
 
     # 场景关键词 → 相关风格（直接从 SCENE_STYLE_MATRIX 硬编码提取，避免字符串解析）
     SCENE_STYLE_MAP = {
@@ -331,7 +362,7 @@ def _match_scene_styles(scene_type):
 
     # 没匹配到 → 返回全部
     if not matched_styles:
-        return set(STYLE_ONE_LINERS.keys())
+        return set(_all_styles().keys())
 
     # 始终包含几个通用风格作为兜底
     matched_styles |= {"安静真实", "日系清新", "胶片复古"}
@@ -349,11 +380,12 @@ def get_knowledge_context(scene_type="", device_key="", light_condition=""):
     relevant_styles = _match_scene_styles(scene_type)
     parts.append("## 📚 风格参考（带拍知识库 · 本场景相关）\n")
     parts.append("### 风格 one_liner（全局唯一标识）")
-    for name, one_liner in STYLE_ONE_LINERS.items():
+    all_styles = _all_styles()
+    for name, one_liner in all_styles.items():
         if name in relevant_styles:
             parts.append(f"- **{name}**：{one_liner}")
     # 不相关的风格只列名字，不列 one_liner（省 token）
-    other_styles = [n for n in STYLE_ONE_LINERS if n not in relevant_styles]
+    other_styles = [n for n in all_styles if n not in relevant_styles]
     if other_styles:
         parts.append(f"\n> 其他可用风格（按需引用，无需展开）：{' / '.join(other_styles)}")
     parts.append("")
@@ -449,14 +481,15 @@ def get_knowledge_context(scene_type="", device_key="", light_condition=""):
 
 def get_style_detail(style_name):
     """获取指定风格的详细信息（用于方案生成 prompt）"""
-    # 尝试匹配 one_liner
+    # 尝试匹配 one_liner（先搜 style-recipes，再搜 cross-media）
     style_name_clean = style_name.strip()
-    for name, one_liner in STYLE_ONE_LINERS.items():
+    all_styles = _all_styles()
+    for name, one_liner in all_styles.items():
         if name in style_name_clean or style_name_clean in name:
             return f"**{name}**：{one_liner}"
 
     # 模糊匹配
-    for name, one_liner in STYLE_ONE_LINERS.items():
+    for name, one_liner in all_styles.items():
         # 检查关键词重叠
         name_chars = set(name)
         input_chars = set(style_name_clean)

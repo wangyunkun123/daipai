@@ -865,22 +865,14 @@ def get_style_technique_panel():
 def seed_from_knowledge_base():
     """
     从知识库中提取有可靠来源的风格/技法，写入数据库作为种子数据。
-    仅运行一次——检测已有 knowledge_base 来源的记录后跳过。
+    仅运行一次——检测已有 knowledge_base / cross_media 来源的记录后跳过。
     返回写入数量。
     """
     conn = get_db()
     try:
-        # 门控：已有种子数据则跳过
-        existing = conn.execute(
-            "SELECT COUNT(*) FROM styles WHERE source_type = 'knowledge_base'"
-        ).fetchone()[0]
-        if existing > 0:
-            print(f"[DB] Seed: {existing} knowledge_base styles already exist, skipping", file=sys.stderr, flush=True)
-            return 0
-
         # 从 knowledge_base 导入（避免循环导入）
         try:
-            from knowledge_base import STYLE_ONE_LINERS, VERIFIED_TECHNIQUES
+            from knowledge_base import STYLE_ONE_LINERS, CROSS_MEDIA_STYLE_ONE_LINERS, VERIFIED_TECHNIQUES
         except ImportError:
             print("[DB] Seed: Cannot import from knowledge_base", file=sys.stderr, flush=True)
             return 0
@@ -888,26 +880,53 @@ def seed_from_knowledge_base():
         count_styles = 0
         count_techs = 0
 
-        # ── 种子风格 ──
-        for name, one_liner in STYLE_ONE_LINERS.items():
-            conn.execute("""
-                INSERT OR IGNORE INTO styles (name, one_liner, source_type, fit_rationale, verify_count)
-                VALUES (?, ?, 'knowledge_base', ?, 10)
-            """, (name, one_liner, f"知识库种子：{one_liner[:200]}"))
-            if conn.execute("SELECT changes()").fetchone()[0] > 0:
-                count_styles += 1
+        # ── Phase 1: 种子风格（style-recipes → knowledge_base）──
+        existing_kb = conn.execute(
+            "SELECT COUNT(*) FROM styles WHERE source_type = 'knowledge_base'"
+        ).fetchone()[0]
+        if existing_kb > 0:
+            print(f"[DB] Seed: {existing_kb} knowledge_base styles already exist, skipping phase 1", file=sys.stderr, flush=True)
+        else:
+            for name, one_liner in STYLE_ONE_LINERS.items():
+                conn.execute("""
+                    INSERT OR IGNORE INTO styles (name, one_liner, source_type, fit_rationale, verify_count)
+                    VALUES (?, ?, 'knowledge_base', ?, 10)
+                """, (name, one_liner, f"知识库种子：{one_liner[:200]}"))
+                if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                    count_styles += 1
 
-        # ── 种子技法 ──
-        for tech in (VERIFIED_TECHNIQUES or []):
-            conn.execute("""
-                INSERT OR IGNORE INTO techniques (name, source_type, description, verify_count)
-                VALUES (?, 'knowledge_base', ?, 10)
-            """, (tech['name'], tech.get('description', '')))
-            if conn.execute("SELECT changes()").fetchone()[0] > 0:
-                count_techs += 1
+        # ── Phase 2: 种子跨媒介风格（cross-media-styles → cross_media）──
+        existing_cm = conn.execute(
+            "SELECT COUNT(*) FROM styles WHERE source_type = 'cross_media'"
+        ).fetchone()[0]
+        if existing_cm > 0:
+            print(f"[DB] Seed: {existing_cm} cross_media styles already exist, skipping phase 2", file=sys.stderr, flush=True)
+        else:
+            for name, one_liner in CROSS_MEDIA_STYLE_ONE_LINERS.items():
+                conn.execute("""
+                    INSERT OR IGNORE INTO styles (name, one_liner, source_type, fit_rationale, verify_count)
+                    VALUES (?, ?, 'cross_media', ?, 8)
+                """, (name, one_liner, f"跨媒介风格：导演/画派/互联网美学 → {one_liner[:200]}"))
+                if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                    count_styles += 1
+
+        # ── Phase 3: 种子技法 ──
+        existing_tech = conn.execute(
+            "SELECT COUNT(*) FROM techniques WHERE source_type = 'knowledge_base'"
+        ).fetchone()[0]
+        if existing_tech > 0:
+            print(f"[DB] Seed: {existing_tech} knowledge_base techniques already exist, skipping phase 3", file=sys.stderr, flush=True)
+        else:
+            for tech in (VERIFIED_TECHNIQUES or []):
+                conn.execute("""
+                    INSERT OR IGNORE INTO techniques (name, source_type, description, verify_count)
+                    VALUES (?, 'knowledge_base', ?, 10)
+                """, (tech['name'], tech.get('description', '')))
+                if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                    count_techs += 1
 
         conn.commit()
-        print(f"[DB] Seed: inserted {count_styles} styles + {count_techs} techniques from knowledge_base",
+        print(f"[DB] Seed: inserted {count_styles} styles + {count_techs} techniques",
               file=sys.stderr, flush=True)
         return count_styles + count_techs
     except Exception as e:
