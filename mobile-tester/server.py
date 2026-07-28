@@ -31,6 +31,10 @@ from database import accumulate, query_scene_context, query_scene_techniques_for
 # v5: 增强方案图生成（PIL）
 # ═══════════════════════════════════════════════════════════
 
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+
+
 def _get_plan_img_dir():
     d = os.path.join(os.path.dirname(__file__), "static", "plan_images")
     try: os.makedirs(d, exist_ok=True)
