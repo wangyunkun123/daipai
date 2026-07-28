@@ -21,14 +21,174 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 load_dotenv()
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageDraw, ImageFont
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map, get_knowledge_files_by_quality
 from search_web import search_style_inspiration, search_location_intel
 from database import accumulate, query_scene_context, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques, get_pending_discoveries, promote_search_to_technique
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+# ═══════════════════════════════════════════════════════════
+# v5: 增强方案图生成（PIL）
+# ═══════════════════════════════════════════════════════════
+
+PLAN_IMG_DIR = os.path.join(os.path.dirname(__file__), "static", "plan_images")
+os.makedirs(PLAN_IMG_DIR, exist_ok=True)
+
+def _load_font(size):
+    for fp in ["/System/Library/Fonts/STHeiti Medium.ttc", "/System/Library/Fonts/PingFang.ttc",
+               "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+               "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"]:
+        try: return ImageFont.truetype(fp, size)
+        except: pass
+    return ImageFont.load_default()
+
+def generate_plan_image(photo_path, plan, plan_index, output_key):
+    """Generate an enhanced plan image with visual overlays.
+    Returns the URL path relative to /static/, or None on failure."""
+    try:
+        img = Image.open(photo_path).convert("RGB")
+    except Exception:
+        return None
+
+    W, H = img.size
+    # Resize for mobile: width = 1290 (3x retina of 430px)
+    MOBILE_W = 1290
+    scale = MOBILE_W / W
+    img = img.resize((MOBILE_W, int(H * scale)), Image.LANCZOS)
+    W, H = img.size
+
+    font_lg = _load_font(34)
+    font_md = _load_font(28)
+    font_sm = _load_font(22)
+
+    color = (245, 158, 11)  # gold default
+    name = plan.get('name', f'方案{plan_index+1}')
+    shot_size = plan.get('shot_size', '')
+    angle = plan.get('angle', '')
+    annotations = plan.get('annotations', [])
+    color_map = {'#4ade80': (74,222,128), '#f59e0b': (245,158,11), '#a78bfa': (167,139,250)}
+
+    base = img.copy().convert("RGBA")
+    light_l = Image.new("RGBA", (W, H), (0,0,0,0))
+    grid_l  = Image.new("RGBA", (W, H), (0,0,0,0))
+    subj_l  = Image.new("RGBA", (W, H), (0,0,0,0))
+    vign_l  = Image.new("RGBA", (W, H), (0,0,0,0))
+    frame_l = Image.new("RGBA", (W, H), (0,0,0,0))
+    badge_l = Image.new("RGBA", (W, H), (0,0,0,0))
+    bar_l   = Image.new("RGBA", (W, H), (0,0,0,0))
+
+    ld = ImageDraw.Draw(light_l)
+    gd = ImageDraw.Draw(grid_l)
+    sd = ImageDraw.Draw(subj_l)
+    vd = ImageDraw.Draw(vign_l)
+    fd = ImageDraw.Draw(frame_l)
+    bd = ImageDraw.Draw(badge_l)
+    bad = ImageDraw.Draw(bar_l)
+
+    # ── Light gradient ──
+    cx_l, cy_l = int(W*0.2), int(H*0.15)
+    for i in range(30):
+        a = int(22*(1-i/30))
+        r = int(W*0.35*(i+1)/30)
+        ld.ellipse([cx_l-r, cy_l-r, cx_l+r, cy_l+r], fill=(255,200,120,a))
+
+    # ── Grid ──
+    gc = (255,255,255,55)
+    for i in [1,2]:
+        x = int(W*i/3); gd.line([(x,0),(x,H)], fill=gc, width=2)
+        y = int(H*i/3); gd.line([(0,y),(W,y)], fill=gc, width=2)
+
+    # ── Vignette ──
+    for i in range(20):
+        a = int(38*(1-i/20)); m = int(min(W,H)*0.02*i)
+        vd.rectangle([m,m,W-m,H-m], outline=(0,0,0,a), width=int(min(W,H)*0.04))
+
+    # ── Subjects ──
+    for ann in annotations:
+        if ann.get('type') == 'subject':
+            c = color_map.get(ann.get('color',''), color)
+            cx = int(W * ann.get('x', 0.5))
+            cy = int(H * ann.get('y', 0.5))
+            r  = int(W * ann.get('r', 0.06))
+            label = ann.get('label', '')
+            for i in range(3):
+                gr = r+5+i*3; sd.ellipse([cx-gr,cy-gr,cx+gr,cy+gr], outline=(*c,80-i*20), width=2)
+            sd.ellipse([cx-r,cy-r,cx+r,cy+r], outline=(*c,210), width=4)
+            for a_deg in [0,90,180,270]:
+                rad = math.radians(a_deg); dx=int(r*0.7*math.cos(rad)); dy=int(r*0.7*math.sin(rad))
+                sd.ellipse([cx+dx-4,cy+dy-4,cx+dx+4,cy+dy+4], fill=(*c,220))
+            if label:
+                try:
+                    bb = sd.textbbox((0,0), label, font=font_md); tw=bb[2]-bb[0]; th=bb[3]-bb[1]
+                except: tw=len(label)*18; th=22
+                px,py=14,8; lw=tw+px; lh=th+py
+                lx=cx+r+10; ly=cy-lh//2
+                if lx+lw>W-16: lx=cx-r-lw-10
+                bar_top=H-56
+                if ly+lh>bar_top-8: ly=bar_top-lh-8
+                if ly<8: ly=8
+                sd.rounded_rectangle([lx,ly,lx+lw,ly+lh], radius=7, fill=(8,8,12,225))
+                sd.text((lx+px//2,ly+py//2), label, fill=(*c,255), font=font_md)
+
+    # ── Shot frame ──
+    frame_ann = next((a for a in annotations if a.get('type')=='frame'), None)
+    if frame_ann:
+        l = int(W*frame_ann.get('l',0.05)); t=int(H*frame_ann.get('t',0.05))
+        r = int(W*frame_ann.get('r',0.95)); b=int(H*frame_ann.get('b',0.85))
+        dark=(0,0,0,55)
+        if t>0: fd.rectangle([(0,0),(W,t)], fill=dark)
+        if b<H: fd.rectangle([(0,b),(W,H)], fill=dark)
+        if l>0: fd.rectangle([(0,t),(l,b)], fill=dark)
+        if r<W: fd.rectangle([(r,t),(W,b)], fill=dark)
+        fc=(*color,110); fd.rectangle([(l,t),(r,b)], outline=fc, width=3)
+        bk=36; bkc=(*color,200)
+        fd.line([(l,t),(l+bk,t)], fill=bkc, width=4)
+        fd.line([(l,t),(l,t+bk)], fill=bkc, width=4)
+        fd.line([(r-bk,t),(r,t)], fill=bkc, width=4)
+        fd.line([(r,t),(r,t+bk)], fill=bkc, width=4)
+        fd.line([(l,b-bk),(l,b)], fill=bkc, width=4)
+        fd.line([(l,b),(l+bk,b)], fill=bkc, width=4)
+        fd.line([(r-bk,b),(r,b)], fill=bkc, width=4)
+        fd.line([(r,b-bk),(r,b)], fill=bkc, width=4)
+        flabel = shot_size if shot_size else '取景'
+        try: fb=fd.textbbox((0,0),flabel,font=font_md); fw=fb[2]-fb[0]; fh=fb[3]-fb[1]
+        except: fw=len(flabel)*18; fh=22
+        fp=16; flw=fw+fp; flh=fh+10
+        flx=l+(r-l)//2-flw//2; fly=t+10
+        fd.rounded_rectangle([flx,fly,flx+flw,fly+flh], radius=8, fill=(*color,160))
+        fd.text((flx+fp//2,fly+5), flabel, fill=(0,0,0,255), font=font_md)
+
+    # ── Badges ──
+    badges = []
+    if shot_size: badges.append((shot_size, color))
+    if angle: badges.append((angle, (180,180,190)))
+    bx0, by0 = 16, 16
+    for btext, bclr in badges:
+        try: bb=bd.textbbox((0,0),btext,font=font_sm); bw=bb[2]-bb[0]; bh=bb[3]-bb[1]
+        except: bw=len(btext)*16; bh=18
+        bpad=16; btw=bw+bpad; bth=bh+10
+        bd.rounded_rectangle([bx0,by0,bx0+btw,by0+bth], radius=7, fill=(8,8,12,210))
+        bd.text((bx0+bpad//2,by0+5), btext, fill=(*bclr,255), font=font_sm)
+        bx0 += btw+8
+
+    # ── Bottom bar ──
+    bar_h=56; y0=H-bar_h
+    bad.rectangle([(0,y0),(W,H)], fill=(0,0,0,140))
+    bad.text((20,y0+12), f"📷 {plan_index+1}/{4}", fill=(200,200,200,255), font=font_lg)
+    try: bb=bad.textbbox((0,0),name,font=font_lg); nw=bb[2]-bb[0]
+    except: nw=len(name)*20
+    bad.text((W-nw-24,y0+12), name, fill=color, font=font_lg)
+
+    # ── Composite ──
+    result = base
+    for layer in [light_l, grid_l, subj_l, vign_l, frame_l, badge_l, bar_l]:
+        result = Image.alpha_composite(result, layer)
+    result = result.convert("RGB")
+
+    out_path = os.path.join(PLAN_IMG_DIR, f"{output_key}.jpg")
+    result.save(out_path, "JPEG", quality=88)
+    return f"/static/plan_images/{output_key}.jpg"
+
 
 # ============================================================
 # 配置
@@ -613,7 +773,9 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。你的唯一任务：�
    - crop: 裁剪建议，加w/h字段
    - color: #4ade80(绿)/#f59e0b(金)/#a78bfa(紫)
 ⑩ perspective: 换个思路——有真正差异才写，可选
-⑪ img_gen_prompt: 豆包图生图提示词——每套必写（⚠️ 图生图模式）
+⑪ shot_size: 景别——每套必写（远景/全景/中景/近景/特写 之一）
+⑫ angle: 拍摄角度——每套必写（平视/俯拍/仰拍/侧面/背面 之一）
+⑬ img_gen_prompt: 豆包图生图提示词——每套必写（⚠️ 图生图模式）
 
    这是图生图提示词——用户会上传原图作为参考图，豆包需要基于原图生成调整后的画面。
 
@@ -641,6 +803,14 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。你的唯一任务：�
 
    无文字、无水印、无签名、自然肤质、真实摄影感
    ```
+
+⑭ post_process: 后期&AI增强——每套必写
+   包含三个维度的建议（每项一句，不强凑）：
+   - 调色方向：色调倾向、影调处理、胶片模拟方向
+   - AI处理：背景虚化增强、AI去物/扩展、AI特效建议
+   - 添加内容：HDR效果、M天神光、光斑、颗粒、暗角等
+   每项格式：{{"cat":"color|ai|add", "label":"调色|AI虚化|添加", "text":"具体操作描述"}}
+   输出为数组，1-3项
 
    参考示例：
    "参考上传的照片，保持人物的面部特征、发型、白色卫衣和牛仔裤不变，
@@ -678,7 +848,7 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。你的唯一任务：�
     {{
       "name": "", "prep": "", "subject": "", "shooter": "", "gear": "",
       "enhance": "", "result": "", "why": "", "annotations": [], "perspective": "",
-      "img_gen_prompt": ""
+      "shot_size": "", "angle": "", "img_gen_prompt": "", "post_process": []
     }}
   ]
 }}"""
@@ -2039,7 +2209,17 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     # 检查缓存
     if cache_key in session['plan_cache']:
         print(f"[Plans] Cache hit: {cache_key}", file=sys.stderr, flush=True)
-        return session['plan_cache'][cache_key], None
+        plans = session['plan_cache'][cache_key]
+        # v5: 补生成缺失的增强图
+        photo_path = session.get('photo_path', '')
+        if photo_path and os.path.exists(photo_path):
+            for i, p in enumerate(plans):
+                if isinstance(p, dict) and p.get('annotations') and not p.get('plan_image'):
+                    img_key = f"{cache_key}_{i}"
+                    img_url = generate_plan_image(photo_path, p, i, img_key)
+                    if img_url:
+                        p['plan_image'] = img_url
+        return plans, None
 
     # ── 防止重复 LLM 调用（retry/poll 并发时同一 key 只生成一次）──
     global_key = f"{session_id}:{cache_key}"
@@ -2150,11 +2330,25 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
                 p.setdefault('enhance', '')
                 p.setdefault('annotations', [])
                 p.setdefault('perspective', '')
+                p.setdefault('shot_size', '')
+                p.setdefault('angle', '')
                 p.setdefault('img_gen_prompt', '')
+                p.setdefault('post_process', [])
 
         # 缓存
         session['plan_cache'][cache_key] = plans
         print(f"[Plans] Generated {len(plans)} plans, cached as {cache_key}", file=sys.stderr, flush=True)
+
+        # ── v5: 生成增强方案图 ──
+        photo_path = session.get('photo_path', '')
+        if photo_path and os.path.exists(photo_path):
+            for i, p in enumerate(plans):
+                if isinstance(p, dict) and p.get('annotations'):
+                    img_key = f"{cache_key}_{i}"
+                    img_url = generate_plan_image(photo_path, p, i, img_key)
+                    if img_url:
+                        p['plan_image'] = img_url
+                        print(f"[Plans] Image generated: {img_url}", file=sys.stderr, flush=True)
 
         # ── 更新使用统计 ──
         try:

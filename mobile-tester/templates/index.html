@@ -304,84 +304,87 @@
   }
   .plan-loading .load-text { font-size: 13px; color: var(--dim); }
 
+  /* ====== v5 方案卡片 ====== */
+  .plan-card-v5 {
+    background: var(--card); border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .plan-card-v5 .plan-img-wrap {
+    position: relative; line-height: 0; background: #000;
+  }
+  .plan-card-v5 .plan-img-wrap img { width: 100%; display: block; }
+
+  /* v5 卡片行 */
+  .v5-row { padding: 11px 14px; display: flex; align-items: flex-start; gap: 8px; }
+  .v5-row + .v5-row { border-top: 1px solid rgba(255,255,255,0.04); }
+  .v5-row .v5-ic { font-size: 18px; flex-shrink: 0; line-height: 1.5; }
+  .v5-row .v5-bd { flex: 1; min-width: 0; }
+  .v5-row .v5-lb { font-size: 10px; color: var(--dimmer); letter-spacing: 0.5px; margin-bottom: 4px; text-transform: uppercase; }
+  .v5-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .v5-tg { display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .v5-tg.mv { background: rgba(34,211,238,0.10); color: var(--cyan); }
+  .v5-tg.ht { background: rgba(167,139,250,0.10); color: var(--purple); }
+  .v5-tg.gr { background: rgba(138,138,138,0.10); color: var(--dim); }
+  .v5-tg.ps { background: rgba(74,222,128,0.08); color: var(--green); }
+
+  .v5-row.vibe { background: rgba(245,158,11,0.03); }
+  .v5-row.vibe .v5-bd { color: var(--fire); font-size: 13px; line-height: 1.6; font-weight: 500; }
+
+  .v5-desc { font-size: 12px; color: var(--dim); margin-top: 4px; line-height: 1.5; }
+
+  /* 构图详解折叠 */
+  .v5-detail { border-top: 1px solid rgba(255,255,255,0.04); }
+  .v5-dhead { padding: 10px 14px; font-size: 12px; color: var(--dim); display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .v5-dhead .ar { font-size: 10px; transition: transform 0.2s; }
+  .v5-detail.open .v5-dhead .ar { transform: rotate(180deg); }
+  .v5-dbody { max-height: 0; overflow: hidden; transition: max-height 0.3s; }
+  .v5-detail.open .v5-dbody { max-height: 400px; }
+  .v5-drow { padding: 9px 14px; font-size: 12px; line-height: 1.7; color: var(--dim); display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.03); }
+
+  /* 后期 */
+  .v5-post { border-top: 1px solid rgba(255,255,255,0.04); padding: 11px 14px; }
+  .v5-post-grid { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
+  .v5-post-item { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.5; }
+  .v5-pcat { flex-shrink: 0; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .v5-pcat.color { background: rgba(245,158,11,0.12); color: var(--fire); }
+  .v5-pcat.ai    { background: rgba(167,139,250,0.12); color: var(--purple); }
+  .v5-pcat.add   { background: rgba(74,222,128,0.10); color: var(--green); }
+  .v5-post-text { color: var(--dim); padding-top: 1px; }
+
+  /* 生图 */
+  .v5-gen { border-top: 1px solid rgba(34,211,238,0.10); padding: 11px 14px; }
+  .v5-pbox { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--dim); line-height: 1.8; max-height: 110px; overflow-y: auto; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; font-family: "SF Mono","Menlo","Consolas",monospace; }
+  .v5-pact { display: flex; gap: 8px; }
+  .v5-btn { padding: 7px 14px; border-radius: 8px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; }
+  .v5-btn:active { transform: scale(0.96); }
+  .v5-btn.copy { background: rgba(138,138,138,0.15); color: var(--dim); }
+  .v5-btn.gen  { background: rgba(34,211,238,0.08); color: var(--cyan); opacity: 0.7; }
+
+  /* 旧版卡片保留兼容 */
   .plan-card {
     background: var(--card); border-radius: var(--radius); padding: 18px;
     margin: 0; border: 1px solid var(--border); min-height: 180px;
   }
-  .plan-card .plan-name {
-    font-size: 16px; font-weight: 700; margin-bottom: 12px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .plan-card .plan-name .idx {
-    width: 24px; height: 24px; border-radius: 50%; font-size: 12px;
-    font-weight: 700; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .annotated-photo {
-    position: relative; border-radius: var(--radius-sm); overflow: hidden;
-    margin-bottom: 14px; background: #000; line-height: 0;
-  }
-  .annotated-photo canvas { width: 100%; display: block; }
+  .plan-card .plan-name { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .plan-card .plan-name .idx { width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .plan-section { margin-bottom: 10px; font-size: 13px; line-height: 1.75; display: flex; gap: 8px; }
   .plan-section .sec-icon { flex-shrink: 0; font-size: 14px; width: 20px; }
-  .plan-section .sec-text { flex: 1; }
-  .sec-prep .sec-text { color: var(--dim); }
-  .sec-subject .sec-text { color: #c084fc; font-weight: 500; }
-  .sec-shooter .sec-text { color: var(--green); font-weight: 500; }
+  .sec-subject .sec-text { color: #c084fc; }
+  .sec-shooter .sec-text { color: var(--green); }
   .sec-gear .sec-text { color: var(--fire); }
-  .sec-enhance .sec-text { color: var(--dim); }
   .sec-result .sec-text { color: var(--fire); }
-
-  .why-toggle {
-    display: flex; align-items: center; gap: 6px; padding: 8px 0;
-    font-size: 12px; color: var(--dimmer); cursor: pointer;
-    border-top: 1px solid var(--border); margin-top: 4px; user-select: none;
-  }
+  .why-toggle { display: flex; align-items: center; gap: 6px; padding: 8px 0; font-size: 12px; color: var(--dimmer); cursor: pointer; border-top: 1px solid var(--border); margin-top: 4px; user-select: none; }
   .why-toggle .arrow { transition: transform 0.2s; font-size: 10px; }
   .why-toggle.open .arrow { transform: rotate(90deg); }
-  .why-content {
-    display: none; padding: 10px 14px; margin-bottom: 8px;
-    background: rgba(167,139,250,0.05); border-radius: 10px;
-    font-size: 13px; color: var(--purple); line-height: 1.7;
-  }
+  .why-content { display: none; padding: 10px 14px; margin-bottom: 8px; background: rgba(167,139,250,0.05); border-radius: 10px; font-size: 13px; color: var(--purple); line-height: 1.7; }
   .why-content.open { display: block; }
-  .plan-perspective {
-    margin-top: 8px; padding: 8px 12px; background: rgba(74,222,128,0.05);
-    border-radius: 10px; font-size: 12px; color: var(--green); line-height: 1.6;
-  }
-
-  /* 生图 */
-  .img-gen-btn {
-    display: flex; align-items: center; gap: 6px;
-    width: 100%; padding: 10px; margin-top: 10px;
-    background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
-    border-radius: 10px; color: var(--fire); font-size: 13px; font-weight: 600;
-    cursor: pointer; text-align: center; justify-content: center;
-  }
+  .plan-perspective { margin-top: 8px; padding: 8px 12px; background: rgba(74,222,128,0.05); border-radius: 10px; font-size: 12px; color: var(--green); line-height: 1.6; }
+  .img-gen-btn { display: flex; align-items: center; gap: 6px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; color: var(--fire); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; justify-content: center; }
   .img-gen-btn:active { background: rgba(245,158,11,0.15); }
-  .img-gen-prompt {
-    display: none; margin-top: 8px; padding: 12px;
-    background: var(--card2); border-radius: 10px; border: 1px solid var(--border);
-  }
+  .img-gen-prompt { display: none; margin-top: 8px; padding: 12px; background: var(--card2); border-radius: 10px; border: 1px solid var(--border); }
   .img-gen-prompt.open { display: block; }
-  .img-gen-prompt .prompt-text {
-    font-size: 12px; color: var(--text); line-height: 1.75; margin-bottom: 8px;
-    white-space: pre-wrap; word-break: break-all;
-  }
-  .img-gen-prompt .prompt-notes {
-    font-size: 11px; color: var(--fire); margin-bottom: 10px;
-    display: flex; flex-wrap: wrap; gap: 6px;
-  }
-  .img-gen-prompt .prompt-notes .note-tag {
-    padding: 2px 8px; border-radius: 8px;
-    background: rgba(245,158,11,0.12); color: var(--fire);
-  }
-  .copy-btn {
-    display: inline-block; padding: 6px 14px; border-radius: 8px;
-    background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2);
-    color: var(--green); font-size: 12px; cursor: pointer; font-weight: 600;
-  }
-  .copy-btn:active { background: rgba(74,222,128,0.2); }
+  .img-gen-prompt .prompt-text { font-size: 12px; color: var(--text); line-height: 1.75; margin-bottom: 8px; white-space: pre-wrap; word-break: break-all; }
+  .copy-btn { display: inline-block; padding: 6px 14px; border-radius: 8px; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2); color: var(--green); font-size: 12px; cursor: pointer; font-weight: 600; }
 
   /* ====== v3.5: 方案反馈 ====== */
   .plan-feedback { display: flex; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); justify-content: center; }
@@ -1491,9 +1494,10 @@ function renderPlans(plans, direction) {
       const tg = document.getElementById(`wt${i}`), ct = document.getElementById(`wc${i}`);
       if (tg&&ct) tg.addEventListener('click', ()=>{ tg.classList.toggle('open'); ct.classList.toggle('open'); });
     }
+    // v5: 旧版生图按钮已移除，v5 有自己的 onclick handler（copyPromptV5/genPromptV5）
     const btn = document.getElementById(`igb${i}`), pnl = document.getElementById(`igp${i}`);
     if (btn&&pnl) btn.addEventListener('click', ()=>{ pnl.classList.toggle('open'); if(pnl.classList.contains('open')) pnl.scrollIntoView({behavior:'smooth'}); });
-    // 复制提示词——兼容 HTTP 局域网
+    // 复制提示词——兼容 HTTP 局域网（旧版 fallback）
     const doCopy = (txt, el) => {
       if (navigator.clipboard&&navigator.clipboard.writeText) {
         navigator.clipboard.writeText(txt).then(()=>{ el.textContent='✅ 已复制'; setTimeout(()=>{el.textContent='📋 复制'},2000); });
@@ -1585,33 +1589,93 @@ function renderPlans(plans, direction) {
 function renderPlanCard(p, i, direction) {
   const cv = direction.id==='now'?'var(--green)':direction.id==='best'?'var(--fire)':'var(--purple)';
   const cb = direction.id==='now'?'rgba(74,222,128,0.08)':direction.id==='best'?'rgba(245,158,11,0.08)':'rgba(167,139,250,0.08)';
+  const accent = direction.id==='now'?'var(--green)':direction.id==='best'?'var(--fire)':'var(--purple)';
 
-  let c = `<div class="plan-card"><div class="plan-name"><span class="idx" style="background:${cb};color:${cv}">${i+1}</span>${esc(p.name||'方案'+(i+1))}</div>`;
-  if (p.annotations && p.annotations.length>0) c += `<div class="annotated-photo"><canvas id="ac${i}"></canvas></div>`;
-  if (p.prep) c += `<div class="plan-section sec-prep"><span class="sec-icon">📋</span><span class="sec-text">${esc(p.prep)}</span></div>`;
-  if (p.subject) c += `<div class="plan-section sec-subject"><span class="sec-icon">👤</span><span class="sec-text">${esc(p.subject)}</span></div>`;
-  if (p.shooter) c += `<div class="plan-section sec-shooter"><span class="sec-icon">📷</span><span class="sec-text">${esc(p.shooter)}</span></div>`;
-  if (p.gear) c += `<div class="plan-section sec-gear"><span class="sec-icon">⚙️</span><span class="sec-text">${esc(p.gear)}</span></div>`;
-  if (p.enhance) c += `<div class="plan-section sec-enhance"><span class="sec-icon">🎨</span><span class="sec-text">${esc(p.enhance)}</span></div>`;
-  if (p.result) c += `<div class="plan-section sec-result"><span class="sec-icon">✨</span><span class="sec-text">${esc(p.result)}</span></div>`;
-  if (p.why) { c += `<div class="why-toggle" id="wt${i}"><span class="arrow">▶</span> 💡 为什么这样好看？</div>`; c += `<div class="why-content" id="wc${i}">${esc(p.why)}</div>`; }
-  if (p.perspective) c += `<div class="plan-perspective">🎯 ${esc(p.perspective)}</div>`;
+  // v5: 增强图 + 行动标签 + 结构化卡片行
+  let c = `<div class="plan-card-v5">`;
 
-  // 生图提示词：优先用 AI 生成的 img_gen_prompt，fallback 前端拼接
-  let imgPromptText = p.img_gen_prompt || '';
-  let imgNotes = [];
-  if (!imgPromptText) {
-    const ip = genImgPrompt(p, direction);
-    imgPromptText = ip.prompt;
-    imgNotes = ip.notes;
+  // ── 增强图 ──
+  if (p.plan_image) {
+    c += `<div class="plan-img-wrap"><img src="${esc(p.plan_image)}" alt="${esc(p.name||'方案'+(i+1))}" loading="lazy"></div>`;
+  } else if (p.annotations && p.annotations.length>0) {
+    // Fallback: canvas 标注
+    c += `<div class="plan-img-wrap"><canvas id="ac${i}"></canvas></div>`;
   }
-  let nh = '';
-  if (imgNotes.length>0) nh = '<div class="prompt-notes">'+imgNotes.map(n=>`<span class="note-tag">${n}</span>`).join('')+'</div>';
-  c += `<button class="img-gen-btn" id="igb${i}">🖼️ 生图</button>`;
-  c += `<div class="img-gen-prompt" id="igp${i}"><div class="prompt-text" id="pt${i}">${esc(imgPromptText)}</div>${nh}<button class="copy-btn" id="cp${i}">📋 复制</button></div>`;
 
-  // v3.5: 反馈按钮 + 原因面板
-  c += `<div class="plan-feedback" id="fb${i}">
+  // ── 1. 效果预期 ──
+  if (p.result) {
+    c += `<div class="v5-row vibe"><div class="v5-ic">✨</div><div class="v5-bd"><div class="v5-lb">效果预期</div>${esc(p.result)}</div></div>`;
+  }
+
+  // ── 2. 你怎么拍（shooter + gear 标签化）──
+  const shooterParts = [];
+  if (p.shooter) shooterParts.push(p.shooter);
+  if (shooterParts.length || p.gear) {
+    c += `<div class="v5-row"><div class="v5-ic">📍</div><div class="v5-bd"><div class="v5-lb">你怎么拍</div><div class="v5-tags">`;
+    if (p.shooter) {
+      // Parse shooter text into tags if possible, or show as text
+      const st = p.shooter;
+      if (st.includes('蹲')||st.includes('站')||st.includes('跪')) c += `<span class="v5-tg ht">🧎 ${esc(st)}</span>`;
+      else if (st.includes('走')||st.includes('退')||st.includes('移')||st.includes('靠')) c += `<span class="v5-tg mv">→ ${esc(st)}</span>`;
+      else c += `<span class="v5-tg mv">📷 ${esc(st)}</span>`;
+    }
+    if (p.gear) c += `<span class="v5-tg gr">⚙️ ${esc(p.gear)}</span>`;
+    c += `</div></div></div>`;
+  }
+
+  // ── 3. 被摄者动作 ──
+  if (p.subject) {
+    c += `<div class="v5-row"><div class="v5-ic">🧍</div><div class="v5-bd"><div class="v5-lb">被摄者动作</div><div class="v5-tags">`;
+    // Extract pose hints from subject text
+    const subj = p.subject;
+    const poseKeywords = [
+      {re:/侧身|45°|转身|站立|[站直立]/,i:'🧍',t:'站姿'},
+      {re:/蹲|跪下|坐/,i:'🧎',t:'蹲/坐'},
+      {re:/看镜头|不看|眼神|望|注视|回看|转头/,i:'👀',t:'眼神'},
+      {re:/笑|微[笑乐]|表情|自然/,i:'😊',t:'表情'},
+      {re:/手|摸|扶|牵|握|抱/,i:'✋',t:'手势'},
+    ];
+    let found = false;
+    for (const pk of poseKeywords) {
+      if (pk.re.test(subj)) { c += `<span class="v5-tg ps">${pk.i} ${pk.t}</span>`; found = true; }
+    }
+    if (!found) c += `<span class="v5-tg ps">🧍 姿势</span>`;
+    c += `</div><div class="v5-desc">${esc(subj)}</div></div></div>`;
+  }
+
+  // ── 4. 构图详解（折叠：enhance + why + prep + perspective）──
+  const detailItems = [];
+  if (p.prep) detailItems.push({i:'📋',t:p.prep});
+  if (p.enhance) detailItems.push({i:'🎨',t:p.enhance});
+  if (p.why) detailItems.push({i:'💡',t:p.why});
+  if (p.perspective) detailItems.push({i:'🎯',t:p.perspective});
+  if (detailItems.length) {
+    c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div><div class="v5-dbody">`;
+    detailItems.forEach(d => { c += `<div class="v5-drow"><span>${d.i}</span><span>${esc(d.t)}</span></div>`; });
+    c += `</div></div>`;
+  }
+
+  // ── 5. 后期 & AI 增强 ──
+  const post = p.post_process || [];
+  if (post.length) {
+    c += `<div class="v5-post"><div class="v5-lb" style="font-size:10px;color:var(--dimmer);letter-spacing:0.5px;margin-bottom:6px">🎨 后期 & AI 增强</div><div class="v5-post-grid">`;
+    post.forEach(x => {
+      const cat = x.cat||'color'; const label = x.label||'处理'; const text = x.text||'';
+      c += `<div class="v5-post-item"><span class="v5-pcat ${cat}">${esc(label)}</span><span class="v5-post-text">${esc(text)}</span></div>`;
+    });
+    c += `</div></div>`;
+  }
+
+  // ── 6. 生图提示词 ──
+  const imgPromptText = p.img_gen_prompt || '';
+  if (imgPromptText) {
+    c += `<div class="v5-gen"><div class="v5-lb" style="font-size:10px;color:var(--dimmer);letter-spacing:0.5px;margin-bottom:6px">🖼️ AI 生图提示词 <span style="color:var(--cyan);font-weight:400">（豆包 · 图生图模式）</span></div>`;
+    c += `<div class="v5-pbox" id="pt${i}">${esc(imgPromptText)}</div>`;
+    c += `<div class="v5-pact"><button class="v5-btn copy" onclick="copyPromptV5(${i})">📋 复制提示词</button><button class="v5-btn gen" onclick="genPromptV5(${i})">🖼️ 生图</button></div></div>`;
+  }
+
+  // ── 反馈 ──
+  c += `<div class="plan-feedback" id="fb${i}" style="border-top:none;margin-top:0;padding-top:10px;border-top:1px solid var(--border)">
     <button class="fb-btn fb-like" data-idx="${i}" data-rating="like">👍 有用</button>
     <button class="fb-btn fb-dislike" data-idx="${i}" data-rating="dislike">👎 不适合</button>
   </div>`;
@@ -1632,6 +1696,27 @@ function renderPlanCard(p, i, direction) {
 
   c += '</div>';
   return c;
+}
+
+// v5: 生图提示词复制 & 按钮逻辑
+function copyPromptV5(i) {
+  const el = document.getElementById('pt'+i);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(()=>{
+    showToast('✅ 提示词已复制，打开豆包粘贴即可生图');
+  }).catch(()=>{
+    showToast('⚠️ 复制失败，请手动长按选择文字');
+  });
+}
+function genPromptV5(i) {
+  copyPromptV5(i);
+  setTimeout(()=>showToast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成'),500);
+}
+function showToast(msg) {
+  let t = document.getElementById('v5toast');
+  if (!t) { t = document.createElement('div'); t.id='v5toast'; t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.9);color:#fff;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:9999'; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('show'); t.style.opacity='1';
+  setTimeout(()=>{t.style.opacity='0';},2500);
 }
 
 function buildLightDesc() {
