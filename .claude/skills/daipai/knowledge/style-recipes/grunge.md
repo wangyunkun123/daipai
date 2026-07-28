@@ -4,7 +4,7 @@ domain: style-recipes
 tags: [Grunge, 脏感, 1990s, 反精致, 粗粝, 高反差, 街头, 2026复兴]
 level: intermediate
 status: mvp
-source: [豆包2026 Grunge复兴趋势, 90年代Grunge音乐/时尚, 反时尚摄影运动]
+source: [90年代Grunge音乐/时尚, 反时尚摄影运动]
 ---
 
 # Grunge 脏感 · Grunge Aesthetic

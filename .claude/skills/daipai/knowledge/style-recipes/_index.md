@@ -4,7 +4,7 @@ domain: style-recipes
 tags: [风格配方, 审美风格, 色彩配方, 光线偏好, 后期基调, 风格匹配]
 level: basic
 status: mvp
-source: [综合审美体系, 豆包画面气质模块, Claude风格流派库, ChatGPT风格美学]
+source: [综合审美体系, 摄影风格流派分类]
 ---
 
 # 风格配方库

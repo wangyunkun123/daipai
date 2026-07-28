@@ -4,7 +4,7 @@ domain: series-rhythm
 tags: [组图节奏, 系列, 9张方案, 色彩统一, 景别张弛, 情绪曲线, 叙事弧]
 level: advanced
 status: mvp
-source: [Claude组图节奏美学, 摄影书编辑逻辑, 电影叙事弧理论]
+source: [孙京涛《隐秘的结构：图片编辑方法论》2025, Robert Frank《美国人》编辑方法论, Gregory Halpern马格南图片编辑, Jörg Colberg《Understanding Photobooks》, 电影叙事弧理论]
 ---
 
 # 组图节奏

@@ -4,7 +4,7 @@ domain: mood-lexicon
 tags: [怀旧, 忧伤, 时光, 褪色, 胶片, 回忆]
 level: intermediate
 status: mvp
-source: [Claude时代感/怀旧美学, 胶片怀旧传统, 中文"老照片"审美]
+source: [胶片怀旧传统, 中文"老照片"审美, 富士胶片模拟文化]
 ---
 
 # 怀旧 · Nostalgia

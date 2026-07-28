@@ -4,7 +4,7 @@ domain: texture-aesthetics
 tags: [质感, 材质, 柔, 硬, 颗粒, 通透, 质感对比]
 level: intermediate
 status: mvp
-source: [豆包质感审美模块, 材质美学, 触觉视觉]
+source: [Laura U. Marks《The Skin of the Film》触觉视觉理论, 广州影像三年展2025"感观的地层"物质性转向, Annebella Pollen《Touch Screen》摄影与纺织物质感, Elizabeth Edwards《Photographs Objects Histories》摄影物质性]
 ---
 
 # 质感审美

@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
-from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map
+from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map, get_knowledge_files_by_quality
 from search_web import search_style_inspiration, search_location_intel
 from database import accumulate, query_scene_context, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques, get_pending_discoveries, promote_search_to_technique
 
@@ -2611,6 +2611,20 @@ def admin_import_data():
         return jsonify({"success": True, "imported_styles": imported_styles, "imported_techniques": imported_techniques})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/admin/knowledge-files')
+@login_required
+def admin_knowledge_files():
+    """返回指定质量分类的知识库文件详情，支持下钻审核"""
+    quality = request.args.get('quality', '')
+    valid = {'verified', 'real_world', 'ai_inferred', 'ai_generated'}
+    qf = quality if quality in valid else None
+    files = get_knowledge_files_by_quality(qf)
+    dist = {"verified": 0, "real_world": 0, "ai_inferred": 0, "ai_generated": 0}
+    for f in files:
+        dist[f["quality"]] = dist.get(f["quality"], 0) + 1
+    return jsonify({"files": files, "distribution": dist, "filter": quality or "all"})
 
 
 @app.route('/admin/export-data')

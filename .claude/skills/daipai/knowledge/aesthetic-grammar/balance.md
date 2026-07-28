@@ -4,7 +4,7 @@ domain: aesthetic-grammar
 tags: [平衡, 视觉重量, 静态平衡, 动态平衡, 不对称, 稳定]
 level: foundational
 status: mvp
-source: [豆包视觉平衡顶层准则, Freeman视觉设计原理, Arnheim格式塔]
+source: [Freeman《摄影师的视界》, Arnheim《艺术与视知觉》格式塔理论]
 ---
 
 # 平衡 · Balance

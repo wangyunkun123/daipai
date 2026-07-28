@@ -4,7 +4,7 @@ domain: social-media-patterns
 tags: [为什么好看, 摄影原理翻译, 人话解释, 用户教育, few-shot参考]
 level: basic
 status: mvp
-source: [摄影基础理论, 产品思考.md §13.4, Prompt工程]
+source: [摄影作品分析方法论, 摄影基础理论, 小红书爆款摄影教程拆解]
 ---
 
 # "为什么好看"范例库：摄影原理 → 人话翻译

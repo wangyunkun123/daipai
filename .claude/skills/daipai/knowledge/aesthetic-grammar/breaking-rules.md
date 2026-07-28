@@ -4,7 +4,7 @@ domain: aesthetic-grammar
 tags: [破格, 反规则, 故意失误, 审美选择, 倾斜, 跑焦, 过曝]
 level: advanced
 status: mvp
-source: [Claude反规则/破格美学, 森山大道, William Klein, 当代摄影破格实践]
+source: [森山大道, William Klein, 当代摄影破格实践]
 ---
 
 # 破格 · Breaking Rules

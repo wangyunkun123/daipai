@@ -4,7 +4,7 @@ domain: style-recipes
 tags: [电影感, 宽画幅, 冷暖对比, 叙事, 变形宽银幕, 色调分级]
 level: intermediate
 status: mvp
-source: [电影摄影传统, 调色师工作流, ChatGPT电影语言模块]
+source: [电影摄影传统, 调色师工作流]
 ---
 
 # 电影感

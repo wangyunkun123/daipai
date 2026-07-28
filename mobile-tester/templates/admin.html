@@ -165,6 +165,19 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 <tbody id="knowledgeQualityBody"></tbody>
 </table>
 </div>
+<!-- drill-down file list -->
+<div id="knowledgeFileDetail" style="display:none;margin-top:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <h3 style="font-size:13px;margin:0" id="kfDetailTitle">文件详情</h3>
+    <button onclick="closeKnowledgeDetail()" style="font-size:11px;padding:2px 8px;cursor:pointer;background:var(--card2);border:1px solid var(--border);color:var(--dim);border-radius:6px">✕ 关闭</button>
+  </div>
+  <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
+  <table class="fb-table">
+  <thead><tr><th>文件路径</th><th>质量</th><th>来源标注</th></tr></thead>
+  <tbody id="knowledgeFileBody"></tbody>
+  </table>
+  </div>
+</div>
 
 <h2 style="font-size:13px;margin-top:12px">🌐 搜索真实性分布</h2>
 <div class="stats-grid" id="searchAuthGrid"></div>
@@ -544,7 +557,9 @@ function renderKnowledgeQuality(kq) {
   };
 
   grid.innerHTML = Object.entries(dist).map(([k,v]) =>
-    `<div class="stat-card"><div class="val" style="color:${colors[k]||'#888'}">${v}</div><div class="lbl">${labels[k]||k}</div></div>`
+    `<div class="stat-card" onclick="showKnowledgeFiles('${k}')" style="cursor:pointer">
+      <div class="val" style="color:${colors[k]||'#888'}">${v}</div>
+      <div class="lbl">${labels[k]||k}</div></div>`
   ).join('');
 
   body.innerHTML = Object.entries(dist).map(([k,v]) => {
@@ -616,6 +631,54 @@ function esc(s) {
 }
 
 // ── v4.3: 搜索发现审核 ──
+
+// ── 知识库文件下钻 ──
+let _cachedFiles = {};  // {quality: [files]}
+
+async function showKnowledgeFiles(quality) {
+  const detail = document.getElementById('knowledgeFileDetail');
+  const title = document.getElementById('kfDetailTitle');
+  const tbody = document.getElementById('knowledgeFileBody');
+  const qlabels = {verified:'✅ 可查证教材/大师', real_world:'🌐 真实互联网趋势', ai_inferred:'💡 AI推理(有真实混合)', ai_generated:'🤖 AI原创(无来源)'};
+  const qcolors = {verified:'#4ade80', real_world:'#22d3ee', ai_inferred:'#f59e0b', ai_generated:'#ef4444'};
+
+  title.innerHTML = `${qlabels[quality]||quality} <span style="font-size:11px;color:var(--dim)">加载中...</span>`;
+
+  if (!_cachedFiles[quality]) {
+    try {
+      const res = await fetch('/admin/knowledge-files?quality=' + quality);
+      const data = await res.json();
+      _cachedFiles[quality] = data.files || [];
+    } catch(e) {
+      _cachedFiles[quality] = [];
+    }
+  }
+
+  const files = _cachedFiles[quality];
+  title.innerHTML = `${qlabels[quality]||quality} <span style="font-size:11px;color:var(--dim)">(${files.length} 个文件)</span>`;
+
+  if (files.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="empty">该分类下暂无文件</td></tr>';
+  } else {
+    tbody.innerHTML = files.map(f => {
+      const qlabel = {verified:'✅', real_world:'🌐', ai_inferred:'💡', ai_generated:'🤖'}[f.quality]||'?';
+      return `<tr>
+        <td style="font-size:11px;word-break:break-all">${esc(f.rel_path)}</td>
+        <td style="color:${qcolors[f.quality]||'#888'}">${qlabel} ${qlabels[f.quality]||f.quality}</td>
+        <td style="font-size:10px;color:var(--dim);word-break:break-all">${esc(f.source).substring(0,120)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  detail.style.display = 'block';
+  detail.scrollIntoView({behavior:'smooth'});
+}
+
+function closeKnowledgeDetail() {
+  document.getElementById('knowledgeFileDetail').style.display = 'none';
+}
+
+// ── 搜索发现审核（原版）──
 async function loadDiscoveries() {
   const tbody = document.getElementById('discoveriesBody');
   tbody.innerHTML = '<tr><td colspan="5" class="empty">加载中...</td></tr>';

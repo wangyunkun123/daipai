@@ -4,7 +4,7 @@ domain: social-media-patterns
 tags: [方向卡片, 产品设计, 用户心理, 三方向, 不会出错, 朋友圈, 脑洞]
 level: basic
 status: mvp
-source: [产品思考.md §12-14, 用户行为分析]
+source: [产品设计方法论, 小红书内容卡片模式, 用户行为分析]
 ---
 
 # 三方向卡片：设计意图与定位

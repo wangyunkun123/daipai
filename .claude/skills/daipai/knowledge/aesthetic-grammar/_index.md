@@ -4,7 +4,7 @@ domain: aesthetic-grammar
 tags: [审美语法, 视觉原理, 平衡, 克制, 统一, 破格, 底层规律]
 level: foundational
 status: mvp
-source: [Freeman视觉设计原理, Barnbaum《摄影的艺术》, 豆包顶层审美总纲, Claude反规则美学, ChatGPT视觉语法]
+source: [Freeman《摄影师的视界》, Barnbaum《摄影的艺术》]
 ---
 
 # 审美语法

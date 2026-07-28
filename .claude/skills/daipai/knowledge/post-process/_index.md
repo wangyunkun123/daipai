@@ -4,6 +4,7 @@ domain: post-process
 tags: [后期意识, 前期拍摄, 手机编辑, 直出]
 depends: [exposure-triangle/_index.md, light/_index.md, device-adaptation/user-capability.md]
 date: 2026-07-22
+source: [Ansel Adams区域曝光系统, Michael Frye《Digital Landscape Photography: In the Footsteps of Ansel Adams》, Glenn Rand《解读亚当斯区域曝光系统》, Barbara London《美国摄影教程》暗房与数字编辑]
 ---
 
 # 后期意识 · 前期拍什么、后期调什么

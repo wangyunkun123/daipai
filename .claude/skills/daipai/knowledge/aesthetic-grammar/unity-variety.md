@@ -4,7 +4,7 @@ domain: aesthetic-grammar
 tags: [统一, 变化, 秩序, 惊喜, 重复, 差异性, 格式塔]
 level: foundational
 status: mvp
-source: [Freeman视觉设计原理, Arnheim格式塔理论, ChatGPT视觉语法中"节奏/重复/变化"]
+source: [Freeman《摄影师的视界》, Arnheim《艺术与视知觉》格式塔理论]
 ---
 
 # 统一与变化 · Unity & Variety

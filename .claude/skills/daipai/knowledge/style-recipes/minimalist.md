@@ -4,7 +4,7 @@ domain: style-recipes
 tags: [极简高级, 克制, 留白, 低饱和, 几何, 疏离]
 level: intermediate
 status: mvp
-source: [极简主义艺术传统, 豆包含弃审美模块, MUJI/Apple设计美学]
+source: [极简主义艺术传统, MUJI/Apple设计美学]
 ---
 
 # 极简高级

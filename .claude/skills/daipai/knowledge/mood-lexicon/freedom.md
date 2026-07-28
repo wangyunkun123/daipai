@@ -4,7 +4,7 @@ domain: mood-lexicon
 tags: [自由, 松弛, 开放空间, 动态, 广角, 自然]
 level: basic
 status: mvp
-source: [中文互联网"松弛感"分析, Claude情绪词库, 自由美学]
+source: [中文互联网"松弛感"分析, 自由美学, 滨田英明日常诗意摄影]
 ---
 
 # 自由 · Freedom

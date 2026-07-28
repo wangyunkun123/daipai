@@ -4,7 +4,7 @@ domain: style-recipes
 tags: [胶片复古, 怀旧, 颗粒, 褪色, 暖调, 胶片模拟]
 level: intermediate
 status: mvp
-source: [胶片摄影传统, Claude时代感/怀旧美学, 富士/柯达胶片色彩科学]
+source: [胶片摄影传统, 富士/柯达胶片色彩科学]
 ---
 
 # 胶片复古

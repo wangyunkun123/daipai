@@ -4,7 +4,7 @@ domain: aesthetic-grammar
 tags: [审美批判, 自检框架, 作品评估, 审美判断, 豆包批判维度]
 level: advanced
 status: mvp
-source: [豆包审美批判框架, Barnbaum审美判断, Barrett摄影批评方法]
+source: [Barnbaum《摄影的艺术》审美判断, Barrett《摄影批评》]
 ---
 
 # 审美批判框架 · Aesthetic Critique

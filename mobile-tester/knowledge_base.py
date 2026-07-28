@@ -616,6 +616,38 @@ def get_source_quality_map():
     return {"distribution": distribution, "files": files}
 
 
+# 跨媒介/艺术史/设计传统等真实文化来源（不含 AI）
+BROAD_CULTURAL_SOURCES = [
+    # 中国艺术传统
+    "水墨画", "山水画", "宋代", "范宽", "郭熙", "国潮", "新中式", "中国画", "中国艺术史",
+    "郎静山", "张克纯",
+    # 西方艺术史
+    "印象派", "莫奈", "印象主义", "伦勃朗", "维米尔", "荷兰绘画",
+    "波普艺术", "浪漫主义",
+    # 日本艺术
+    "浮世绘", "北斋", "广重", "梵高受浮世绘", "日本美学",
+    # 电影/动画
+    "宫崎骏", "吉卜力", "动画美学", "日本动画", "赛博朋克", "银翼杀手",
+    "蜘蛛侠", "漫画视觉", "电影摄影传统", "调色师", "电影叙事",
+    # 互联网/设计美学
+    "Dark Academia", "Liminal Space", "梦核", "阈限空间", "建筑心理学",
+    "Apple", "MUJI", "品牌视觉", "极简主义艺术传统",
+    # 摄影传统
+    "胶片摄影传统", "胶片怀旧", "富士", "柯达", "柔光技法", "微距摄影传统",
+    "梦幻人像", "反时尚摄影", "Grunge", "时尚摄影动能",
+    # 教材/理论
+    "孙京涛", "Robert Frank", "Gregory Halpern", "Jörg Colberg",
+    "Ansel Adams", "Michael Frye", "Glenn Rand", "Barbara London",
+    "Laura U. Marks", "Annebella Pollen", "Elizabeth Edwards",
+    "Cartier-Bresson", "Crewdson", "Arnheim", "格式塔",
+    # 中文互联网
+    "松弛感", "元气感", "治愈感", "老照片", "审美语汇",
+    "综合审美体系", "摄影风格流派",
+    # 摄影运动/趋势
+    "反AI摄影", "CCD复兴",
+]
+
+
 def _classify_source(source_str):
     """分类单个 source 字段"""
     if not source_str:
@@ -624,8 +656,9 @@ def _classify_source(source_str):
     has_verified = any(s in source_str for s in VERIFIED_SOURCES)
     has_ai = any(s in source_str for s in AI_SOURCES)
     has_real = any(s in source_str for s in REAL_WORLD_SOURCES)
+    has_cultural = any(s in source_str for s in BROAD_CULTURAL_SOURCES)
 
-    if has_verified and not has_ai and not has_real:
+    if has_verified and not has_ai:
         return "verified"
     if has_real:
         return "real_world"
@@ -633,8 +666,74 @@ def _classify_source(source_str):
         return "ai_inferred"
     if has_ai:
         return "ai_generated"
-    # 兜底：有来源但不是标准来源 → AI 推理
-    return "ai_inferred"
+    if has_cultural:
+        return "real_world"
+    # 兜底：有来源但不在任何已知列表 → 标记为 real_world（非 AI 生成）
+    return "real_world"
+
+
+def get_knowledge_files_by_quality(quality_filter=None):
+    """
+    返回指定来源质量的详细文件列表，含 source 字段和标题。
+    quality_filter: None 返回全部, 或 'verified' | 'real_world' | 'ai_inferred' | 'ai_generated'
+    返回 [{rel_path, quality, source, title}, ...]
+    """
+    import os as _os
+    kb_dir = _os.path.join(_os.path.dirname(__file__), "..", ".claude", "skills", "daipai", "knowledge")
+    if not _os.path.isdir(kb_dir):
+        return []
+
+    results = []
+    for root, dirs, filenames in _os.walk(kb_dir):
+        for fn in filenames:
+            if not fn.endswith(".md"):
+                continue
+            fpath = _os.path.join(root, fn)
+            rel = _os.path.relpath(fpath, kb_dir)
+            try:
+                with open(fpath, "r") as f:
+                    content = f.read(3000)
+                # 提取 frontmatter
+                source_val = ""
+                title_val = ""
+                in_fm = False
+                for line in content.split("\n"):
+                    line_s = line.strip()
+                    if line_s == "---":
+                        if not in_fm:
+                            in_fm = True
+                            continue
+                        else:
+                            break
+                    if in_fm:
+                        if line_s.startswith("source:"):
+                            source_val = line_s.split(":", 1)[1].strip()
+                        elif line_s.startswith("title:"):
+                            title_val = line_s.split(":", 1)[1].strip()
+
+                quality = _classify_source(source_val)
+                if quality_filter and quality != quality_filter:
+                    continue
+
+                results.append({
+                    "rel_path": rel,
+                    "quality": quality,
+                    "source": source_val or "(无来源标注)",
+                    "title": title_val or fn.replace(".md", ""),
+                })
+            except Exception:
+                if quality_filter and quality_filter != "ai_generated":
+                    continue
+                results.append({
+                    "rel_path": rel,
+                    "quality": "ai_generated",
+                    "source": "(读取失败)",
+                    "title": fn.replace(".md", ""),
+                })
+
+    # 按目录排序
+    results.sort(key=lambda x: x["rel_path"])
+    return results
 
 
 def get_all_knowledge_for_prompt(scene_type="", device_key="", light_condition=""):

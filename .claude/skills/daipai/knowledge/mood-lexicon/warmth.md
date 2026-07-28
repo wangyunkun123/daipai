@@ -4,7 +4,7 @@ domain: mood-lexicon
 tags: [温暖, 亲密, 治愈, 金色光线, 暖色调, 软光]
 level: basic
 status: mvp
-source: [豆包氛围感模块, Claude情绪词库, 中文互联网"治愈感"分析]
+source: [中文互联网"治愈感"分析, 滨田英明日系治愈摄影, 川内伦子日常诗意]
 ---
 
 # 温暖 · Warmth

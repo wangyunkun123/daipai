@@ -4,7 +4,7 @@ domain: visual-narrative
 tags: [视觉叙事, 叙事体系, 摄影故事, 人物, 事件, 留白叙事, 隐喻]
 level: advanced
 status: mvp
-source: [ChatGPT视觉叙事提议, Cartier-Bresson决定性瞬间叙事, Crewdson叙事摄影, 电影叙事理论]
+source: [Cartier-Bresson决定性瞬间叙事, Gregory Crewdson叙事摄影, 电影叙事理论]
 ---
 
 # 视觉叙事 · Visual Narrative

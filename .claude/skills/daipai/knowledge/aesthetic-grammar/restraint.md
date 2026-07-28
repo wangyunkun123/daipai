@@ -4,7 +4,7 @@ domain: aesthetic-grammar
 tags: [克制, 减法, 取舍, 极简, 视觉噪音, 审美判断]
 level: foundational
 status: mvp
-source: [豆包含弃审美模块, 豆包克制审美顶层准则, Barnbaum审美判断]
+source: [Barnbaum《摄影的艺术》审美判断, 极简摄影舍弃美学]
 ---
 
 # 克制 · Restraint

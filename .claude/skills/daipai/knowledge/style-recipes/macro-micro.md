@@ -4,7 +4,7 @@ domain: style-recipes
 tags: [微观, 微距, 细节, 抽象, 质感, 川内伦子, 日常诗意]
 level: intermediate
 status: mvp
-source: [川内伦子微观诗意, 微距摄影传统, 豆包风格扩充建议]
+source: [川内伦子微观诗意, 微距摄影传统]
 ---
 
 # 微观微距 · Macro & Micro Poetry

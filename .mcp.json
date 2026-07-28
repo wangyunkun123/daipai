@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "aesthetics-wiki": {
+      "command": "/Users/rabbit/.local/bin/aesthetics-wiki-mcp"
+    }
+  }
+}

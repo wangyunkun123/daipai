@@ -4,7 +4,7 @@ domain: cross-media-styles
 tags: [吉卜力, 宫崎骏, 动画, 自然, 治愈, 手绘质感, 绿蓝调]
 level: basic
 status: mvp
-source: [宫崎骏/吉卜力工作室动画美学, ChatGPT吉卜力滤镜现象, 日本动画美术传统]
+source: [宫崎骏/吉卜力工作室动画美学, 日本动画美术传统]
 ---
 
 # 吉卜力 · Ghibli

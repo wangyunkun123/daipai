@@ -4,7 +4,7 @@ domain: mood-lexicon
 tags: [情绪词库, 氛围感, 视觉翻译, 中文审美词汇, 情绪映射]
 level: basic
 status: mvp
-source: [Claude情绪词库提议, 豆包氛围感模块, ChatGPT情绪美学, 中文互联网审美语汇]
+source: [中文互联网审美语汇, 摄影情绪与氛围理论]
 ---
 
 # 情绪词库

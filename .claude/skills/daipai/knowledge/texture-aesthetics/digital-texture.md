@@ -4,7 +4,7 @@ domain: texture-aesthetics
 tags: [数字质感, 数字瑕疵, AI噪点, CCD色偏, 摩尔纹, 数码断层, 反AI质感]
 level: advanced
 status: mvp
-source: [豆包数字瑕疵质感提议, 2026反AI摄影运动, CCD复兴趋势]
+source: [小红书CCD话题39.6亿浏览+抖音75.2亿播放, 2024全球数码相机出货849万台Z世代怀旧消费, 36氪"反AI修图过度完美审美"CCD复兴报道, 2026反AI摄影运动]
 ---
 
 # 数字瑕疵质感 · Digital Imperfection Texture

@@ -53,6 +53,52 @@
 
   注册完之后告诉我，我帮你走后面的服务器购买和部署脚本。
 
+⏺ 两种方式：
+     
+  🏠 局域网（手机和电脑同 WiFi，推荐）
 
-  用户评分和意见反馈收集
-  找回前一次分析。
+  cd mobile-tester
+  python3 server.py
+
+  然后用手机访问：
+
+  http://<你电脑的局域网IP>:8888
+
+  你的局域网 IP：
+
+⏺ Bash(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null ||
+      echo "未获取到")
+  ⎿  192.168.3.244
+
+  Thought for 2s (ctrl+o to expand)
+
+⏺ 手机访问：
+     
+  http://192.168.3.244:8888
+
+  电脑本机直接用 http://localhost:8888。
+
+  🔒 Tailscale（手机不在同一 WiFi 也能用）
+
+  如果手机装了 Tailscale 并登录同一账号：
+
+  cd mobile-tester
+  ./start.sh
+
+  会同时显示 Tailscale IP 和局域网 IP。
+
+  管理员链接：  http://192.168.3.244:8888/admin
+  本地连接： http://192.168.3.244:8888
+
+    以后本地有新的风格技法需要同步到生产，两条命令搞定
+   
+    # 导出本地数据
+  curl -c /tmp/c.txt -X POST http://192.168.3.244:8888/admin/login -d
+  "password=daipai2026"
+  curl -b /tmp/c.txt http://192.168.3.244:8888/admin/export-data > /tmp/sync.json
+
+  # 导入到生产
+  curl -c /tmp/p.txt -X POST https://guidepic.cn/admin/login -d
+  "password=daipai2026"
+  curl -b /tmp/p.txt -X POST https://guidepic.cn/admin/import-data \
+    -H "Content-Type: application/json" -d @/tmp/sync.json

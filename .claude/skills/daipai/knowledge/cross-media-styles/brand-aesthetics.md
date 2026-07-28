@@ -4,7 +4,7 @@ domain: cross-media-styles
 tags: [品牌审美, Apple, MUJI, Aesop, COS, Patagonia, 商业美学, 品牌摄影语言]
 level: intermediate
 status: mvp
-source: [ChatGPT品牌审美提议, Apple/MUJI/Aesop/COS/Patagonia品牌视觉分析]
+source: [Apple/MUJI/Aesop/COS/Patagonia品牌视觉分析]
 ---
 
 # 品牌审美体系 · Brand Aesthetics
