@@ -61,21 +61,30 @@ def draw_subject(draw, W, H, cx_r, cy_r, r_r, label, color=(245,158,11), bottom_
         rad = math.radians(a)
         dx = int(r*0.7*math.cos(rad)); dy = int(r*0.7*math.sin(rad))
         draw.ellipse([cx+dx-4, cy+dy-4, cx+dx+4, cy+dy+4], fill=(*color, 220))
-    # Label pill - clamp position so it doesn't overflow bottom bar
-    lw, lh = 56, 26
-    lx = cx + r + 12
+    # Label pill — measure text width, not hardcoded
+    try:
+        bbox = draw.textbbox((0, 0), label, font=FONT_MD)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+    except Exception:
+        text_w = len(label) * 18
+        text_h = 22
+    pad_x, pad_y = 14, 8
+    lw = text_w + pad_x
+    lh = text_h + pad_y
+    lx = cx + r + 10
     # If label would be past right edge, flip to left side
-    if lx + lw > W - 20:
-        lx = cx - r - lw - 12
-    ly = cy - lh//2
+    if lx + lw > W - 16:
+        lx = cx - r - lw - 10
+    ly = cy - lh // 2
     # Clamp Y: stay above bottom bar (56px) and below top edge
     bar_top = H - 56 if bottom_bar_y is None else bottom_bar_y
     if ly + lh > bar_top - 8:
         ly = bar_top - lh - 8
     if ly < 8:
         ly = 8
-    draw.rounded_rectangle([lx, ly, lx+lw, ly+lh], radius=7, fill=(8,8,12,225))
-    draw.text((lx+7, ly+3), label, fill=(*color, 255), font=FONT_MD)
+    draw.rounded_rectangle([lx, ly, lx + lw, ly + lh], radius=7, fill=(8, 8, 12, 225))
+    draw.text((lx + pad_x // 2, ly + pad_y // 2), label, fill=(*color, 255), font=FONT_MD)
 
 def draw_horizon(draw, W, H, y_r):
     """Horizontal ref line with end ticks - increased contrast."""
@@ -139,13 +148,19 @@ def draw_shot_frame(draw, W, H, frame, label, color=(255,255,255)):
     draw.line([(r-bracket,b),(r,b)], fill=bracket_c, width=bw)
     draw.line([(r,b-bracket),(r,b)], fill=bracket_c, width=bw)
 
-    # Label at top-center of frame
-    label_w = len(label) * 18 + 20
-    label_h = 30
+    # Label at top-center of frame — measure text
+    try:
+        fb = draw.textbbox((0,0), label, font=FONT_MD)
+        fw = fb[2]-fb[0]; fh = fb[3]-fb[1]
+    except:
+        fw = len(label)*18; fh = 22
+    pad = 16
+    label_w = fw + pad
+    label_h = fh + 10
     lx = l + (r-l)//2 - label_w//2
     ly = t + 10
     draw.rounded_rectangle([lx, ly, lx+label_w, ly+label_h], radius=8, fill=(*color, 160))
-    draw.text((lx+10, ly+4), label, fill=(0,0,0,255), font=FONT_MD)
+    draw.text((lx+pad//2, ly+5), label, fill=(0,0,0,255), font=FONT_MD)
 
 # ═══════════════════════════════════════════════════════════
 # NEW: Camera position mini-diagram (角度变化指示)
@@ -166,7 +181,13 @@ def draw_camera_diagram(draw, W, H, target_label, direction='left'):
     draw.rounded_rectangle([bx, by, bx+box_w, by+box_h], radius=10, fill=(8,8,12,200))
 
     # Title
-    draw.text((bx+8, by+6), "📷 机位移动", fill=(200,200,200,255), font=FONT_XS)
+    title = "📷 机位移动"
+    try:
+        tb = draw.textbbox((0,0), title, font=FONT_XS)
+        tw = tb[2]-tb[0]
+    except:
+        tw = len(title)*12
+    draw.text((bx + (box_w - tw)//2, by + 6), title, fill=(200, 200, 200, 255), font=FONT_XS)
 
     # Current camera (left side, gray)
     cur_cx = bx + 30
@@ -174,7 +195,13 @@ def draw_camera_diagram(draw, W, H, target_label, direction='left'):
     draw.ellipse([cur_cx-12, cur_cy-12, cur_cx+12, cur_cy+12],
                  fill=(100,100,110,200))
     draw.text((cur_cx-5, cur_cy-8), "📷", fill=(180,180,180,255), font=FONT_XS)
-    draw.text((cur_cx-14, cur_cy+16), "现在", fill=(120,120,130,255), font=FONT_XS)
+    cur_label = "现在"
+    try:
+        cb = draw.textbbox((0,0), cur_label, font=FONT_XS)
+        cw = cb[2]-cb[0]
+    except:
+        cw = len(cur_label)*12
+    draw.text((cur_cx - cw//2, cur_cy+16), cur_label, fill=(120,120,130,255), font=FONT_XS)
 
     # Target camera (right side, colored)
     tgt_cx = bx + 130
@@ -183,7 +210,12 @@ def draw_camera_diagram(draw, W, H, target_label, direction='left'):
     draw.ellipse([tgt_cx-14, tgt_cy-14, tgt_cx+14, tgt_cy+14],
                  fill=(*tgt_color, 180))
     draw.text((tgt_cx-5, tgt_cy-8), "📷", fill=(255,255,255,255), font=FONT_XS)
-    draw.text((tgt_cx-14, tgt_cy+16), target_label, fill=(*tgt_color, 255), font=FONT_XS)
+    try:
+        tb2 = draw.textbbox((0,0), target_label, font=FONT_XS)
+        tw2 = tb2[2]-tb2[0]
+    except:
+        tw2 = len(target_label)*12
+    draw.text((tgt_cx - tw2//2, tgt_cy+16), target_label, fill=(*tgt_color, 255), font=FONT_XS)
 
     # Arrow from current to target
     arrow_y = cur_cy
@@ -206,10 +238,15 @@ def draw_badges(draw, W, H, shot_size, angle, color=(245,158,11)):
     ]
     x0, y0 = 16, 16
     for text, clr in badges:
-        tw = len(text) * 16 + 24
-        th = 28
+        try:
+            bb = draw.textbbox((0,0), text, font=FONT_SM)
+            tw = bb[2]-bb[0]; th = bb[3]-bb[1]
+        except:
+            tw = len(text)*16; th = 18
+        pad = 16
+        tw += pad; th += 10
         draw.rounded_rectangle([x0, y0, x0+tw, y0+th], radius=7, fill=(8,8,12,210))
-        draw.text((x0+12, y0+4), text, fill=(*clr, 255), font=FONT_SM)
+        draw.text((x0+pad//2, y0+5), text, fill=(*clr, 255), font=FONT_SM)
         x0 += tw + 8
 
 # ═══════════════════════════════════════════════════════════
@@ -220,8 +257,15 @@ def draw_bottom_bar(draw, W, H, plan_num, plan_name, color):
     bar_h = 56
     y0 = H - bar_h
     draw.rectangle([(0, y0), (W, H)], fill=(0,0,0,140))
-    draw.text((20, y0+12), f"📷 {plan_num}", fill=(200,200,200,255), font=FONT_LG)
-    draw.text((W-220, y0+12), plan_name, fill=color, font=FONT_LG)
+    left_text = f"📷 {plan_num}"
+    draw.text((20, y0 + 12), left_text, fill=(200, 200, 200, 255), font=FONT_LG)
+    # Right-align plan name
+    try:
+        bbox = draw.textbbox((0, 0), plan_name, font=FONT_LG)
+        tw = bbox[2] - bbox[0]
+    except:
+        tw = len(plan_name) * 20
+    draw.text((W - tw - 24, y0 + 12), plan_name, fill=color, font=FONT_LG)
 
 # ═══════════════════════════════════════════════════════════
 # Plan Definitions
