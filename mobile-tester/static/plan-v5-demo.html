@@ -97,7 +97,7 @@
 <div class="app">
   <div class="header">
     <h1>带拍 · v5 完整方案</h1>
-    <div class="tag">景别框 + 角度指示 → 构图详解 → 后期AI → 生图提示词</div>
+    <div class="tag">效果预期 → 怎么拍 → 动作 → 构图 → 后期AI → 生图</div>
   </div>
 
   <!-- Carousel -->
@@ -109,25 +109,25 @@
   <!-- Meta -->
   <div class="meta-row" id="metaRow"></div>
 
-  <!-- 1. 你怎么拍 -->
+  <!-- 1. 效果预期 — 紧贴照片，先感受再行动 -->
+  <div class="crd vibe"><div class="ic">✨</div><div class="bd"><div class="lb">效果预期</div><div class="vibe-text" id="vibeText"></div></div></div>
+
+  <!-- 2. 你怎么拍 -->
   <div class="crd shooter"><div class="ic">📍</div><div class="bd"><div class="lb">你怎么拍</div><div class="tags" id="shooterTags"></div></div></div>
 
-  <!-- 2. 被摄者动作 -->
+  <!-- 3. 被摄者动作 -->
   <div class="crd subject"><div class="ic">🧍</div><div class="bd"><div class="lb">被摄者动作</div><div class="tags" id="subjectTags"></div><div class="sub-desc" id="subjectDesc"></div></div></div>
 
-  <!-- 3. 构图详解 (collapsible — moved here per user request) -->
+  <!-- 4. 构图详解 (collapsible) -->
   <div class="det-wrap" id="detWrap">
     <div class="det-head" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div>
     <div class="det-body" id="detBody"></div>
   </div>
 
-  <!-- 4. 效果预期 -->
-  <div class="crd vibe"><div class="ic">✨</div><div class="bd"><div class="lb">效果预期</div><div class="vibe-text" id="vibeText"></div></div></div>
-
   <!-- 5. 后期 & AI 增强 -->
   <div class="crd post"><div class="ic">🎨</div><div class="bd"><div class="lb">后期 & AI 增强</div><div class="post-grid" id="postGrid"></div></div></div>
 
-  <!-- 6. AI 生图提示词 — Chinese template -->
+  <!-- 6. AI 生图提示词 -->
   <div class="crd gen"><div class="ic">🖼️</div><div class="bd">
     <div class="lb">AI 生图提示词 <span style="color:var(--cyan);font-weight:400">（豆包 Seedream · 图生图模式）</span></div>
     <div class="prompt-box" id="promptBox"></div>
