@@ -462,6 +462,7 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
 
 {
   "scene_type": "[观察]室外/室内/半室外 — [推测]具体场景类型及依据（1-2句）",
+  "primary_subject": "[观察]画面中最主要的拍摄对象是什么——人/宠物/车辆/建筑/食物/自然景观/其他。尽可能具体，如'橘猫''红色跑车''闺蜜三人'。这将用于网络搜索摄影技巧",
   "people": "人物数量、每人位置/衣着/动作/表情/姿态。如果没有人，写'无人物'。衣着用[观察]标注具体颜色和款式",
   "light": {
     "direction": "[推测]顺光/侧光/逆光/顶光/漫射 — 判断依据",
@@ -1923,7 +1924,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             # 风格搜索（最多 6 秒）
             t_search = time.time()
             search_text, search_quality_web, search_meta = search_style_inspiration(
-                scene_type, people_info
+                scene_type, people_info,
+                primary_subject=vision_json.get('primary_subject', '')
             )
             search_duration = int((time.time() - t_search) * 1000)
             if search_text:
@@ -2806,20 +2808,111 @@ def admin_discoveries():
 @app.route('/admin/promote-discovery', methods=['POST'])
 @login_required
 def admin_promote_discovery():
-    """审批通过一个搜索发现，提升为正式技法"""
+    """审批通过一个搜索发现，提升为正式技法。支持 auto 模式——从搜索数据自动提取名称和描述。"""
     try:
         data = request.get_json() or {}
         search_log_id = data.get('search_log_id')
         technique_name = data.get('technique_name', '').strip()
         description = data.get('description', '').strip()
         scene_category = data.get('scene_category', '')
-        if not search_log_id or not technique_name:
-            return jsonify({"error": "缺少必要参数"}), 400
+        auto_mode = data.get('auto', False)
+
+        if not search_log_id:
+            return jsonify({"error": "缺少 search_log_id"}), 400
+
+        # Auto 模式：从搜索数据中自动提取技法和场景分类
+        if auto_mode:
+            import sqlite3
+            db = sqlite3.connect(DB_PATH)
+            row = db.execute(
+                "SELECT query_text, keywords_used, results_summary, useful_data FROM search_log WHERE id=?",
+                (search_log_id,)
+            ).fetchone()
+            db.close()
+            if not row:
+                return jsonify({"error": "搜索记录不存在"}), 404
+
+            query_text = row[0] or ''
+            keywords = row[1] or ''
+            summary = row[2] or ''
+            useful = row[3] or ''
+
+            # 自动提取技法名称：从 keywords 中取第一个有意义的词
+            if not technique_name:
+                kw_list = [k.strip() for k in keywords.split(',') if k.strip()]
+                for kw in kw_list:
+                    # 跳过场景描述词，取拍摄相关词
+                    if any(w in kw for w in ['拍照', '摄影', '技巧', '构图', '姿势', 'pose', '风格']):
+                        # 提取主语部分
+                        name = kw.replace('拍照','').replace('摄影','').replace('技巧','').replace('构图','').replace('姿势','').strip()
+                        if len(name) >= 2 and len(name) <= 30:
+                            technique_name = name
+                            break
+                if not technique_name:
+                    # Fallback: 从 query_text 提取
+                    technique_name = query_text[:30].split(' ')[0] if query_text else '未命名技法'
+
+            # 自动提取描述：从 summary 取前 120 字
+            if not description and summary:
+                # 取第一个有意义的结果
+                for line in summary.split('\n'):
+                    line = line.strip()
+                    if line.startswith('- **') or line.startswith('1. **'):
+                        # 去掉 markdown 标记
+                        desc = line.lstrip('- 0123456789.*# ').strip()
+                        if len(desc) >= 10:
+                            description = desc[:200]
+                            break
+                if not description:
+                    description = summary[:200]
+
+            # 自动推断场景分类
+            if not scene_category:
+                q = (query_text + ' ' + keywords).lower()
+                mapping = [
+                    ('park_nature', ['公园','花园','植物','树','花','草','森林','湖','河','海','山','自然','户外','野外','天空','日落','日出','阳光','风景']),
+                    ('urban_street', ['街','路','城市','建筑','楼','广场','桥','巷','弄','市区','马路','交通','车']),
+                    ('cultural_site', ['博物馆','美术馆','展览','寺庙','教堂','历史','文化','遗址','古城','古镇','园林','宫殿','塔','钟楼']),
+                    ('f_and_b', ['餐厅','咖啡','美食','酒吧','食物','饮料','餐桌','吃饭','奶茶','甜品','饭店','食堂']),
+                    ('commercial', ['商场','购物','商店','超市','店铺','零售','品牌','室内','工作室']),
+                    ('indoor_home', ['家','客厅','卧室','房间','室内','窗边','阳台','家居','家具','公寓','宿舍']),
+                    ('night', ['夜景','夜晚','灯光','霓虹','夜晚','晚上','暗光','夜景']),
+                    ('portrait', ['人像','人物','自拍','合影','闺蜜','情侣','朋友','小孩','宠物','猫','狗','动物']),
+                ]
+                for cat, kws in mapping:
+                    if any(kw in q for kw in kws):
+                        scene_category = cat
+                        break
+                if not scene_category:
+                    scene_category = 'urban_street'
+
+        if not technique_name:
+            return jsonify({"error": "无法自动提取技法名称，请手动输入"}), 400
+
         ok = promote_search_to_technique(
             search_log_id, technique_name, description,
             source_type='community', scene_category=scene_category, verify_count=3
         )
-        return jsonify({"success": ok})
+        return jsonify({"success": ok, "name": technique_name, "category": scene_category})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/admin/delete-discovery', methods=['POST'])
+@login_required
+def admin_delete_discovery():
+    """删除一条搜索发现（不需要的不入库）"""
+    try:
+        data = request.get_json() or {}
+        search_log_id = data.get('search_log_id')
+        if not search_log_id:
+            return jsonify({"error": "缺少 search_log_id"}), 400
+        import sqlite3
+        db = sqlite3.connect(DB_PATH)
+        db.execute("DELETE FROM search_log WHERE id=?", (search_log_id,))
+        db.commit()
+        db.close()
+        return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

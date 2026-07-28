@@ -52,19 +52,18 @@ def _search_one(query, max_results=5):
     return result
 
 
-def search_style_inspiration(scene_type, people_info=""):
+def search_style_inspiration(scene_type, people_info="", primary_subject=""):
     """
     搜索风格灵感——基于场景类型搜索社区推荐。
 
     返回格式化的搜索摘要文本，可直接注入 prompt。
     搜索策略：
-    1. "{场景摘要} 拍照 风格 摄影" — 通用风格搜索
-    2. "{场景摘要} 拍照技巧 构图" — 技法搜索
+    1. 如果有 primary_subject（猫/车/建筑等），优先搜 "{primary_subject} 拍照 技巧"
+    2. "{场景摘要} 拍照 风格 摄影" — 通用风格搜索
+    3. "{场景摘要} 拍照技巧 构图" — 技法搜索
     """
     # 从 scene_type 提取简短查询词
-    # scene_type 格式如："[观察]室外 — [推测]城市居民小区公共草坪绿地..."
     scene_short = scene_type
-    # 提取 [推测] 或 [观察] 后的简短描述
     for marker in ["推测]", "观察]"]:
         if marker in scene_type:
             parts = scene_type.split(marker, 1)
@@ -77,10 +76,20 @@ def search_style_inspiration(scene_type, people_info=""):
     if not scene_short or len(scene_short) < 3:
         scene_short = scene_type[:60]
 
-    queries = [
+    queries = []
+
+    # 如果有明确拍摄主体，优先搜主体相关技巧
+    if primary_subject and primary_subject not in ("无", "无法识别", "无明确主体") and len(primary_subject) >= 1:
+        # 去掉 [观察][推测] 等标记
+        subj = primary_subject.replace("[观察]", "").replace("[推测]", "").strip()
+        if len(subj) >= 1:
+            queries.append(f"{subj} 拍照 技巧 摄影")
+            queries.append(f"{subj} 摄影 构图 光线")
+
+    queries.extend([
         f"{scene_short} 拍照 风格 摄影",
         f"{scene_short} 拍照技巧 构图 姿势",
-    ]
+    ])
 
     # 有人物时加搜人像技巧
     if people_info and "无" not in people_info:
@@ -175,13 +184,66 @@ def search_style_inspiration(scene_type, people_info=""):
     }
 
 
+def _is_notable_place(place_name):
+    """判断地名是否为值得搜索摄影技巧的场所（非随机街道/住宅区）"""
+    if not place_name:
+        return False
+    notable_keywords = [
+        # 景区/自然
+        "公园", "花园", "植物园", "动物园", "景区", "风景", "山", "峰", "岭", "崖", "峡谷", "瀑布",
+        "湖", "河", "海", "沙滩", "海岸", "滨", "湾", "滩", "湿地", "森林", "草原", "沙漠",
+        "岛", "温泉", "溶洞", "冰川", "雪山",
+        # 城市地标
+        "广场", "步行街", "古镇", "老街", "胡同", "里弄", "遗址", "城墙", "宫殿", "园林",
+        "塔", "桥", "钟楼", "鼓楼", "大厦", "中心", "剧院", "音乐厅", "艺术",
+        # 文博场馆
+        "博物馆", "美术馆", "展览", "图书馆", "书店", "教堂", "寺庙", "清真寺", "道观",
+        # 商业/娱乐
+        "商场", "购物中心", "美食街", "夜市", "酒吧街", "文创园", "创意园", "产业园",
+        "体育场", "体育馆", "游泳馆", "滑雪场", "滑冰场", "游乐场", "主题乐园", "乐园",
+        "酒店", "度假", "民宿", "咖啡馆", "餐厅",
+        # 校园
+        "大学", "学院", "校园", "校区",
+        # 交通枢纽（有建筑特色）
+        "机场", "火车站", "地铁站",
+        # 国际
+        "park", "beach", "temple", "museum", "gallery", "square", "market",
+        "mountain", "lake", "river", "garden", "castle", "palace", "cathedral",
+        "stadium", "university", "campus", "resort",
+    ]
+    # 排除：纯街道地址、小区名、道路名
+    exclude_patterns = [
+        "路", "街", "巷", "弄", "道", "号", "楼", "单元", "小区", "花园小区",
+        "公寓", "座", "层", "室", "栋", "幢", "区", "县", "镇", "乡", "村",
+        "派出", "办事", "政府", "居委会", "收费站",
+        "road", "street", "ave", "avenue", "lane", "district",
+    ]
+    # 如果地名只有街道级信息，不搜索
+    place_clean = place_name.replace(" ", "").strip()
+    # 检车是否为纯地址（如 "XX路XX号"）
+    is_address = any(p in place_clean for p in ["路", "街", "巷", "道"])
+    if is_address and len(place_clean) <= 10:
+        return False
+    # 检查是否包含值得拍摄的地标关键词
+    has_notable = any(kw in place_clean for kw in notable_keywords)
+    if not has_notable:
+        return False
+    return True
+
+
 def search_location_intel(place_name, scene_type=""):
     """
     搜索位置摄影情报——如果 GPS 能识别出地名。
+    仅在 place_name 为知名景点/地标时搜索，普通街道跳过。
 
     返回格式化的位置上下文，可直接注入 prompt。
     """
     if not place_name or len(place_name) < 3:
+        return "", "🔴"
+
+    # 只搜索值得拍照的场所
+    if not _is_notable_place(place_name):
+        print(f"[Search] Location skipped (not notable): {place_name[:60]}", file=sys.stderr, flush=True)
         return "", "🔴"
 
     # 提取简短地名

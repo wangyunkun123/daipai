@@ -719,7 +719,10 @@ async function loadDiscoveries() {
         <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(d.query_text||'')}">${kw}</td>
         <td>${auth}</td>
         <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${hint}</td>
-        <td><button onclick="promoteDiscovery(${d.id}, '${esc(d.query_text||'').substring(0,30)}')" style="font-size:10px;padding:1px 5px;cursor:pointer">✅ 提升为技法</button></td>
+        <td style="white-space:nowrap">
+          <button onclick="promoteDiscovery(${d.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:var(--green);color:#000;border:none;border-radius:4px">✅ 入库</button>
+          <button onclick="deleteDiscovery(${d.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);border-radius:4px;margin-left:4px">🗑 删除</button>
+        </td>
       </tr>`;
     }).join('');
   } catch(e) {
@@ -727,26 +730,42 @@ async function loadDiscoveries() {
   }
 }
 
-async function promoteDiscovery(searchLogId, hint) {
-  const name = prompt('技法名称（从搜索结果中提取）：', hint || '');
-  if (!name) return;
-  const desc = prompt('技法描述：', '');
-  if (desc === null) return;
-  const cat = prompt('场景分类（如 urban_street / park_nature / f_and_b / commercial / cultural_site）：', 'urban_street');
-  if (cat === null) return;
+async function promoteDiscovery(searchLogId) {
+  // 一键入库：自动从搜索结果提取名称/描述/分类
+  if (!confirm('确认将此搜索结果自动提取并入库为正式技法？')) return;
   try {
     const res = await fetch('/admin/promote-discovery', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({search_log_id: searchLogId, technique_name: name, description: desc, scene_category: cat})
+      body: JSON.stringify({search_log_id: searchLogId, auto: true})
     });
     const data = await res.json();
     if (data.success) {
-      alert('✅ 已提升为正式技法！');
+      alert('✅ 已入库！\n技法: ' + data.name + '\n分类: ' + data.category);
       loadDiscoveries();
-      loadData(); // 刷新主面板统计
+      loadData();
     } else {
-      alert('❌ 失败: ' + (data.error || '未知错误'));
+      alert('❌ 入库失败: ' + (data.error || '未知错误'));
+    }
+  } catch(e) {
+    alert('❌ 请求失败: ' + String(e));
+  }
+}
+
+async function deleteDiscovery(searchLogId) {
+  if (!confirm('确定删除这条搜索记录？此操作不可恢复。')) return;
+  try {
+    const res = await fetch('/admin/delete-discovery', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({search_log_id: searchLogId})
+    });
+    const data = await res.json();
+    if (data.success) {
+      loadDiscoveries();
+      loadData();
+    } else {
+      alert('❌ 删除失败: ' + (data.error || '未知错误'));
     }
   } catch(e) {
     alert('❌ 请求失败: ' + String(e));
