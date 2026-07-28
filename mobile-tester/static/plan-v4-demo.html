@@ -47,7 +47,6 @@
   }
   .plan-slide img { width: 100%; display: block; }
 
-  /* Dots */
   .dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0; }
   .dot {
     width: 6px; height: 6px; border-radius: 3px;
@@ -55,49 +54,81 @@
   }
   .dot.active { background: var(--gold); width: 20px; }
 
-  /* ── Action Strip (Layer 2: 你怎么拍) ── */
+  /* ── Shot type badge ── */
+  .shot-meta {
+    margin: 0 16px 6px; display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: var(--dimmer); letter-spacing: 0.5px;
+  }
+  .shot-badge {
+    padding: 3px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 600;
+  }
+  .shot-badge.wide  { background: rgba(34,211,238,0.10); color: var(--cyan); }
+  .shot-badge.full  { background: rgba(34,211,238,0.10); color: var(--cyan); }
+  .shot-badge.medium{ background: rgba(245,158,11,0.10); color: var(--gold); }
+  .shot-badge.close { background: rgba(167,139,250,0.10); color: var(--purple); }
+  .shot-badge.eye   { background: rgba(34,211,238,0.08); color: var(--cyan); }
+  .shot-badge.low   { background: rgba(167,139,250,0.10); color: var(--purple); }
+  .shot-badge.side  { background: rgba(74,222,128,0.10); color: var(--green); }
+
+  /* ── Action Strip: 你怎么拍 ── */
   .action-strip {
     margin: 0 16px 6px; padding: 14px 16px;
     background: var(--card); border-radius: var(--radius);
     border: 1px solid var(--border);
     display: flex; align-items: flex-start; gap: 10px;
   }
-  .action-strip .icon-col {
-    font-size: 22px; flex-shrink: 0; line-height: 1.4;
-  }
-  .action-strip .content-col { flex: 1; }
-  .action-strip .label {
+  .action-strip .row-icon { font-size: 22px; flex-shrink: 0; line-height: 1.4; }
+  .action-strip .row-body { flex: 1; }
+  .action-strip .row-label {
     font-size: 11px; color: var(--dimmer); text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 4px;
+    letter-spacing: 0.5px; margin-bottom: 5px;
   }
-  .action-strip .actions {
-    font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.5;
-    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-  }
+  .action-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   .action-tag {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 4px 10px; border-radius: 8px;
-    font-size: 13px; font-weight: 600;
-    white-space: nowrap;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
   }
-  .action-tag.move  { background: rgba(34,211,238,0.10); color: var(--cyan); }
-  .action-tag.height{ background: rgba(167,139,250,0.10); color: var(--purple); }
-  .action-tag.gear  { background: rgba(138,138,138,0.12); color: var(--dim); }
+  .action-tag.move   { background: rgba(34,211,238,0.10); color: var(--cyan); }
+  .action-tag.height { background: rgba(167,139,250,0.10); color: var(--purple); }
+  .action-tag.gear   { background: rgba(138,138,138,0.12); color: var(--dim); }
 
-  /* ── Vibe Strip (Layer 5: 效果预期) ── */
+  /* ── Subject Strip: 被摄者动作 ── */
+  .subject-strip {
+    margin: 0 16px 6px; padding: 12px 16px;
+    background: rgba(74,222,128,0.04); border-radius: 12px;
+    border: 1px solid rgba(74,222,128,0.10);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .subject-strip .row-icon { font-size: 20px; flex-shrink: 0; line-height: 1.4; }
+  .subject-strip .row-body { flex: 1; }
+  .subject-strip .row-label {
+    font-size: 11px; color: var(--dimmer); letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+  .subject-strip .subject-text {
+    font-size: 14px; color: var(--green); line-height: 1.5; font-weight: 500;
+  }
+  .subject-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px; border-radius: 6px;
+    font-size: 12px; font-weight: 600;
+    background: rgba(74,222,128,0.08); color: var(--green);
+  }
+
+  /* ── Vibe Strip: 效果预期 ── */
   .vibe-strip {
     margin: 0 16px 6px; padding: 12px 16px;
-    background: rgba(245,158,11,0.05); border-radius: 12px;
-    border: 1px solid rgba(245,158,11,0.10);
+    background: rgba(245,158,11,0.04); border-radius: 12px;
+    border: 1px solid rgba(245,158,11,0.08);
     font-size: 13px; color: var(--gold); line-height: 1.6;
     display: flex; align-items: center; gap: 8px;
   }
   .vibe-strip .vibe-icon { font-size: 16px; flex-shrink: 0; }
 
-  /* ── Detail Strip (Layer 3: 构图关键，可折叠) ── */
+  /* ── Detail Strip ── */
   .detail-strip {
-    margin: 0 16px 8px; border-radius: 12px;
-    overflow: hidden;
+    margin: 0 16px 16px; border-radius: 12px; overflow: hidden;
   }
   .detail-header {
     padding: 12px 16px; background: var(--card);
@@ -109,14 +140,12 @@
   .detail-header .arrow { transition: transform 0.2s; font-size: 11px; }
   .detail-strip.open .detail-header .arrow { transform: rotate(180deg); }
   .detail-strip.open .detail-header { border-radius: 12px 12px 0 0; }
-
   .detail-body {
     max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
     background: var(--card); border: 1px solid var(--border);
     border-top: none; border-radius: 0 0 12px 12px;
   }
-  .detail-strip.open .detail-body { max-height: 300px; }
-
+  .detail-strip.open .detail-body { max-height: 400px; }
   .detail-body .detail-row {
     padding: 10px 16px; font-size: 13px; line-height: 1.7;
     color: var(--dim); display: flex; gap: 8px;
@@ -124,32 +153,31 @@
   .detail-body .detail-row + .detail-row { border-top: 1px solid rgba(255,255,255,0.03); }
   .detail-body .detail-icon { flex-shrink: 0; font-size: 14px; }
 
-  /* ── Comparison: Old Text Card ── */
+  /* ── Section ── */
   .section-title {
-    margin: 24px 16px 8px; font-size: 13px; color: var(--dimmer);
+    margin: 32px 16px 10px; font-size: 13px; color: var(--dimmer);
     font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
   }
+  .divider { margin: 24px 16px; border-top: 1px solid var(--border); }
+
+  /* ── Comparison ── */
   .old-card {
     margin: 0 16px 8px; padding: 16px;
     background: var(--card); border-radius: var(--radius);
     border: 1px solid var(--border);
   }
-  .old-card .plan-name {
-    font-size: 15px; font-weight: 600; margin-bottom: 12px;
-  }
+  .old-card .plan-name { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
   .old-row { margin-bottom: 6px; font-size: 13px; line-height: 1.7; color: var(--dim); }
 
-  /* ── Key difference callout ── */
-  .callout {
-    margin: 16px; padding: 16px;
-    background: rgba(34,211,238,0.05); border-radius: 12px;
-    border: 1px solid rgba(34,211,238,0.12);
+  /* ── Insights ── */
+  .insight-box {
+    margin: 20px 16px; padding: 16px;
+    background: rgba(34,211,238,0.04); border-radius: 12px;
+    border: 1px solid rgba(34,211,238,0.10);
   }
-  .callout h3 { font-size: 14px; color: var(--cyan); margin-bottom: 8px; }
-  .callout ul { font-size: 12px; color: var(--dim); line-height: 1.8; padding-left: 18px; }
-  .callout ul li { margin-bottom: 4px; }
-  .callout .good { color: var(--green); }
-  .callout .bad  { color: #ef4444; }
+  .insight-box h3 { font-size: 14px; color: var(--cyan); margin-bottom: 10px; }
+  .insight-box ul { font-size: 12px; color: var(--dim); line-height: 2; padding-left: 18px; }
+  .good { color: var(--green); }
 </style>
 </head>
 <body>
@@ -158,44 +186,54 @@
   <!-- Header -->
   <div class="header">
     <h1>带拍 · 混合卡片</h1>
-    <div class="tagline">增强图标注构图 · 三行文字给指令 · 3秒看完</div>
+    <div class="tagline">增强图标注构图 × 三行卡片给指令 × 3秒一张方案</div>
   </div>
 
-  <!-- ============ HYBRID CARDS ============ -->
-
-  <!-- Carousel -->
+  <!-- ============ HYBRID CARD CAROUSEL ============ -->
   <div class="carousel">
     <div class="carousel-track" id="carouselTrack"></div>
     <div class="dots" id="carouselDots"></div>
   </div>
 
-  <!-- Action Strip (dynamically updated) -->
+  <!-- Shot type badge -->
+  <div class="shot-meta" id="shotMeta"></div>
+
+  <!-- Layer 2: 你怎么拍 -->
   <div class="action-strip" id="actionStrip">
-    <div class="icon-col">📍</div>
-    <div class="content-col">
-      <div class="label">你怎么拍</div>
-      <div class="actions" id="actionContent"></div>
+    <div class="row-icon">📍</div>
+    <div class="row-body">
+      <div class="row-label">你怎么拍</div>
+      <div class="action-tags" id="actionTags"></div>
     </div>
   </div>
 
-  <!-- Vibe Strip (dynamically updated) -->
+  <!-- Layer 3: 被摄者动作 -->
+  <div class="subject-strip" id="subjectStrip">
+    <div class="row-icon">🧍</div>
+    <div class="row-body">
+      <div class="row-label">被摄者动作</div>
+      <div id="subjectContent"></div>
+    </div>
+  </div>
+
+  <!-- Layer 5: 效果预期 -->
   <div class="vibe-strip" id="vibeStrip">
     <span class="vibe-icon">✨</span>
     <span id="vibeContent"></span>
   </div>
 
-  <!-- Detail Strip (collapsible) -->
+  <!-- Layer 1/3 detail: 构图详解 -->
   <div class="detail-strip" id="detailStrip">
-    <div class="detail-header" onclick="this.parentElement.classList.toggle('open')">
+    <div class="detail-header" onclick="toggleDetail()">
       <span>📐 构图详解</span>
       <span class="arrow">▼</span>
     </div>
     <div class="detail-body" id="detailContent"></div>
   </div>
 
-  <!-- ============ COMPARISON: Old Text Cards ============ -->
+  <!-- ============ COMPARISON ============ -->
+  <div class="divider"></div>
   <div class="section-title">📋 对比：旧版纯文字卡片</div>
-
   <div class="old-card">
     <div class="plan-name">📷 人宠互动特写</div>
     <div class="old-row">📋 观察狗的动态，等待它看向镜头的时机</div>
@@ -206,14 +244,14 @@
     <div class="old-row">✨ 春日河边，柔和阳光洒在人与狗身上，金黄光线穿过树梢</div>
   </div>
 
-  <!-- Key Differences -->
-  <div class="callout">
-    <h3>⚡ v4 混合卡片的 4 个关键差异</h3>
+  <!-- Core differences -->
+  <div class="insight-box">
+    <h3>⚡ v4 混合卡片 vs 旧版的 4 个关键差异</h3>
     <ul>
-      <li><span class="good">✓ 照片上只标注构图/光线/主体</span> — 不写文字，不画箭头，不标地面位置</li>
-      <li><span class="good">✓ 拍摄者动作独立成行</span> — 图标+标签，动词先行，一行扫完</li>
-      <li><span class="good">✓ 效果预期用感性语言</span> — 不写技术术语，写"拍出来是什么感觉"</li>
-      <li><span class="good">✓ 构图详情默认折叠</span> — 想看的展开，不看的直接跳过</li>
+      <li><span class="good">✓ 照片标注极简</span> — 仅网格+定位圈+光线+底部状态栏，无文字无箭头</li>
+      <li><span class="good">✓ 拍摄者/被摄者分离</span> — 📍你怎么拍 vs 🧍被摄者动作，两个行动者各行其是</li>
+      <li><span class="good">✓ 景别自适应标注</span> — 全景画水平线+引导线，中景画网格+定位圈，近景只画光线</li>
+      <li><span class="good">✓ 认知负荷最小化</span> — 3秒扫完「怎么拍+怎么站+什么效果」，详情可展开</li>
     </ul>
   </div>
 
@@ -221,45 +259,108 @@
 
 <script>
 // ============================================================
-// Plan Data
+// 4 Plans: multi shot-size + multi angle + subject actions
 // ============================================================
 const plans = [
   {
-    id: 'now-1',
-    name: '人宠互动特写',
-    image: 'plan_v4_clean.jpg',
-    color: '#f59e0b',
+    id: 'plan1',
+    name: '中景互动',
+    direction: '现在就拍',
+    image: 'plan_v4_plan1.jpg',
+    accent: '#f59e0b',
+    // Shot meta
+    shotSize: '中景', shotSizeClass: 'medium',
+    angle: '平视', angleClass: 'eye',
+    // Layer 2: Shooter actions
     actions: [
-      { text: '蹲下', icon: '🧎', type: 'height' },
       { text: '靠近一步', icon: '→', type: 'move' },
+      { text: '蹲下', icon: '🧎', type: 'height' },
       { text: '主摄 24mm', icon: '📷', type: 'gear' },
     ],
-    vibe: '春日暖阳从左上洒落，发丝透出金边。宠物和人对视的那一刻——温暖、自然、有故事。',
+    // Layer 3: Subject actions (NEW)
+    subjectAction: '侧身45°站立 · 手自然垂放 · 不看镜头看远处',
+    subjectTags: ['🧍 侧身45°', '👀 不看镜头', '🐕 狗安静坐旁边'],
+    // Layer 5: Vibe
+    vibe: '柔和侧光打在侧脸和发丝上，金棕色暖调。人物和狗安静地待在画面里，像一张有温度的日常胶片。',
+    // Detail rows
     details: [
-      { icon: '👤', text: '人物放在画面左三分之一竖线上，身体占画面中下部' },
-      { icon: '🐕', text: '穿红衣的泰迪放在右下方交叉点，与人物形成对角线呼应' },
-      { icon: '✂️', text: '顶部虚化的树枝太乱——机位稍微往上移，让树枝只在画面最上方占一小条' },
-      { icon: '💡', text: '光线从左上角（树叶缝隙）射入，让阳光刚好照亮人物侧脸和狗的红衣' },
-      { icon: '⚙️', text: '轻点人物脸部锁定对焦，拍的时候连拍 3 张，选眼神最好的那张' },
+      { icon: '👤', text: '人物放在画面左三分之一竖线上，身体占画面中下区域约 40%' },
+      { icon: '🐕', text: '穿红衣的泰迪放在右下方交叉点，与人物形成对角线平衡' },
+      { icon: '✂️', text: '上方树枝略乱——机位微调上移，树枝只在顶边占一小条' },
+      { icon: '💡', text: '光线从左上树叶缝隙射入，让阳光照亮人物侧脸和狗的红衣' },
+      { icon: '⚙️', text: '轻点人脸锁定对焦，连拍 3 张选眼神最好的那张' },
     ],
   },
   {
-    id: 'best-1',
-    name: '郊野氛围全景',
-    image: 'plan_v4_clean.jpg',  // Would be a different annotated image in production
-    color: '#22d3ee',
+    id: 'plan2',
+    name: '全景氛围',
+    direction: '最出片',
+    image: 'plan_v4_plan2.jpg',
+    accent: '#22d3ee',
+    shotSize: '全景', shotSizeClass: 'full',
+    angle: '平视', angleClass: 'eye',
     actions: [
-      { text: '退后 3 步', icon: '←', type: 'move' },
+      { text: '退后 4 步', icon: '←', type: 'move' },
       { text: '站立', icon: '🧍', type: 'height' },
       { text: '主摄 24mm', icon: '📷', type: 'gear' },
     ],
-    vibe: '郊野河畔的松弛感——小人影在开阔景色中，绿叶做天然画框。像一张电影截图，不是一张游客照。',
+    subjectAction: '人宠保持自然站姿，面朝河对岸或低头互动——不需要刻意摆拍',
+    subjectTags: ['🧍 自然站立', '🐕 牵着狗绳', '🌿 面向风景'],
+    vibe: '郊野河畔的松弛感——小人影在开阔景色中，柳枝做天然前景画框。像一张电影剧照，不是一张游客照。',
     details: [
-      { icon: '👤', text: '人物和狗的组合放在画面左下三分之一区域，留出大面积天空和河水' },
-      { icon: '🌿', text: '利用垂下的柳枝做前景虚化画框——把手机贴近树枝，对焦在远景人物上' },
-      { icon: '📐', text: '水平面保持在中线附近，天空和地面各占一半，营造开阔感' },
-      { icon: '💡', text: '阳光从左上方来，让人物的轮廓被柔和地勾勒出来' },
-      { icon: '⚙️', text: '保持手机水平（打开相机网格），对焦在人物上，让前景枝叶自然虚化' },
+      { icon: '👤', text: '人物+宠物组合放在画面左下区域，留出大面积天空和河水' },
+      { icon: '🌿', text: '利用垂下的柳枝做前景虚化画框——手机贴近树枝，对焦在远景人物' },
+      { icon: '📐', text: '水平面保持在中线偏下附近，天空约占 45%，营造开阔呼吸感' },
+      { icon: '➡️', text: '小路从画面右下延伸向人物位置——天然引导线，利用它' },
+      { icon: '⚙️', text: '打开相机网格，保持手机水平，对焦在人物上，前景枝叶自然虚化' },
+    ],
+  },
+  {
+    id: 'plan3',
+    name: '近景特写',
+    direction: '脑洞大开',
+    image: 'plan_v4_plan3.jpg',
+    accent: '#a78bfa',
+    shotSize: '近景', shotSizeClass: 'close',
+    angle: '低角度', angleClass: 'low',
+    actions: [
+      { text: '再靠近', icon: '→→', type: 'move' },
+      { text: '蹲更低', icon: '🧎', type: 'height' },
+      { text: '人像模式', icon: '📷', type: 'gear' },
+    ],
+    subjectAction: '蹲下来，和狗平视——两个人的脸一样高。手轻轻摸狗的头，嘴角带一丝笑',
+    subjectTags: ['🧎 蹲下与狗平视', '✋ 手摸狗头', '😊 嘴角轻笑'],
+    vibe: '人物和狗的脸在同一个高度，侧光照亮两个侧脸。虚化背景让所有注意力都落在人和狗的互动上——亲密、温暖、有爱。',
+    details: [
+      { icon: '👤', text: '人物脸部放在左上三分线交叉点，狗的脸放在右下交叉点' },
+      { icon: '📐', text: '近景不画网格——构图靠人物和狗的视线交汇形成张力' },
+      { icon: '🎨', text: '近景裁掉顶部乱枝和底部杂乱地面，只保留人和狗的核心区域' },
+      { icon: '💡', text: '光线从侧面来，形成人物和狗的侧脸高光，立体感极强' },
+      { icon: '⚙️', text: '用人像模式 f/2.8，轻点人物眼睛对焦，背景自动虚化' },
+    ],
+  },
+  {
+    id: 'plan4',
+    name: '侧面角度',
+    direction: '最出片',
+    image: 'plan_v4_plan4.jpg',
+    accent: '#4ade80',
+    shotSize: '全景', shotSizeClass: 'full',
+    angle: '侧面', angleClass: 'side',
+    actions: [
+      { text: '左移 3 步', icon: '⬅', type: 'move' },
+      { text: '身体右转90°', icon: '🔄', type: 'move' },
+      { text: '主摄 24mm', icon: '📷', type: 'gear' },
+    ],
+    subjectAction: '身体自然侧对镜头，转头回看镜头方向——"不经意被拍"的自然感',
+    subjectTags: ['🚶 侧身站立', '🔙 转头回看', '😊 自然微笑'],
+    vibe: '侧面视角让河岸线条斜穿画面，人物轮廓被侧光照亮。不是正面游客照，而是一张有故事感的"偷拍"——自然、有空间感。',
+    details: [
+      { icon: '👤', text: '人物放在画面中央偏右，侧身线条沿三分线方向' },
+      { icon: '📐', text: '河岸线从左下到右上形成对角线——利用它增加画面动感' },
+      { icon: '💡', text: '侧面光只照亮人物半边轮廓，形成强烈的明暗对比' },
+      { icon: '🔄', text: '从侧面拍能让背景的河水和树形成纵深，比正面拍更有空间层次' },
+      { icon: '⚙️', text: '保持手机水平，打开网格，让人物侧脸刚好在右竖线上' },
     ],
   },
 ];
@@ -273,58 +374,69 @@ function render() {
 
   let trackHTML = '', dotsHTML = '';
   plans.forEach((p, i) => {
-    trackHTML += `
-      <div class="plan-slide" data-idx="${i}">
-        <img src="${p.image}" alt="${p.name}" loading="${i === 0 ? 'eager' : 'lazy'}">
-      </div>`;
-    dotsHTML += `<span class="dot${i === 0 ? ' active' : ''}" data-idx="${i}"></span>`;
+    trackHTML += `<div class="plan-slide" data-idx="${i}"><img src="${p.image}" alt="${p.name}" loading="${i===0?'eager':'lazy'}"></div>`;
+    dotsHTML += `<span class="dot${i===0?' active':''}" data-idx="${i}"></span>`;
   });
-
   track.innerHTML = trackHTML;
   dots.innerHTML = dotsHTML;
 
-  // Scroll → update dots + info
   track.addEventListener('scroll', () => {
     const center = track.scrollLeft + track.clientWidth / 2;
     let activeIdx = 0, minDist = Infinity;
-    track.querySelectorAll('.plan-slide').forEach((slide, i) => {
-      const dist = Math.abs(center - (slide.offsetLeft + slide.clientWidth / 2));
+    track.querySelectorAll('.plan-slide').forEach((s, i) => {
+      const dist = Math.abs(center - (s.offsetLeft + s.clientWidth / 2));
       if (dist < minDist) { minDist = dist; activeIdx = i; }
     });
     dots.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === activeIdx));
     updateInfo(activeIdx);
   });
 
-  // Dot click
   dots.querySelectorAll('.dot').forEach(dot => {
     dot.addEventListener('click', () => {
-      const idx = parseInt(dot.dataset.idx);
-      const slide = track.querySelector(`[data-idx="${idx}"]`);
-      if (slide) slide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+      const slide = track.querySelector(`[data-idx="${dot.dataset.idx}"]`);
+      if (slide) slide.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'start' });
     });
   });
 
   updateInfo(0);
 }
 
+function toggleDetail() {
+  document.getElementById('detailStrip').classList.toggle('open');
+}
+
 function updateInfo(idx) {
   const p = plans[idx];
   if (!p) return;
 
-  // Actions
-  const actionsHTML = p.actions.map(a =>
+  // Shot meta badge
+  document.getElementById('shotMeta').innerHTML = `
+    <span class="shot-badge ${p.shotSizeClass}">${p.shotSize}</span>
+    <span class="shot-badge ${p.angleClass}">${p.angle}</span>
+    <span style="color:${p.accent}">${p.direction}</span>
+  `;
+
+  // Shooter actions
+  document.getElementById('actionTags').innerHTML = p.actions.map(a =>
     `<span class="action-tag ${a.type}">${a.icon} ${a.text}</span>`
   ).join('');
-  document.getElementById('actionContent').innerHTML = actionsHTML;
+
+  // Subject actions (NEW)
+  const subDiv = document.getElementById('subjectContent');
+  subDiv.innerHTML = p.subjectTags.map(t =>
+    `<span class="subject-tag">${t}</span>`
+  ).join(' ') + `<div style="font-size:13px;color:var(--dim);margin-top:6px;">${p.subjectAction}</div>`;
 
   // Vibe
   document.getElementById('vibeContent').textContent = p.vibe;
 
   // Details
-  const detailsHTML = p.details.map(d =>
+  document.getElementById('detailContent').innerHTML = p.details.map(d =>
     `<div class="detail-row"><span class="detail-icon">${d.icon}</span><span>${d.text}</span></div>`
   ).join('');
-  document.getElementById('detailContent').innerHTML = detailsHTML;
+
+  // Reset detail collapse
+  document.getElementById('detailStrip').classList.remove('open');
 }
 
 render();
