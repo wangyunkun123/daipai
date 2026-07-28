@@ -40,47 +40,56 @@ def draw_light(draw, W, H, direction='upper-left'):
         draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255,200,120, alpha))
 
 def draw_grid(draw, W, H):
-    """Rule of thirds grid."""
-    c = (255,255,255,35)
+    """Rule of thirds grid - increased contrast for visibility."""
+    c = (255,255,255,55)  # was 35, boosted
     for i in [1,2]:
         x = int(W * i/3); draw.line([(x,0),(x,H)], fill=c, width=2)
         y = int(H * i/3); draw.line([(0,y),(W,y)], fill=c, width=2)
 
-def draw_subject(draw, W, H, cx_r, cy_r, r_r, label, color=(245,158,11)):
-    """Subject positioning circle + label pill."""
+def draw_subject(draw, W, H, cx_r, cy_r, r_r, label, color=(245,158,11), bottom_bar_y=None):
+    """Subject positioning circle + label pill. Clamp label to stay above bottom bar."""
     cx, cy = int(W * cx_r), int(H * cy_r)
     r = int(W * r_r)
-    # Glow
+    # Glow - brighter
     for i in range(3):
         gr = r + 5 + i*3
-        draw.ellipse([cx-gr, cy-gr, cx+gr, cy+gr], outline=(*color, 65-i*18), width=2)
-    # Ring
-    draw.ellipse([cx-r, cy-r, cx+r, cy+r], outline=(*color, 160), width=3)
-    # Corner dots
+        draw.ellipse([cx-gr, cy-gr, cx+gr, cy+gr], outline=(*color, 80-i*20), width=2)
+    # Ring - thicker, more opaque
+    draw.ellipse([cx-r, cy-r, cx+r, cy+r], outline=(*color, 210), width=4)
+    # Corner dots - larger, brighter
     for a in [0,90,180,270]:
         rad = math.radians(a)
         dx = int(r*0.7*math.cos(rad)); dy = int(r*0.7*math.sin(rad))
-        draw.ellipse([cx+dx-3, cy+dy-3, cx+dx+3, cy+dy+3], fill=(*color, 190))
-    # Label pill
+        draw.ellipse([cx+dx-4, cy+dy-4, cx+dx+4, cy+dy+4], fill=(*color, 220))
+    # Label pill - clamp position so it doesn't overflow bottom bar
     lw, lh = 56, 26
     lx = cx + r + 12
+    # If label would be past right edge, flip to left side
+    if lx + lw > W - 20:
+        lx = cx - r - lw - 12
     ly = cy - lh//2
-    draw.rounded_rectangle([lx, ly, lx+lw, ly+lh], radius=7, fill=(8,8,12,210))
+    # Clamp Y: stay above bottom bar (56px) and below top edge
+    bar_top = H - 56 if bottom_bar_y is None else bottom_bar_y
+    if ly + lh > bar_top - 8:
+        ly = bar_top - lh - 8
+    if ly < 8:
+        ly = 8
+    draw.rounded_rectangle([lx, ly, lx+lw, ly+lh], radius=7, fill=(8,8,12,225))
     draw.text((lx+7, ly+3), label, fill=(*color, 255), font=FONT_MD)
 
 def draw_horizon(draw, W, H, y_r):
-    """Horizontal ref line with end ticks."""
+    """Horizontal ref line with end ticks - increased contrast."""
     y = int(H * y_r)
-    draw.line([(0,y),(W,y)], fill=(255,255,255,45), width=2)
+    draw.line([(0,y),(W,y)], fill=(255,255,255,65), width=3)  # was 45/2
     t = 18
-    draw.line([(t,y-5),(t,y+5)], fill=(255,255,255,55), width=2)
-    draw.line([(W-t,y-5),(W-t,y+5)], fill=(255,255,255,55), width=2)
+    draw.line([(t,y-6),(t,y+6)], fill=(255,255,255,80), width=2)  # was 55/5
+    draw.line([(W-t,y-6),(W-t,y+6)], fill=(255,255,255,80), width=2)
 
 def draw_leading(draw, W, H, points):
-    """Highlight a leading line path."""
+    """Highlight a leading line path - increased visibility."""
     pts = [(int(W*x), int(H*y)) for x,y in points]
     for i in range(3):
-        draw.line(pts, fill=(255,255,255, 15 + i*5), width=3+i*2)
+        draw.line(pts, fill=(255,255,255, 25 + i*8), width=3+i*3)  # was 15/3
 
 def draw_vignette(draw, W, H):
     """Edge darkening."""
@@ -109,14 +118,14 @@ def draw_shot_frame(draw, W, H, frame, label, color=(255,255,255)):
     if l > 0: draw.rectangle([(0,t),(l,b)], fill=dark)
     if r < W: draw.rectangle([(r,t),(W,b)], fill=dark)
 
-    # Frame border (subtle white line)
-    border_c = (*color, 70)
-    draw.rectangle([(l,t),(r,b)], outline=border_c, width=2)
+    # Frame border - more visible
+    border_c = (*color, 110)
+    draw.rectangle([(l,t),(r,b)], outline=border_c, width=3)
 
-    # Corner brackets (more visible)
-    bracket_c = (*color, 160)
-    bracket = 30  # px length
-    bw = 3
+    # Corner brackets
+    bracket_c = (*color, 200)
+    bracket = 36  # px length
+    bw = 4
     # Top-left
     draw.line([(l,t),(l+bracket,t)], fill=bracket_c, width=bw)
     draw.line([(l,t),(l,t+bracket)], fill=bracket_c, width=bw)

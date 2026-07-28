@@ -3,317 +3,253 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>带拍 · v5 完整方案卡片</title>
+<title>带拍 · v5 方案卡片</title>
 <style>
   :root {
-    --bg: #0a0a0a; --card: #141414; --text: #e8e8e8;
-    --dim: #8a8a8a; --dimmer: #5a5a5a;
-    --green: #4ade80; --gold: #f59e0b;
-    --purple: #a78bfa; --cyan: #22d3ee; --pink: #f472b6;
-    --border: #262626; --radius: 14px;
+    --bg:#0a0a0a; --card:#141414; --text:#e8e8e8;
+    --dim:#8a8a8a; --dimmer:#5a5a5a;
+    --green:#4ade80; --gold:#f59e0b; --purple:#a78bfa; --cyan:#22d3ee;
+    --pink:#f472b6; --border:#262626; --radius:14px;
   }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
-    background: var(--bg); color: var(--text); min-height: 100dvh;
-    -webkit-font-smoothing: antialiased;
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",sans-serif;
+    background:var(--bg);color:var(--text);min-height:100dvh;
+    -webkit-font-smoothing:antialiased;
   }
-  .app { max-width: 480px; margin: 0 auto; padding: 0 0 40px; }
+  .app{max-width:480px;margin:0 auto;padding:0 0 40px}
 
-  /* Header */
-  .header { text-align:center; padding:24px 16px 8px; }
-  .header h1 {
-    font-size:18px; font-weight:700; letter-spacing:-0.3px;
-    background: linear-gradient(135deg, #f59e0b, #fbbf24);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-  }
-  .header .tag { font-size:12px; color:var(--dim); margin-top:4px; }
+  .header{text-align:center;padding:24px 16px 8px}
+  .header h1{font-size:18px;font-weight:700;letter-spacing:-0.3px;background:linear-gradient(135deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .header .tag{font-size:12px;color:var(--dim);margin-top:4px}
 
   /* Carousel */
-  .carousel { margin:10px 0; }
-  .carousel-track {
-    display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
-    scroll-behavior:smooth; -webkit-overflow-scrolling:touch;
-    border-radius:var(--radius); background:#000;
-  }
-  .carousel-track::-webkit-scrollbar { display:none; }
-  .plan-slide { flex:0 0 100%; scroll-snap-align:start; }
-  .plan-slide img { width:100%; display:block; }
-  .dots { display:flex; justify-content:center; gap:6px; padding:10px 0; }
-  .dot { width:6px;height:6px;border-radius:3px;background:var(--border);transition:all 0.3s; }
-  .dot.active { background:var(--gold); width:20px; }
+  .carousel{margin:10px 0}
+  .carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;border-radius:var(--radius);background:#000}
+  .carousel-track::-webkit-scrollbar{display:none}
+  .slide{flex:0 0 100%;scroll-snap-align:start}
+  .slide img{width:100%;display:block}
+  .dots{display:flex;justify-content:center;gap:6px;padding:10px 0}
+  .dot{width:6px;height:6px;border-radius:3px;background:var(--border);transition:all .3s}
+  .dot.active{background:var(--gold);width:20px}
 
-  /* Shot meta row */
-  .meta-row {
-    margin:0 14px 6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-  }
-  .meta-badge {
-    padding:4px 10px; border-radius:7px; font-size:11px; font-weight:600;
-    display:inline-flex; align-items:center; gap:4px;
-  }
-  .meta-badge.shot { background:rgba(245,158,11,0.10); color:var(--gold); }
-  .meta-badge.angle{ background:rgba(167,139,250,0.10); color:var(--purple); }
-  .meta-badge.dir  { background:rgba(34,211,238,0.08); color:var(--cyan); }
+  /* Meta */
+  .meta-row{margin:0 14px 6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .meta-badge{padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+  .meta-badge.shot{background:rgba(245,158,11,.10);color:var(--gold)}
+  .meta-badge.angle{background:rgba(167,139,250,.10);color:var(--purple)}
+  .meta-badge.dir{background:rgba(34,211,238,.08);color:var(--cyan)}
 
-  /* ── Card sections ── */
-  .card-row {
-    margin:0 14px 5px; padding:12px 14px;
-    border-radius:var(--radius); display:flex; align-items:flex-start; gap:10px;
-  }
-  .card-row .r-icon { font-size:20px; flex-shrink:0; line-height:1.5; }
-  .card-row .r-body { flex:1; min-width:0; }
-  .card-row .r-label { font-size:10px; color:var(--dimmer); letter-spacing:0.5px; margin-bottom:5px; text-transform:uppercase; }
+  /* Card row base */
+  .crd{margin:0 14px 5px;padding:12px 14px;border-radius:var(--radius);display:flex;align-items:flex-start;gap:10px}
+  .crd .ic{font-size:19px;flex-shrink:0;line-height:1.5}
+  .crd .bd{flex:1;min-width:0}
+  .crd .lb{font-size:10px;color:var(--dimmer);letter-spacing:.5px;margin-bottom:5px;text-transform:uppercase}
+  .tags{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .tg{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap}
+  .tg.mv{background:rgba(34,211,238,.10);color:var(--cyan)}
+  .tg.ht{background:rgba(167,139,250,.10);color:var(--purple)}
+  .tg.gr{background:rgba(138,138,138,.10);color:var(--dim)}
+  .tg.ps{background:rgba(74,222,128,.08);color:var(--green)}
 
-  /* Shooter */
-  .card-row.shooter { background:var(--card); border:1px solid var(--border); }
-  .tag-row { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
-  .tag {
-    display:inline-flex; align-items:center; gap:3px;
-    padding:3px 9px; border-radius:7px; font-size:12px; font-weight:600; white-space:nowrap;
-  }
-  .tag.move  { background:rgba(34,211,238,0.10); color:var(--cyan); }
-  .tag.height{ background:rgba(167,139,250,0.10); color:var(--purple); }
-  .tag.gear  { background:rgba(138,138,138,0.10); color:var(--dim); }
+  .crd.shooter{background:var(--card);border:1px solid var(--border)}
+  .crd.subject{background:rgba(74,222,128,.03);border:1px solid rgba(74,222,128,.08)}
+  .sub-desc{font-size:12px;color:var(--dim);margin-top:5px;line-height:1.5}
 
-  /* Subject */
-  .card-row.subject { background:rgba(74,222,128,0.03); border:1px solid rgba(74,222,128,0.08); }
-  .tag.pose { background:rgba(74,222,128,0.08); color:var(--green); }
-  .subject-desc { font-size:12px; color:var(--dim); margin-top:5px; line-height:1.5; }
+  /* Detail (collapsible) — now right after subject */
+  .det-wrap{margin:0 14px 5px;border-radius:var(--radius);overflow:hidden}
+  .det-head{padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--dim);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+  .det-head .ar{transition:transform .2s;font-size:10px}
+  .det-wrap.open .det-head .ar{transform:rotate(180deg)}
+  .det-wrap.open .det-head{border-radius:var(--radius) var(--radius) 0 0}
+  .det-body{max-height:0;overflow:hidden;transition:max-height .3s;background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius)}
+  .det-wrap.open .det-body{max-height:500px}
+  .det-row{padding:10px 14px;font-size:12px;line-height:1.7;color:var(--dim);display:flex;gap:8px}
+  .det-row+.det-row{border-top:1px solid rgba(255,255,255,.03)}
 
-  /* Vibe */
-  .card-row.vibe { background:rgba(245,158,11,0.03); border:1px solid rgba(245,158,11,0.08); }
-  .vibe-text { font-size:13px; color:var(--gold); line-height:1.6; }
+  .crd.vibe{background:rgba(245,158,11,.03);border:1px solid rgba(245,158,11,.08)}
+  .vibe-text{font-size:13px;color:var(--gold);line-height:1.6}
 
-  /* ── NEW: Post-process & AI Enhance ── */
-  .card-row.post { background:rgba(244,114,182,0.03); border:1px solid rgba(244,114,182,0.08); }
-  .post-grid {
-    display:flex; flex-direction:column; gap:6px;
-  }
-  .post-item {
-    display:flex; align-items:flex-start; gap:6px;
-    font-size:12px; line-height:1.5;
-  }
-  .post-item .p-cat {
-    flex-shrink:0; padding:2px 7px; border-radius:5px;
-    font-size:10px; font-weight:600; white-space:nowrap;
-  }
-  .p-cat.color  { background:rgba(245,158,11,0.12); color:var(--gold); }
-  .p-cat.ai     { background:rgba(167,139,250,0.12); color:var(--purple); }
-  .p-cat.add    { background:rgba(74,222,128,0.10); color:var(--green); }
-  .post-item .p-text { color:var(--dim); padding-top:1px; }
+  /* Post & AI */
+  .crd.post{background:rgba(244,114,182,.03);border:1px solid rgba(244,114,182,.08)}
+  .post-grid{display:flex;flex-direction:column;gap:6px}
+  .post-item{display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.5}
+  .p-cat{flex-shrink:0;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;white-space:nowrap}
+  .p-cat.color{background:rgba(245,158,11,.12);color:var(--gold)}
+  .p-cat.ai{background:rgba(167,139,250,.12);color:var(--purple)}
+  .p-cat.add{background:rgba(74,222,128,.10);color:var(--green)}
+  .p-text{color:var(--dim);padding-top:1px}
 
-  /* ── NEW: Image Gen Prompt ── */
-  .card-row.gen { background:var(--card); border:1px solid rgba(34,211,238,0.15); }
-  .prompt-box {
-    background:rgba(0,0,0,0.3); border-radius:10px; padding:12px;
-    font-size:12px; color:var(--dim); line-height:1.7;
-    font-family:"SF Mono","Menlo","Consolas",monospace;
-    word-break:break-word; max-height:120px; overflow-y:auto;
-    margin-bottom:10px;
-  }
-  .prompt-actions { display:flex; gap:8px; }
-  .btn {
-    padding:8px 16px; border-radius:9px; border:none;
-    font-size:12px; font-weight:700; cursor:pointer;
-    -webkit-tap-highlight-color:transparent; transition:all 0.15s;
-    display:inline-flex; align-items:center; gap:5px;
-  }
-  .btn:active { transform:scale(0.96); }
-  .btn-copy { background:rgba(138,138,138,0.15); color:var(--dim); }
-  .btn-gen  { background:rgba(34,211,238,0.12); color:var(--cyan); }
+  /* Image Gen Prompt — Chinese template */
+  .crd.gen{background:var(--card);border:1px solid rgba(34,211,238,.15)}
+  .prompt-box{background:rgba(0,0,0,.3);border-radius:10px;padding:12px;font-size:12px;color:var(--dim);line-height:1.8;max-height:140px;overflow-y:auto;margin-bottom:10px}
+  .prompt-actions{display:flex;gap:8px}
+  .btn{padding:8px 16px;border-radius:9px;border:none;font-size:12px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+  .btn:active{transform:scale(.96)}
+  .btn-copy{background:rgba(138,138,138,.15);color:var(--dim)}
+  .btn-gen{background:rgba(34,211,238,.08);color:var(--cyan);opacity:.7}
 
-  /* Detail (collapsible) */
-  .detail-wrap { margin:0 14px 14px; border-radius:var(--radius); overflow:hidden; }
-  .detail-head {
-    padding:11px 14px; background:var(--card); border:1px solid var(--border);
-    border-radius:var(--radius); font-size:12px; color:var(--dim);
-    display:flex; align-items:center; justify-content:space-between;
-    cursor:pointer; user-select:none;
-  }
-  .detail-head .arr { transition:transform 0.2s; font-size:10px; }
-  .detail-wrap.open .detail-head .arr { transform:rotate(180deg); }
-  .detail-wrap.open .detail-head { border-radius:var(--radius) var(--radius) 0 0; }
-  .detail-body {
-    max-height:0; overflow:hidden; transition:max-height 0.3s;
-    background:var(--card); border:1px solid var(--border); border-top:none;
-    border-radius:0 0 var(--radius) var(--radius);
-  }
-  .detail-wrap.open .detail-body { max-height:500px; }
-  .detail-row {
-    padding:10px 14px; font-size:12px; line-height:1.7;
-    color:var(--dim); display:flex; gap:8px;
-  }
-  .detail-row+.detail-row { border-top:1px solid rgba(255,255,255,0.03); }
-
-  /* Toast */
-  .toast {
-    position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
-    background:rgba(0,0,0,0.9); color:#fff; padding:10px 22px;
-    border-radius:20px; font-size:13px; font-weight:600;
-    opacity:0; transition:opacity 0.25s; pointer-events:none; z-index:100;
-  }
-  .toast.show { opacity:1; }
-
-  /* Section divider */
-  .sec-div { margin:24px 14px; border-top:1px solid var(--border); }
-  .sec-title { margin:0 14px 10px; font-size:12px; color:var(--dimmer); font-weight:600; letter-spacing:0.5px; text-transform:uppercase; }
-
-  /* Old card for comparison */
-  .old-card {
-    margin:0 14px 8px; padding:14px; background:var(--card);
-    border-radius:var(--radius); border:1px solid var(--border);
-  }
-  .old-card .old-name { font-size:14px; font-weight:600; margin-bottom:10px; }
-  .old-row { margin-bottom:4px; font-size:12px; line-height:1.7; color:var(--dim); }
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:#fff;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;z-index:100}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
 <div class="app">
-
   <div class="header">
     <h1>带拍 · v5 完整方案</h1>
-    <div class="tag">景别框 + 角度指示 + 后期栏 + 生图提示词</div>
+    <div class="tag">景别框 + 角度指示 → 构图详解 → 后期AI → 生图提示词</div>
   </div>
 
-  <!-- ====== CAROUSEL ====== -->
+  <!-- Carousel -->
   <div class="carousel">
     <div class="carousel-track" id="track"></div>
     <div class="dots" id="dotsEl"></div>
   </div>
 
-  <!-- Meta badges -->
+  <!-- Meta -->
   <div class="meta-row" id="metaRow"></div>
 
-  <!-- Shooter -->
-  <div class="card-row shooter" id="shooterRow">
-    <div class="r-icon">📍</div>
-    <div class="r-body"><div class="r-label">你怎么拍</div><div class="tag-row" id="shooterTags"></div></div>
+  <!-- 1. 你怎么拍 -->
+  <div class="crd shooter"><div class="ic">📍</div><div class="bd"><div class="lb">你怎么拍</div><div class="tags" id="shooterTags"></div></div></div>
+
+  <!-- 2. 被摄者动作 -->
+  <div class="crd subject"><div class="ic">🧍</div><div class="bd"><div class="lb">被摄者动作</div><div class="tags" id="subjectTags"></div><div class="sub-desc" id="subjectDesc"></div></div></div>
+
+  <!-- 3. 构图详解 (collapsible — moved here per user request) -->
+  <div class="det-wrap" id="detWrap">
+    <div class="det-head" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div>
+    <div class="det-body" id="detBody"></div>
   </div>
 
-  <!-- Subject -->
-  <div class="card-row subject" id="subjectRow">
-    <div class="r-icon">🧍</div>
-    <div class="r-body"><div class="r-label">被摄者动作</div><div class="tag-row" id="subjectTags"></div><div class="subject-desc" id="subjectDesc"></div></div>
-  </div>
+  <!-- 4. 效果预期 -->
+  <div class="crd vibe"><div class="ic">✨</div><div class="bd"><div class="lb">效果预期</div><div class="vibe-text" id="vibeText"></div></div></div>
 
-  <!-- Vibe -->
-  <div class="card-row vibe" id="vibeRow">
-    <div class="r-icon">✨</div>
-    <div class="r-body"><div class="r-label">效果预期</div><div class="vibe-text" id="vibeText"></div></div>
-  </div>
+  <!-- 5. 后期 & AI 增强 -->
+  <div class="crd post"><div class="ic">🎨</div><div class="bd"><div class="lb">后期 & AI 增强</div><div class="post-grid" id="postGrid"></div></div></div>
 
-  <!-- ── NEW: Post & AI ── -->
-  <div class="card-row post" id="postRow">
-    <div class="r-icon">🎨</div>
-    <div class="r-body">
-      <div class="r-label">后期 & AI 增强</div>
-      <div class="post-grid" id="postGrid"></div>
+  <!-- 6. AI 生图提示词 — Chinese template -->
+  <div class="crd gen"><div class="ic">🖼️</div><div class="bd">
+    <div class="lb">AI 生图提示词 <span style="color:var(--cyan);font-weight:400">（豆包 Seedream · 图生图模式）</span></div>
+    <div class="prompt-box" id="promptBox"></div>
+    <div class="prompt-actions">
+      <button class="btn btn-copy" onclick="copyPrompt()">📋 复制提示词</button>
+      <button class="btn btn-gen" onclick="goGenerate()">🪄 去 Seedream 生图</button>
     </div>
-  </div>
-
-  <!-- ── NEW: Image Gen Prompt ── -->
-  <div class="card-row gen" id="genRow">
-    <div class="r-icon">🖼️</div>
-    <div class="r-body">
-      <div class="r-label">AI 生图提示词</div>
-      <div class="prompt-box" id="promptBox"></div>
-      <div class="prompt-actions">
-        <button class="btn btn-copy" onclick="copyPrompt()">📋 复制提示词</button>
-        <button class="btn btn-gen" onclick="goGenerate()">🪄 去 Seedream 生图</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Detail -->
-  <div class="detail-wrap" id="detailWrap">
-    <div class="detail-head" onclick="this.parentElement.classList.toggle('open')">
-      <span>📐 构图详解</span><span class="arr">▼</span>
-    </div>
-    <div class="detail-body" id="detailBody"></div>
-  </div>
-
-  <!-- ====== COMPARISON ====== -->
-  <div class="sec-div"></div>
-  <div class="sec-title">📋 对比：旧版纯文字卡片</div>
-  <div class="old-card">
-    <div class="old-name">📷 人宠互动特写</div>
-    <div class="old-row">📋 观察狗的动态，等待它看向镜头的时机</div>
-    <div class="old-row">👤 人物放在画面左三分之一处，狗放在右三分之一处</div>
-    <div class="old-row">📷 向前走两步，蹲下来，机位降低到与人和狗平齐</div>
-    <div class="old-row">⚙️ iPhone 主摄（24mm等效），轻点人脸锁定对焦和曝光</div>
-    <div class="old-row">🎨 顶部虚化树枝太乱，拍的时候往上移一点裁掉</div>
-    <div class="old-row">✨ 春日河边，柔和阳光洒在人与狗身上，金黄光线穿过树梢</div>
-  </div>
+  </div></div>
 
   <div class="toast" id="toast"></div>
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════
+// Plan data — Chinese img_gen_prompt template
+// ═══════════════════════════════════════════════════════════
 const plans = [
   {
-    id:'plan1', name:'中景互动', dir:'现在就拍',
-    image:'plan_v5_plan1.jpg', accent:'#f59e0b',
+    id:'plan1', name:'中景互动', dir:'现在就拍', image:'plan_v5_plan1.jpg', accent:'#f59e0b',
     shotSize:'中景', angle:'平视',
-    shooter:[
-      {t:'靠近一步',i:'→',c:'move'},{t:'蹲下',i:'🧎',c:'height'},{t:'主摄 24mm',i:'📷',c:'gear'},
-    ],
-    subjectTags:[{t:'侧身45°',i:'🧍',c:'pose'},{t:'不看镜头',i:'👀',c:'pose'},{t:'狗安静坐',i:'🐕',c:'pose'}],
-    subjectDesc:'侧身45°站立，手自然垂放，眼神看向远处——不是摆拍，是"刚好被拍到"的自然感。',
+    shooter:[{t:'靠近一步',i:'→',c:'mv'},{t:'蹲下',i:'🧎',c:'ht'},{t:'主摄 24mm',i:'📷',c:'gr'}],
+    subTags:[{t:'侧身45°',i:'🧍',c:'ps'},{t:'不看镜头',i:'👀',c:'ps'},{t:'狗安静坐',i:'🐕',c:'ps'}],
+    subDesc:'侧身 45° 站立，手自然垂放，眼神看向远处——不是摆拍，是"刚好被拍到"的自然感。',
     vibe:'柔和侧光打亮人物侧脸和发丝，金棕色暖调。人物和狗安静待在画面里，像一张有温度的日常胶片。',
     post:[
-      {cat:'color', label:'调色', text:'暖调提亮 + 暗角，模拟柯达 Portra 400 胶片色'},
-      {cat:'ai', label:'AI 虚化', text:'背景增强虚化至 f/2.0，分离人物与背景的层次'},
-      {cat:'add', label:'添加', text:'发丝高光强化 + 左上角光斑（模拟树叶漏光）'},
+      {cat:'color',label:'调色',text:'暖调提亮 + 暗角，模拟柯达 Portra 400 胶片色'},
+      {cat:'ai',label:'AI 虚化',text:'背景增强虚化至 f/2.0，分离人物与背景的层次'},
+      {cat:'add',label:'添加',text:'发丝高光强化 + 左上角光斑（模拟树叶漏光）'},
     ],
-    prompt:'A cinematic medium shot, warm golden hour, side lighting. A young woman standing at 45-degree angle, looking into distance, natural smile. A small red dog sitting beside her. Riverside park, spring greenery blurred in background. Kodak Portra 400 color palette, soft film grain. The light catches her hair creating a subtle rim light. --ar 3:4 --style raw',
+    prompt:`参考上传的照片，保持人物的面部特征、发型、服装不变，
+    保持春日河边坡地、绿叶柳枝的场景环境不变。
+
+    做以下调整：
+    - 人物：侧身 45° 站立，手自然垂放在身体两侧，
+      脸微微转向右前方，眼神看向远处，嘴唇自然闭合
+    - 机位：向前靠近一步，蹲下至胸口高度，
+      与人物保持平视，让观众感觉就站在她面前
+    - 光线：午后阳光从左上树叶缝隙射入，
+      在人物侧脸和发丝边缘形成金色轮廓光，
+      狗的红衣被阳光打亮
+
+    画面风格：温暖日常——柔和暖调，低对比度，
+    阴影偏暖棕，高光过渡自然，轻微胶片颗粒
+    景别与空间：中景，人物占据画面中下约一半，
+    背景树丛和河岸虚化成暖色光斑
+
+    无文字、无水印、无签名、自然肤质、真实摄影感`,
     details:[
-      {i:'👤',t:'人物放在画面左1/3竖线上，身体占画面中下约40%'},
+      {i:'👤',t:'人物放在画面左 1/3 竖线上，身体占画面中下约 40%'},
       {i:'🐕',t:'穿红衣的泰迪放在右下方交叉点，与人物形成对角线平衡'},
       {i:'✂️',t:'上方树枝略乱——机位微调上移，树枝只在顶部占一小条'},
       {i:'💡',t:'光线从左上树叶缝隙射入，照亮人物侧脸和狗的红衣'},
-      {i:'⚙️',t:'轻点人脸锁定对焦，连拍3张选眼神最好的'},
+      {i:'⚙️',t:'轻点人脸锁定对焦，连拍 3 张选眼神最好的'},
     ],
   },
   {
-    id:'plan2', name:'全景氛围', dir:'最出片',
-    image:'plan_v5_plan2.jpg', accent:'#22d3ee',
+    id:'plan2', name:'全景氛围', dir:'最出片', image:'plan_v5_plan2.jpg', accent:'#22d3ee',
     shotSize:'全景', angle:'平视',
-    shooter:[
-      {t:'退后4步',i:'←',c:'move'},{t:'站立',i:'🧍',c:'height'},{t:'主摄 24mm',i:'📷',c:'gear'},
-    ],
-    subjectTags:[{t:'自然站立',i:'🧍',c:'pose'},{t:'牵狗绳',i:'🐕',c:'pose'},{t:'面朝河',i:'🌿',c:'pose'}],
-    subjectDesc:'人宠保持自然站姿，面朝河对岸或低头互动。不需要刻意摆拍——松弛感来自真实状态。',
+    shooter:[{t:'退后 4 步',i:'←',c:'mv'},{t:'站立',i:'🧍',c:'ht'},{t:'主摄 24mm',i:'📷',c:'gr'}],
+    subTags:[{t:'自然站立',i:'🧍',c:'ps'},{t:'牵狗绳',i:'🐕',c:'ps'},{t:'面朝河',i:'🌿',c:'ps'}],
+    subDesc:'人宠保持自然站姿，面朝河对岸或低头互动。不需要刻意摆拍——松弛感来自真实状态。',
     vibe:'郊野河畔的松弛感——小人影在开阔景中，柳枝做天然前景画框。像一张电影剧照，不是游客照。',
     post:[
-      {cat:'color', label:'调色', text:'降低对比度 + 青绿暗部，模拟电影感调色（teal & orange）'},
-      {cat:'ai', label:'AI 去物', text:'如果远处有垃圾桶或游客，AI 去除干扰物'},
-      {cat:'add', label:'添加', text:'前景柳枝虚化增强 + 右上角轻微柔光'},
+      {cat:'color',label:'调色',text:'降低对比度 + 青绿暗部，模拟电影感调色（teal & orange）'},
+      {cat:'ai',label:'AI 去物',text:'如果远处有垃圾桶或游客，AI 去除干扰物'},
+      {cat:'add',label:'添加',text:'前景柳枝虚化增强 + 右上角轻微柔光'},
     ],
-    prompt:'A cinematic wide shot of a riverside park in spring. A woman and a small red dog standing in the lower-left third of the frame, facing the river. Willow branches in the foreground creating a natural frame. Soft afternoon light, teal and orange color grading. Film still aesthetic, calm and atmospheric. --ar 3:4 --style raw',
+    prompt:`参考上传的照片，保持河畔坡地、柳枝绿叶、春日自然光线的场景环境不变，
+    保持人物与红衣泰迪的组合关系不变。
+
+    做以下调整：
+    - 人物：与狗自然站在画面左下区域，面朝河对岸，
+      不需要看镜头——像在欣赏风景，松弛自在
+    - 机位：退后几步拉开距离，站立拍摄，
+      利用垂下的柳枝靠近镜头作为虚化前景
+    - 光线：午后自然的散射光，均匀柔和，
+      透过薄云形成大面积柔光，没有强烈阴影
+
+    画面风格：电影感自然光——青绿暗部，
+    暖调高光，低饱和度，画面弥漫春天午后慵懒感
+    景别与空间：全景，人物在画面中占比小，
+    大面积的河水、天空和绿树构成开阔的空间层次
+
+    无文字、无水印、无签名、自然肤质、真实摄影感`,
     details:[
       {i:'👤',t:'人物+宠物组合放在左下区域，留出大面积天空和河水'},
       {i:'🌿',t:'柳枝做前景虚化画框——手机贴近树枝，对焦在远景人物'},
-      {i:'📐',t:'水平面保持中线偏下，天空约45%，营造呼吸感'},
+      {i:'📐',t:'水平面保持中线偏下，天空约 45%，营造呼吸感'},
       {i:'➡️',t:'小路从右下延伸向人物——天然引导线，利用它'},
       {i:'⚙️',t:'打开网格保持水平，对焦人物，前景自然虚化'},
     ],
   },
   {
-    id:'plan3', name:'近景特写', dir:'脑洞大开',
-    image:'plan_v5_plan3.jpg', accent:'#a78bfa',
+    id:'plan3', name:'近景特写', dir:'脑洞大开', image:'plan_v5_plan3.jpg', accent:'#a78bfa',
     shotSize:'近景', angle:'低角度',
-    shooter:[
-      {t:'再靠近',i:'→→',c:'move'},{t:'蹲更低',i:'🧎',c:'height'},{t:'人像模式',i:'📷',c:'gear'},
-    ],
-    subjectTags:[{t:'蹲下平视',i:'🧎',c:'pose'},{t:'手摸狗头',i:'✋',c:'pose'},{t:'嘴角轻笑',i:'😊',c:'pose'}],
-    subjectDesc:'蹲到与狗一样高——两个人的脸在同一高度。手轻轻摸狗的头，嘴角带一丝若有若无的笑。',
+    shooter:[{t:'再靠近',i:'→→',c:'mv'},{t:'蹲更低',i:'🧎',c:'ht'},{t:'人像模式',i:'📷',c:'gr'}],
+    subTags:[{t:'蹲下平视',i:'🧎',c:'ps'},{t:'手摸狗头',i:'✋',c:'ps'},{t:'嘴角轻笑',i:'😊',c:'ps'}],
+    subDesc:'蹲到与狗一样高——两个人的脸在同一高度。手轻轻摸狗的头，嘴角带一丝若有若无的笑。',
     vibe:'人物和狗的脸在同一高度，侧光照亮两个侧脸。虚化背景把注意力全压在互动上——亲密、温暖、有爱。',
     post:[
-      {cat:'color', label:'调色', text:'微提曝光 + 暖色温，强调皮肤质感和毛发光泽'},
-      {cat:'ai', label:'AI 虚化', text:'背景深度虚化 f/1.8，模拟大光圈定焦镜头效果'},
-      {cat:'add', label:'添加', text:'眼神光强化 + 狗毛边缘柔光 + 轻微胶片颗粒'},
+      {cat:'color',label:'调色',text:'微提曝光 + 暖色温，强调皮肤质感和毛发光泽'},
+      {cat:'ai',label:'AI 虚化',text:'背景深度虚化 f/1.8，模拟大光圈定焦镜头效果'},
+      {cat:'add',label:'添加',text:'眼神光强化 + 狗毛边缘柔光 + 轻微胶片颗粒'},
     ],
-    prompt:'An intimate close-up portrait, low angle, eye-level with subject. A woman crouching, face close to a small red dog, gentle smile, hand touching the dogs head. Warm side lighting creates soft highlights on both faces. Background heavily blurred with creamy bokeh. Intimate, warm, emotional. Fuji Pro 400H color palette. --ar 3:4 --style raw',
+    prompt:`参考上传的照片，保持人物的面部特征、发型、服装不变，
+    保持红衣泰迪的毛色和体型特征不变。
+
+    做以下调整：
+    - 人物：蹲下来，脸和狗的脸在同一高度，
+      一只手轻轻搭在狗的头上，嘴角带一丝若有若无的笑，
+      眼神温柔地看向狗的方向
+    - 机位：靠近到只拍上半身，蹲低到与人物脸部平齐，
+      让人物和狗的视线交汇成为画面的绝对焦点
+    - 光线：侧面柔光同时照亮人物和狗的侧脸，
+      形成对称的高光轮廓，背景落入暗调
+
+    画面风格：亲密肖像——柔和暖调，极浅景深，
+    皮肤质感细腻，狗毛边缘有柔和的逆光勾勒
+    景别与空间：近景特写，人物和狗的脸占画面主体，
+    背景完全虚化成奶油色光斑，没有干扰元素
+
+    无文字、无水印、无签名、自然肤质、真实摄影感`,
     details:[
       {i:'👤',t:'人物脸部放在左上三分线交叉点，狗脸在右下交叉点'},
       {i:'📐',t:'近景不画网格——靠人物和狗视线交汇形成张力'},
@@ -323,21 +259,34 @@ const plans = [
     ],
   },
   {
-    id:'plan4', name:'侧面角度', dir:'最出片',
-    image:'plan_v5_plan4.jpg', accent:'#4ade80',
+    id:'plan4', name:'侧面角度', dir:'最出片', image:'plan_v5_plan4.jpg', accent:'#4ade80',
     shotSize:'全景', angle:'侧面',
-    shooter:[
-      {t:'左移3步',i:'⬅',c:'move'},{t:'右转90°',i:'🔄',c:'move'},{t:'主摄 24mm',i:'📷',c:'gear'},
-    ],
-    subjectTags:[{t:'侧身站立',i:'🚶',c:'pose'},{t:'转头回看',i:'🔙',c:'pose'},{t:'自然微笑',i:'😊',c:'pose'}],
-    subjectDesc:'身体侧对镜头，头转回来——"不经意被拍"的自然感。关键是不要正对相机，侧身才有故事。',
+    shooter:[{t:'左移 3 步',i:'⬅',c:'mv'},{t:'右转 90°',i:'🔄',c:'mv'},{t:'主摄 24mm',i:'📷',c:'gr'}],
+    subTags:[{t:'侧身站立',i:'🚶',c:'ps'},{t:'转头回看',i:'🔙',c:'ps'},{t:'自然微笑',i:'😊',c:'ps'}],
+    subDesc:'身体侧对镜头，头转回来——"不经意被拍"的自然感。关键是不要正对相机，侧身才有故事。',
     vibe:'侧面视角让河岸线斜穿画面，人物轮廓被侧光照亮。不是正面游客照——是一张有故事感的"偷拍"。',
     post:[
-      {cat:'color', label:'调色', text:'冷调暗部 + 暖调高光，增强侧光的明暗对比'},
-      {cat:'ai', label:'AI 扩展', text:'若构图偏紧，AI 向外扩展画幅，保留更多河岸纵深'},
-      {cat:'add', label:'添加', text:'水面微光反射 + 人物轮廓光强化 + 电影宽幅裁切'},
+      {cat:'color',label:'调色',text:'冷调暗部 + 暖调高光，增强侧光的明暗对比'},
+      {cat:'ai',label:'AI 扩展',text:'若构图偏紧，AI 向外扩展画幅，保留更多河岸纵深'},
+      {cat:'add',label:'添加',text:'水面微光反射 + 人物轮廓光强化 + 电影宽幅裁切'},
     ],
-    prompt:'A candid side-angle shot, woman and small red dog standing by a riverside. The riverbank creates a diagonal line across the frame. Subject seen from the side, turning head back to look at camera with a natural smile. Strong side lighting, half face illuminated half in shadow. Cinematic composition, natural and unposed. --ar 3:4 --style raw',
+    prompt:`参考上传的照片，保持河畔环境、春日光线、人物与红衣泰迪的特征不变。
+
+    做以下调整：
+    - 人物：身体侧对镜头站立，上半身微微转向右方，
+      头转回来看向镜头方向，带一点自然的微笑——
+      像是有人在旁边叫你，你回头的那一瞬间
+    - 机位：走到人物左侧约三步远的位置，身体右转 90°，
+      从侧面取景，让河岸线斜穿画面形成对角线
+    - 光线：从人物正面方向照来，半边脸被照亮、
+      半边脸落入柔和的阴影，形成自然的立体感
+
+    画面风格：自然抓拍感——干净色调，明暗对比柔和，
+    不过度后期，保留环境的真实质感和空间纵深
+    景别与空间：全景，人物放在画面偏右位置，
+    左侧留出河岸延伸的空间，前景有自然的环境元素
+
+    无文字、无水印、无签名、自然肤质、真实摄影感`,
     details:[
       {i:'👤',t:'人物侧身线条沿右竖线，转头回看的瞬间是关键'},
       {i:'📐',t:'河岸线从左下到右上形成对角线——利用它增加动感'},
@@ -348,44 +297,43 @@ const plans = [
   },
 ];
 
-let current = 0;
+let cur=0;
 
-function render() {
-  const track=document.getElementById('track'), dots=document.getElementById('dotsEl');
-  track.innerHTML=plans.map((p,i)=>`<div class="plan-slide" data-idx="${i}"><img src="${p.image}" alt="${p.name}" loading="${i===0?'eager':'lazy'}"></div>`).join('');
-  dots.innerHTML=plans.map((_,i)=>`<span class="dot${i===0?' active':''}" data-idx="${i}"></span>`).join('');
-
-  track.addEventListener('scroll',()=>{
-    const c=track.scrollLeft+track.clientWidth/2; let ai=0,md=Infinity;
-    track.querySelectorAll('.plan-slide').forEach((s,i)=>{const d=Math.abs(c-(s.offsetLeft+s.clientWidth/2));if(d<md){md=d;ai=i;}});
-    dots.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===ai));
+function render(){
+  const tr=document.getElementById('track'),ds=document.getElementById('dotsEl');
+  tr.innerHTML=plans.map((p,i)=>`<div class="slide" data-idx="${i}"><img src="${p.image}" alt="${p.name}" loading="${i===0?'eager':'lazy'}"></div>`).join('');
+  ds.innerHTML=plans.map((_,i)=>`<span class="dot${i===0?' active':''}" data-idx="${i}"></span>`).join('');
+  tr.addEventListener('scroll',()=>{
+    const c=tr.scrollLeft+tr.clientWidth/2;let ai=0,md=Infinity;
+    tr.querySelectorAll('.slide').forEach((s,i)=>{const d=Math.abs(c-(s.offsetLeft+s.clientWidth/2));if(d<md){md=d;ai=i;}});
+    ds.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===ai));
     update(ai);
   });
-  dots.querySelectorAll('.dot').forEach(d=>d.addEventListener('click',()=>{const s=track.querySelector(`[data-idx="${d.dataset.idx}"]`);if(s)s.scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'});}));
+  ds.querySelectorAll('.dot').forEach(d=>d.addEventListener('click',()=>{const s=tr.querySelector(`[data-idx="${d.dataset.idx}"]`);if(s)s.scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'});}));
   update(0);
 }
 
-function update(i) {
-  current=i; const p=plans[i];
-  document.getElementById('metaRow').innerHTML=`
-    <span class="meta-badge shot">📐 ${p.shotSize}</span>
-    <span class="meta-badge angle">📷 ${p.angle}</span>
-    <span class="meta-badge dir" style="color:${p.accent}">${p.dir}</span>`;
-  document.getElementById('shooterTags').innerHTML=p.shooter.map(a=>`<span class="tag ${a.c}">${a.i} ${a.t}</span>`).join('');
-  document.getElementById('subjectTags').innerHTML=p.subjectTags.map(t=>`<span class="tag ${t.c}">${t.i} ${t.t}</span>`).join('');
-  document.getElementById('subjectDesc').textContent=p.subjectDesc;
+function update(i){
+  cur=i;const p=plans[i];
+  document.getElementById('metaRow').innerHTML=`<span class="meta-badge shot">📐 ${p.shotSize}</span><span class="meta-badge angle">📷 ${p.angle}</span><span class="meta-badge dir" style="color:${p.accent}">${p.dir}</span>`;
+  document.getElementById('shooterTags').innerHTML=p.shooter.map(a=>`<span class="tg ${a.c}">${a.i} ${a.t}</span>`).join('');
+  document.getElementById('subjectTags').innerHTML=p.subTags.map(t=>`<span class="tg ${t.c}">${t.i} ${t.t}</span>`).join('');
+  document.getElementById('subjectDesc').textContent=p.subDesc;
   document.getElementById('vibeText').textContent=p.vibe;
   document.getElementById('postGrid').innerHTML=p.post.map(x=>`<div class="post-item"><span class="p-cat ${x.cat}">${x.label}</span><span class="p-text">${x.text}</span></div>`).join('');
   document.getElementById('promptBox').textContent=p.prompt;
-  document.getElementById('detailBody').innerHTML=p.details.map(d=>`<div class="detail-row"><span>${d.i}</span><span>${d.t}</span></div>`).join('');
-  document.getElementById('detailWrap').classList.remove('open');
+  document.getElementById('detBody').innerHTML=p.details.map(d=>`<div class="det-row"><span>${d.i}</span><span>${d.t}</span></div>`).join('');
+  document.getElementById('detWrap').classList.remove('open');
 }
 
-function copyPrompt() {
-  navigator.clipboard.writeText(plans[current].prompt).then(()=>toast('✅ 提示词已复制到剪贴板')).catch(()=>toast('⚠️ 复制失败，请手动选择文字'));
+function copyPrompt(){
+  navigator.clipboard.writeText(plans[cur].prompt).then(()=>toast('✅ 提示词已复制！打开 Seedream 粘贴即可生图')).catch(()=>toast('⚠️ 复制失败，请手动长按选择文字复制'));
 }
-function goGenerate() { toast('🪄 提示词已复制！打开 Seedream / Midjourney 粘贴即可生图'); copyPrompt(); }
-function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
+function goGenerate(){
+  copyPrompt();
+  toast('🛠️ 在线生图功能开发中，提示词已复制到剪贴板，可前往 Seedream 自行生成');
+}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
 render();
 </script>
