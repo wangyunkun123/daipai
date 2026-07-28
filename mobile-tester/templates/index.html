@@ -348,15 +348,20 @@
   .v5-detail.open .v5-dbody { max-height: 800px; overflow-y: auto; }
   .v5-drow { padding: 8px 12px; font-size: 12px; line-height: 1.6; color: var(--dim); display: flex; gap: 6px; border-top: 1px solid rgba(255,255,255,0.03); word-break: break-word; }
 
-  /* 后期 */
-  .v5-post { border-top: 1px solid rgba(255,255,255,0.04); padding: 10px 12px; }
-  .v5-post-grid { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
-  .v5-post-item { display: flex; align-items: flex-start; gap: 5px; font-size: 11px; line-height: 1.5; }
-  .v5-pcat { flex-shrink: 0; padding: 2px 6px; border-radius: 5px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  /* 后期（折叠面板） */
+  .v5-post-wrap { border-top: 1px solid rgba(255,255,255,0.04); }
+  .v5-post-wrap .v5-dhead { padding: 9px 12px; font-size: 12px; color: var(--dim); display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .v5-post-wrap .v5-dhead .ar { font-size: 10px; transition: transform 0.2s; }
+  .v5-post-wrap.open .v5-dhead .ar { transform: rotate(180deg); }
+  .v5-post-body { max-height: 0; overflow: hidden; transition: max-height 0.3s; }
+  .v5-post-wrap.open .v5-post-body { max-height: 500px; overflow-y: auto; }
+  .v5-post-grid { display: flex; flex-direction: column; gap: 4px; padding: 0 12px 10px; }
+  .v5-post-item { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.5; }
+  .v5-pcat { flex-shrink: 0; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 600; white-space: nowrap; min-width: 44px; text-align: center; }
   .v5-pcat.color { background: rgba(245,158,11,0.12); color: var(--fire); }
+  .v5-pcat.fx    { background: rgba(244,114,182,0.12); color: #f472b6; }
   .v5-pcat.ai    { background: rgba(167,139,250,0.12); color: var(--purple); }
-  .v5-pcat.add   { background: rgba(74,222,128,0.10); color: var(--green); }
-  .v5-post-text { color: var(--dim); padding-top: 1px; word-break: break-word; }
+  .v5-post-text { color: var(--dim); padding-top: 1px; word-break: break-word; flex: 1; min-width: 0; }
 
   /* 生图 */
   .v5-gen { border-top: 1px solid rgba(34,211,238,0.10); padding: 10px 12px; }
@@ -1693,15 +1698,15 @@ function renderPlanCard(p, i, direction) {
     c += `</div></div>`;
   }
 
-  // ── 5. 后期 & AI 增强 ──
+  // ── 5. 后期（折叠面板）──
   const post = p.post_process || [];
   if (post.length) {
-    c += `<div class="v5-post"><div class="v5-lb" style="font-size:10px;color:var(--dimmer);letter-spacing:0.5px;margin-bottom:6px">🎨 后期 & AI 增强</div><div class="v5-post-grid">`;
+    c += `<div class="v5-post-wrap" id="v5post${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>🎨 后期</span><span class="ar">▼</span></div><div class="v5-post-body"><div class="v5-post-grid">`;
     post.forEach(x => {
-      const cat = x.cat||'color'; const label = x.label||'处理'; const text = x.text||'';
+      const cat = x.cat||'color'; const label = x.label||'调色'; const text = x.text||'';
       c += `<div class="v5-post-item"><span class="v5-pcat ${cat}">${esc(label)}</span><span class="v5-post-text">${esc(text)}</span></div>`;
     });
-    c += `</div></div>`;
+    c += `</div></div></div>`;
   }
 
   // ── 6. 生图提示词 ──
