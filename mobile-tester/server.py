@@ -25,7 +25,7 @@ from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map
 from search_web import search_style_inspiration, search_location_intel
-from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base
+from database import accumulate, query_scene_context, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -509,6 +509,9 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。你的唯一任务：�
 
 ## 🌐 社区搜索参考（本次搜索到的真实技法——在方案中直接利用）
 {search_context}
+
+## 📚 历史验证技法（同类场景多次验证过的拍摄经验——必须利用）
+{db_techniques}
 
 ## 设备信息
 {device_context}
@@ -1143,7 +1146,7 @@ def get_location_weather(exif_result):
 # Session 管理
 # ============================================================
 
-def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", search_context="", session_id=None):
+def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", search_context="", scene_category="", session_id=None):
     """创建分析会话"""
     if session_id is None:
         session_id = uuid.uuid4().hex[:12]
@@ -1158,7 +1161,8 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
         'created_at': time.time(),
         'client_ip': client_ip,
         'env_context': env_context,
-        'search_context': search_context
+        'search_context': search_context,
+        'scene_category': scene_category
     }
     _cleanup_old_sessions()
     return session_id
@@ -2015,7 +2019,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             scene_tier=scene_tier,
             client_ip=client_ip,
             env_context=env_context,
-            search_context=search_context
+            search_context=search_context,
+            scene_category=scene_category
         )
 
         # ── 记录使用统计 ──
@@ -2170,9 +2175,19 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     style_knowledge = get_style_detail(direction.get('style', '')) or ""
     device_knowledge = get_device_adaptation(device_key) or ""
 
+    # ── v4.2: 查询数据库历史验证技法，注入方案生成 ──
+    scene_type = session.get('vision_json', {}).get('scene_type', '')
+    scene_category = session.get('scene_category', '')
+    db_techniques = query_scene_techniques_for_plans(scene_type, category=scene_category)
+    if db_techniques:
+        print(f"[Plans] DB techniques: {len(db_techniques)} chars for cat={scene_category}", file=sys.stderr, flush=True)
+    else:
+        db_techniques = "（同类场景暂无历史验证技法——方案将主要基于知识库推理和社区搜索。）\n"
+
     plans_prompt = PLANS_PROMPT.format(
         vision_json=json.dumps(session['vision_json'], ensure_ascii=False, indent=2),
         search_context=session.get('search_context', '（无社区搜索数据）'),
+        db_techniques=db_techniques,
         device_context=device_text,
         style_knowledge=style_knowledge,
         device_knowledge=device_knowledge,

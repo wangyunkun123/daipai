@@ -441,11 +441,72 @@ def query_scene_context(scene_type, category=''):
                 if r['tech_name'] not in seen:
                     seen.add(r['tech_name'])
                     ctx += f"- {r['tech_name']}（{r['source_type']}, 验证{r['verify_count']}次）\n"
-        ctx += "\n可以参考以上积累，但不强制使用。如果场景特征不匹配，忽略即可。\n"
+        ctx += "\n## 🚨 验证过的经验：同类场景验证过的风格/技法优先推荐。除非有明确不匹配的理由（光线条件完全不同/设备不支持），否则至少采纳 1 个验证过的风格方向。\n"
 
         return ctx
     except Exception as e:
         print(f"[DB] Query error: {e}", file=sys.stderr, flush=True)
+        return ""
+    finally:
+        conn.close()
+
+
+def query_scene_techniques_for_plans(scene_type, category=''):
+    """
+    查询同类场景的高频验证技法，直接注入方案生成 prompt。
+    与 query_scene_context 不同：
+    - 只取技法（不含风格）
+    - 包含 description 字段（具体怎么用）
+    - 只返回 verify_count >= 2 的（至少被验证过 2 次）
+    - 返回带强制使用指令的 prompt 文本
+    """
+    if not scene_type:
+        return ""
+
+    if not category:
+        category = extract_scene_category(scene_type)
+
+    conn = get_db()
+    try:
+        params = []
+        if category:
+            where_clause = "sm.scene_category = ?"
+            params = [category]
+        else:
+            keywords = scene_type.replace("[观察]", "").replace("[推测]", "").replace("—", " ").split()
+            search_terms = [k for k in keywords if len(k) >= 2][:3]
+            if not search_terms:
+                return ""
+            like_clauses = " OR ".join(["sm.scene_type LIKE ?" for _ in search_terms])
+            where_clause = like_clauses
+            params = [f"%{t}%" for t in search_terms]
+
+        tech_rows = conn.execute(f"""
+            SELECT DISTINCT t.name, t.description, t.source_type, t.verify_count
+            FROM scene_matches sm
+            JOIN techniques t ON sm.technique_id = t.id
+            WHERE sm.match_type = 'technique' AND ({where_clause})
+              AND t.verify_count >= 2
+            ORDER BY t.verify_count DESC
+            LIMIT 8
+        """, params).fetchall()
+
+        if not tech_rows:
+            return ""
+
+        ctx = "\n## 📚 历史验证技法（同类场景多次验证——方案中必须利用）\n"
+        ctx += "以下是同类场景中经过多次验证的拍摄技法。每次分析都在实际拍摄中确认有效。\n\n"
+        for i, r in enumerate(tech_rows, 1):
+            desc = r['description'] or ''
+            ctx += f"{i}. **{r['name']}**（验证{r['verify_count']}次, {r['source_type']}）\n"
+            if desc:
+                ctx += f"   → {desc}\n"
+        ctx += "\n## 🚨 硬性要求：至少从以上技法中采纳 1 个，融入方案的 subject/shooter/gear 中。"
+        ctx += "这是同类场景验证过的经验，不是你猜的。如果某个技法确实不适用当前光线/设备，说明原因后可以跳过。\n"
+
+        return ctx
+    except Exception as e:
+        print(f"[DB] Query techniques error: {e}", file=sys.stderr, flush=True)
         return ""
     finally:
         conn.close()
