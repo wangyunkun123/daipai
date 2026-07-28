@@ -324,18 +324,18 @@
   /* v5 卡片行 */
   .v5-row { padding: 10px 12px; display: flex; align-items: flex-start; gap: 6px; overflow: hidden; }
   .v5-row + .v5-row { border-top: 1px solid rgba(255,255,255,0.04); }
-  .v5-row .v5-ic { font-size: 17px; flex-shrink: 0; line-height: 1.4; }
+  .v5-row .v5-ic { font-size: 17px; flex-shrink: 0; line-height: 1.4; width: 22px; text-align: center; }
   .v5-row .v5-bd { flex: 1; min-width: 0; overflow: hidden; }
   .v5-row .v5-lb { font-size: 10px; color: var(--dimmer); letter-spacing: 0.5px; margin-bottom: 3px; text-transform: uppercase; }
   .v5-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; overflow: hidden; }
-  .v5-tg { display: inline-flex; align-items: center; gap: 2px; padding: 3px 7px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .v5-tg { display: inline-flex; align-items: center; gap: 2px; padding: 3px 7px; border-radius: 6px; font-size: 11px; font-weight: 600; }
   .v5-tg.mv { background: rgba(34,211,238,0.10); color: var(--cyan); }
   .v5-tg.ht { background: rgba(167,139,250,0.10); color: var(--purple); }
   .v5-tg.gr { background: rgba(138,138,138,0.10); color: var(--dim); }
   .v5-tg.ps { background: rgba(74,222,128,0.08); color: var(--green); }
 
   .v5-row.vibe { background: rgba(245,158,11,0.03); }
-  .v5-row.vibe .v5-bd { color: var(--fire); font-size: 13px; line-height: 1.6; font-weight: 500; }
+  .v5-row.vibe .v5-desc { color: var(--fire); font-weight: 500; }
 
   .v5-desc { font-size: 12px; color: var(--dim); margin-top: 3px; line-height: 1.5; word-break: break-word; }
 
@@ -1650,23 +1650,15 @@ function renderPlanCard(p, i, direction) {
 
   // ── 1. 效果预期 ──
   if (p.result) {
-    c += `<div class="v5-row vibe"><div class="v5-ic">✨</div><div class="v5-bd"><div class="v5-lb">效果预期</div>${esc(p.result)}</div></div>`;
+    c += `<div class="v5-row vibe"><div class="v5-ic">✨</div><div class="v5-bd"><div class="v5-lb">效果预期</div><div class="v5-desc">${esc(p.result)}</div></div></div>`;
   }
 
-  // ── 2. 你怎么拍（shooter + gear 标签化）──
-  const shooterParts = [];
-  if (p.shooter) shooterParts.push(p.shooter);
-  if (shooterParts.length || p.gear) {
-    c += `<div class="v5-row"><div class="v5-ic">📍</div><div class="v5-bd"><div class="v5-lb">你怎么拍</div><div class="v5-tags">`;
-    if (p.shooter) {
-      // Parse shooter text into tags if possible, or show as text
-      const st = p.shooter;
-      if (st.includes('蹲')||st.includes('站')||st.includes('跪')) c += `<span class="v5-tg ht">🧎 ${esc(st)}</span>`;
-      else if (st.includes('走')||st.includes('退')||st.includes('移')||st.includes('靠')) c += `<span class="v5-tg mv">→ ${esc(st)}</span>`;
-      else c += `<span class="v5-tg mv">📷 ${esc(st)}</span>`;
-    }
-    if (p.gear) c += `<span class="v5-tg gr">⚙️ ${esc(p.gear)}</span>`;
-    c += `</div></div></div>`;
+  // ── 2. 你怎么拍（shooter 全文 + gear 标签）──
+  if (p.shooter || p.gear) {
+    c += `<div class="v5-row"><div class="v5-ic">📍</div><div class="v5-bd"><div class="v5-lb">你怎么拍</div>`;
+    if (p.shooter) c += `<div class="v5-desc">📷 ${esc(p.shooter)}</div>`;
+    if (p.gear) c += `<div class="v5-tags"><span class="v5-tg gr">⚙️ ${esc(p.gear)}</span></div>`;
+    c += `</div></div>`;
   }
 
   // ── 3. 被摄者动作 ──
