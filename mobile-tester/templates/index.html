@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>带拍 LAB · 本地测试</title>
+<title>带拍</title>
 <style>
   :root {
     --bg: #0a0a0a; --card: #141414; --card2: #1a1a1a; --text: #e8e8e8;
@@ -29,14 +29,7 @@
     -webkit-background-clip:text; -webkit-text-fill-color:transparent;
     display: flex; align-items: center; justify-content: center; gap: 6px;
   }
-  .lab-badge {
-    display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
-    padding: 2px 6px; border-radius: 4px;
-    background: rgba(167,139,250,0.2); color: var(--purple);
-    border: 1px solid rgba(167,139,250,0.35);
-    -webkit-text-fill-color: var(--purple);
-    vertical-align: middle; position: relative; top: -1px;
-  }
+
   .header p { font-size:12px; color:var(--dim); margin-top:2px; }
 
   /* ====== Device Bar ====== */
@@ -321,45 +314,35 @@
   }
   .plan-card-v5 .plan-img-wrap img { width: 100%; max-width: 100%; height: auto; display: block; }
 
-  /* v5 卡片行 */
-  .v5-row { padding: 10px 12px; display: flex; align-items: flex-start; gap: 4px; overflow: hidden; }
-  .v5-row + .v5-row { border-top: 1px solid rgba(255,255,255,0.04); }
-  .v5-row .v5-ic { font-size: 14px; flex-shrink: 0; line-height: 1.5; width: 18px; text-align: center; }
-  .v5-row .v5-bd { flex: 1; min-width: 0; overflow: hidden; }
-  .v5-row .v5-lb { font-size: 10px; color: var(--dimmer); letter-spacing: 0.5px; margin-bottom: 3px; text-transform: uppercase; }
-  .v5-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; overflow: hidden; }
+  /* v5 卡片行（纯文字标签在上，内容在下，左顶满） */
+  .v5-item { display: flex; flex-direction: column; gap: 4px; padding: 9px 12px; font-size: 12px; line-height: 1.5; }
+  .v5-item + .v5-item { border-top: 1px solid rgba(255,255,255,0.04); }
+  .v5-item.vibe { background: rgba(245,158,11,0.03); }
+  .v5-label { font-size: 10px; color: var(--dimmer); letter-spacing: 0.5px; text-transform: uppercase; }
+  .v5-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
   .v5-tg { display: inline-flex; align-items: center; gap: 2px; padding: 3px 7px; border-radius: 6px; font-size: 11px; font-weight: 600; }
   .v5-tg.mv { background: rgba(34,211,238,0.10); color: var(--cyan); }
   .v5-tg.ht { background: rgba(167,139,250,0.10); color: var(--purple); }
   .v5-tg.gr { background: rgba(138,138,138,0.10); color: var(--dim); }
   .v5-tg.ps { background: rgba(74,222,128,0.08); color: var(--green); }
 
-  .v5-row.vibe { background: rgba(245,158,11,0.03); }
-  .v5-row.vibe .v5-desc { color: var(--fire); font-weight: 500; }
+  .v5-post-text { color: var(--dim); word-break: break-word; font-size: 12px; line-height: 1.5; }
+  .v5-item.vibe .v5-post-text { color: var(--fire); font-weight: 500; }
 
-  .v5-desc { font-size: 12px; color: var(--dim); margin-top: 3px; line-height: 1.5; word-break: break-word; }
-
-  /* 构图详解折叠 */
-  .v5-detail { border-top: 1px solid rgba(255,255,255,0.04); }
+  /* 构图详解 & 后期折叠 */
+  .v5-detail, .v5-post-wrap { border-top: 1px solid rgba(255,255,255,0.04); }
   .v5-dhead { padding: 9px 12px; font-size: 12px; color: var(--dim); display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
   .v5-dhead .ar { font-size: 10px; transition: transform 0.2s; }
-  .v5-detail.open .v5-dhead .ar { transform: rotate(180deg); }
-  .v5-dbody { max-height: 0; overflow: hidden; transition: max-height 0.3s; }
+  .v5-detail.open .v5-dhead .ar, .v5-post-wrap.open .v5-dhead .ar { transform: rotate(180deg); }
+  .v5-dbody, .v5-post-body { max-height: 0; overflow: hidden; transition: max-height 0.3s; }
   .v5-detail.open .v5-dbody { max-height: 800px; overflow-y: auto; }
-  .v5-drow { padding: 9px 12px 9px 10px; font-size: 12px; line-height: 1.6; color: var(--dim); display: flex; gap: 8px; border-left: 3px solid var(--border); margin: 0 4px 0 8px; word-break: break-word; align-items: flex-start; }
-  .v5-drow + .v5-drow { margin-top: 3px; }
-  .v5-drow .v5-dnum { flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%; background: rgba(34,211,238,0.10); color: var(--cyan); font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; line-height: 1; margin-top: 1px; }
-
-  /* 后期（折叠面板） */
-  .v5-post-wrap { border-top: 1px solid rgba(255,255,255,0.04); }
-  .v5-post-wrap .v5-dhead { padding: 9px 12px; font-size: 12px; color: var(--dim); display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
-  .v5-post-wrap .v5-dhead .ar { font-size: 10px; transition: transform 0.2s; }
-  .v5-post-wrap.open .v5-dhead .ar { transform: rotate(180deg); }
-  .v5-post-body { max-height: 0; overflow: hidden; transition: max-height 0.3s; }
   .v5-post-wrap.open .v5-post-body { max-height: 500px; overflow-y: auto; }
   .v5-post-grid { display: flex; flex-direction: column; gap: 4px; padding: 0 12px 10px; }
   .v5-post-item { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.5; }
-  .v5-pcat { flex-shrink: 0; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 600; white-space: nowrap; min-width: 44px; text-align: center; }
+
+  /* Tag pills（后期 & 构图详解用） */
+  .v5-pcat { display: inline-block; width: fit-content; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 600; white-space: nowrap; text-align: center; line-height: 1.6; }
+  .v5-pcat.comp  { background: rgba(138,138,138,0.10); color: var(--dim); }
   .v5-pcat.color { background: rgba(245,158,11,0.12); color: var(--fire); }
   .v5-pcat.fx    { background: rgba(244,114,182,0.12); color: #f472b6; }
   .v5-pcat.ai    { background: rgba(167,139,250,0.12); color: var(--purple); }
@@ -562,7 +545,7 @@
 <div class="app">
 
   <div class="header">
-    <h1>📷 带拍 <span class="lab-badge">LAB</span></h1>
+    <h1>📷 带拍</h1>
     <p>拍照上传 → 场景分析 → 方向选择 → 出方案</p>
   </div>
 
@@ -1657,20 +1640,20 @@ function renderPlanCard(p, i, direction) {
 
   // ── 1. 效果预期 ──
   if (p.result) {
-    c += `<div class="v5-row vibe"><div class="v5-ic">✨</div><div class="v5-bd"><div class="v5-lb">效果预期</div><div class="v5-desc">${esc(p.result)}</div></div></div>`;
+    c += `<div class="v5-item vibe"><div class="v5-label">✨ 效果预期</div><div class="v5-post-text">${esc(p.result)}</div></div>`;
   }
 
   // ── 2. 你怎么拍（shooter 全文 + gear 标签）──
   if (p.shooter || p.gear) {
-    c += `<div class="v5-row"><div class="v5-ic">📍</div><div class="v5-bd"><div class="v5-lb">你怎么拍</div>`;
-    if (p.shooter) c += `<div class="v5-desc">📷 ${esc(p.shooter)}</div>`;
+    c += `<div class="v5-item"><div class="v5-label">📍 你怎么拍</div>`;
+    if (p.shooter) c += `<div class="v5-post-text">📷 ${esc(p.shooter)}</div>`;
     if (p.gear) c += `<div class="v5-tags"><span class="v5-tg gr">⚙️ ${esc(p.gear)}</span></div>`;
-    c += `</div></div>`;
+    c += `</div>`;
   }
 
   // ── 3. 被摄者动作 ──
   if (p.subject) {
-    c += `<div class="v5-row"><div class="v5-ic">🧍</div><div class="v5-bd"><div class="v5-lb">被摄者动作</div><div class="v5-tags">`;
+    c += `<div class="v5-item"><div class="v5-label">🧍 被摄者动作</div><div class="v5-tags">`;
     // Extract pose hints from subject text
     const subj = p.subject;
     const poseKeywords = [
@@ -1685,18 +1668,18 @@ function renderPlanCard(p, i, direction) {
       if (pk.re.test(subj)) { c += `<span class="v5-tg ps">${pk.i} ${pk.t}</span>`; found = true; }
     }
     if (!found) c += `<span class="v5-tg ps">🧍 姿势</span>`;
-    c += `</div><div class="v5-desc">${esc(subj)}</div></div></div>`;
+    c += `</div><div class="v5-post-text">${esc(subj)}</div></div>`;
   }
 
   // ── 4. 构图详解（折叠：enhance + why + prep + perspective）──
   const detailItems = [];
-      if (p.prep) detailItems.push({i:'①',t:p.prep});
-      if (p.enhance) detailItems.push({i:'②',t:p.enhance});
-      if (p.why) detailItems.push({i:'③',t:p.why});
-      if (p.perspective) detailItems.push({i:'④',t:p.perspective});
-  if (detailItems.length) {
-    c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div><div class="v5-dbody">`;
-      detailItems.forEach(d => { c += `<div class="v5-drow"><span class="v5-dnum">${d.i}</span><span>${esc(d.t)}</span></div>`; });
+      if (p.prep) detailItems.push({i:'① 准备',t:p.prep});
+      if (p.enhance) detailItems.push({i:'② 增强',t:p.enhance});
+      if (p.why) detailItems.push({i:'③ 原理',t:p.why});
+      if (p.perspective) detailItems.push({i:'④ 视角',t:p.perspective});
+    c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
+      detailItems.forEach(d => { c += `<div class="v5-post-item"><span class="v5-pcat comp">${d.i}</span><span class="v5-post-text">${esc(d.t)}</span></div>`; });
+    c += `</div></div></div>`;
     c += `</div></div>`;
   }
 
