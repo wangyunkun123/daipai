@@ -31,8 +31,11 @@ from database import accumulate, query_scene_context, query_scene_techniques_for
 # v5: 增强方案图生成（PIL）
 # ═══════════════════════════════════════════════════════════
 
-PLAN_IMG_DIR = os.path.join(os.path.dirname(__file__), "static", "plan_images")
-os.makedirs(PLAN_IMG_DIR, exist_ok=True)
+def _get_plan_img_dir():
+    d = os.path.join(os.path.dirname(__file__), "static", "plan_images")
+    try: os.makedirs(d, exist_ok=True)
+    except Exception: pass
+    return d
 
 def _load_font(size):
     for fp in ["/System/Library/Fonts/STHeiti Medium.ttc", "/System/Library/Fonts/PingFang.ttc",
@@ -185,7 +188,7 @@ def generate_plan_image(photo_path, plan, plan_index, output_key):
         result = Image.alpha_composite(result, layer)
     result = result.convert("RGB")
 
-    out_path = os.path.join(PLAN_IMG_DIR, f"{output_key}.jpg")
+    out_path = os.path.join(_get_plan_img_dir(), f"{output_key}.jpg")
     result.save(out_path, "JPEG", quality=88)
     return f"/static/plan_images/{output_key}.jpg"
 
