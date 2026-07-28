@@ -23,9 +23,9 @@ from dotenv import load_dotenv
 load_dotenv()
 from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
-from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation
+from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map
 from search_web import search_style_inspiration, search_location_intel
-from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel
+from database import accumulate, query_scene_context, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -1781,7 +1781,9 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
 
         # 风格积累上下文
         scene_type = vision_json.get('scene_type', '')
-        style_context = query_scene_context(scene_type)
+        location_clues = vision_json.get('location_clues', '')
+        scene_category = extract_scene_category(scene_type, location_clues)
+        style_context = query_scene_context(scene_type, category=scene_category)
 
         # ── EXIF 交叉验证（v4.0）──
         exif_cross_check = ""
@@ -1849,7 +1851,10 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
                 log_search(trace_id, 'style', scene_type[:200],
                           search_meta.get('total_results', 0) if isinstance(search_meta, dict) else 0,
                           search_quality_web, source_types_str, search_duration,
-                          results_summary=search_text[:500] if search_text else None)
+                          results_summary=search_text[:500] if search_text else None,
+                          keywords_used=','.join(search_meta.get('keywords', [])) if isinstance(search_meta, dict) else '',
+                          useful_data=search_meta.get('useful_data', '') if isinstance(search_meta, dict) else '',
+                          authenticity=search_meta.get('authenticity', 'unknown') if isinstance(search_meta, dict) else 'unknown')
             except Exception:
                 pass
         except Exception as e:
@@ -2029,7 +2034,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
 
         # ── 风格积累（异步不影响响应）──
         try:
-            accumulate(scene_type, discovered_styles, techniques_used)
+            accumulate(scene_type, discovered_styles, techniques_used, scene_category=scene_category)
         except Exception as e:
             print(f"[StyleCache] Accumulate error: {e}", file=sys.stderr, flush=True)
 
@@ -2623,6 +2628,10 @@ def admin_stats():
         style_panel = get_style_technique_panel()
     except Exception:
         style_panel = {}
+    try:
+        knowledge_quality = get_source_quality_map()
+    except Exception:
+        knowledge_quality = {}
 
     return jsonify({
         "db": db_stats,
@@ -2634,7 +2643,8 @@ def admin_stats():
         "processing": _processing,
         "api_stats": api_stats,
         "search_stats": search_stats,
-        "style_panel": style_panel
+        "style_panel": style_panel,
+        "knowledge_quality": knowledge_quality
     })
 
 
@@ -2737,6 +2747,10 @@ if __name__ == '__main__':
         applied = apply_pending_sync()
         if applied:
             print(f"[Init] Applied {applied} pending sync items from Claude", file=sys.stderr, flush=True)
+        # v3.8: 知识库种子数据（首次启动写入 styles/techniques 表）
+        seeded = seed_from_knowledge_base()
+        if seeded:
+            print(f"[Init] Seeded {seeded} styles/techniques from knowledge_base", file=sys.stderr, flush=True)
     except Exception as e:
         print(f"[Init] Migration/sync error (non-fatal): {e}", file=sys.stderr, flush=True)
 

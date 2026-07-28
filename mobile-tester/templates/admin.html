@@ -156,6 +156,19 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 </table>
 </div>
 
+<!-- 📊 v3.8: 数据真实性 & 知识库质量 -->
+<h2>📊 数据真实性</h2>
+<div class="stats-grid" id="knowledgeQualityGrid"></div>
+<div style="overflow-x:auto">
+<table class="fb-table">
+<thead><tr><th>知识库来源</th><th>文件数</th><th>占比</th></tr></thead>
+<tbody id="knowledgeQualityBody"></tbody>
+</table>
+</div>
+
+<h2 style="font-size:13px;margin-top:12px">🌐 搜索真实性分布</h2>
+<div class="stats-grid" id="searchAuthGrid"></div>
+
 <script>
 const REASON_LABELS = {
   'too_slow': '⏱️ 时间太久了',
@@ -323,6 +336,8 @@ function render(d) {
   renderApiStats(d.api_stats);
   renderSearchStats(d.search_stats);
   renderStylePanel(d.style_panel);
+  renderKnowledgeQuality(d.knowledge_quality);
+  renderSearchAuth(d.search_stats);
 }
 
 // ── v3.6: AI API 调用监控渲染 ──
@@ -487,6 +502,79 @@ function renderStylePanel(sp) {
         <td style="font-size:10px;color:var(--dimmer)">${date}</td>
       </tr>`;
     }).join('');
+  }
+}
+
+// ── v3.8: 知识库来源质量渲染 ──
+function renderKnowledgeQuality(kq) {
+  const grid = document.getElementById('knowledgeQualityGrid');
+  const body = document.getElementById('knowledgeQualityBody');
+  if (!kq || !kq.distribution) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">暂无知识库质量数据</div>';
+    body.innerHTML = '<tr><td colspan="3" class="empty">暂无数据</td></tr>';
+    return;
+  }
+
+  const dist = kq.distribution;
+  const total = (dist.verified||0) + (dist.real_world||0) + (dist.ai_inferred||0) + (dist.ai_generated||0);
+  const pct = (n) => total > 0 ? Math.round(n/total*100) : 0;
+
+  const labels = {
+    'verified': '✅ 可查证教材/大师',
+    'real_world': '🌐 真实互联网趋势',
+    'ai_inferred': '💡 AI推理(有真实混合)',
+    'ai_generated': '🤖 AI原创(无来源)'
+  };
+  const colors = {
+    'verified': '#4ade80',
+    'real_world': '#22d3ee',
+    'ai_inferred': '#f59e0b',
+    'ai_generated': '#ef4444'
+  };
+
+  grid.innerHTML = Object.entries(dist).map(([k,v]) =>
+    `<div class="stat-card"><div class="val" style="color:${colors[k]||'#888'}">${v}</div><div class="lbl">${labels[k]||k}</div></div>`
+  ).join('');
+
+  body.innerHTML = Object.entries(dist).map(([k,v]) => {
+    const p = pct(v);
+    return `<tr>
+      <td>${labels[k]||k}</td>
+      <td>${v}</td>
+      <td><span style="color:${colors[k]||'#888'}">${p}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── v3.8: 搜索真实性分布渲染 ──
+function renderSearchAuth(ss) {
+  const grid = document.getElementById('searchAuthGrid');
+  if (!ss || !ss.auth_dist || ss.auth_dist.length === 0) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">暂无搜索真实性数据（新搜索后自动积累）</div>';
+    return;
+  }
+
+  const labels = {
+    'real_community': '✅ 真实社区内容',
+    'mixed': '🟡 混合来源',
+    'unknown': '❓ 未知来源',
+    'ai_content': '🤖 AI内容农场'
+  };
+  const colors = {
+    'real_community': '#4ade80',
+    'mixed': '#f59e0b',
+    'unknown': '#8a8a8a',
+    'ai_content': '#ef4444'
+  };
+
+  grid.innerHTML = ss.auth_dist.map(a =>
+    `<div class="stat-card"><div class="val" style="color:${colors[a.authenticity]||'#888'}">${a.cnt}</div><div class="lbl">${labels[a.authenticity]||a.authenticity}</div></div>`
+  ).join('');
+
+  // 如果有有用数据统计也显示
+  if (ss.useful_total != null) {
+    grid.innerHTML += `<div class="stat-card"><div class="val green">${ss.useful_total||0}</div><div class="lbl">📌 含可用数据的搜索</div></div>`;
+    grid.innerHTML += `<div class="stat-card"><div class="val" style="color:#a78bfa">${ss.total_with_results||0}</div><div class="lbl">🎯 有返回结果的搜索</div></div>`;
   }
 }
 

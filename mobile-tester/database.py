@@ -185,18 +185,104 @@ def _init_tables(conn):
     except Exception:
         pass  # 列已存在
 
+    # v3.8: 迁移——scene_matches 加 scene_category 列
+    try:
+        conn.execute("ALTER TABLE scene_matches ADD COLUMN scene_category TEXT DEFAULT ''")
+        conn.commit()
+        print("[DB] Migration: added scene_category column to scene_matches", file=sys.stderr, flush=True)
+    except Exception:
+        pass
+
+    # v3.8: 迁移——search_log 加搜索监控列
+    try:
+        conn.execute("ALTER TABLE search_log ADD COLUMN keywords_used TEXT DEFAULT ''")
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE search_log ADD COLUMN useful_data TEXT DEFAULT ''")
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE search_log ADD COLUMN authenticity TEXT DEFAULT 'unknown'")
+        conn.commit()
+        print("[DB] Migration: added keywords_used/useful_data/authenticity to search_log", file=sys.stderr, flush=True)
+    except Exception:
+        pass
+
+
+# ============================================================
+# 场景分类体系（v3.8——替代 LIKE 模糊匹配）
+# ============================================================
+
+SCENE_CATEGORY_RULES = [
+    ("sports_venue", ["球场", "跑道", "泳池", "冰场", "健身房", "体育馆", "网球场", "篮球场", "足球场", "运动场", "球馆", "赛馆"]),
+    ("f_and_b", ["咖啡厅", "咖啡馆", "咖啡", "餐厅", "酒吧", "茶馆", "便利店", "食堂", "甜品店", "奶茶", "饭店", "小食"]),
+    ("transit_station", ["地铁站", "地铁", "火车站", "机场", "高铁站", "候车室", "公交站", "轻轨", "站台", "车厢"]),
+    ("commercial", ["商场", "书店", "展览馆", "超市", "购物中心", "店铺", "商店", "展馆", "集市", "步行街"]),
+    ("park_nature", ["公园", "森林", "草地", "花海", "植物园", "郊野", "登山", "山林", "草坪", "树林", "步道", "自然", "山岳"]),
+    ("waterside", ["海边", "海滩", "河滨", "湖岸", "泳池边", "水库", "江边", "海岸", "湖畔", "河岸", "码头", "河流"]),
+    ("urban_street", ["商业街", "马路", "街道", "巷弄", "霓虹街道", "路边", "街区", "街景", "老城", "夜市", "步行街", "胡同"]),
+    ("cultural_site", ["博物馆", "寺庙", "园林", "图书馆", "美术馆", "古建筑", "祠堂", "古迹", "教堂", "故居", "遗址"]),
+    ("residential", ["客厅", "卧室", "阳台", "小区", "居家", "住宅", "书房", "公寓", "宿舍", "晾衣"]),
+    ("industrial_ruins", ["废弃工厂", "拆迁", "工地", "废墟", "旧厂房", "废弃", "烂尾楼"]),
+    ("campus", ["学校", "操场", "教室", "大学", "教学楼", "校园"]),
+    ("night_scene", ["夜景", "夜间", "夜晚", "夜", "霓虹", "灯会"]),
+]
+
+
+def extract_scene_category(scene_type, location_clues=''):
+    """
+    从场景类型文本中提取场景分类标签。
+    返回类别名如 'sports_venue'，无匹配返回空字符串。
+    """
+    if not scene_type:
+        return ""
+    # 合并场景描述和位置线索
+    text = f"{scene_type} {location_clues or ''}"
+    # 清洗标注前缀
+    text = text.replace("[观察]", "").replace("[推测]", "")
+
+    best_category = ""
+    best_score = 0
+
+    for category, keywords in SCENE_CATEGORY_RULES:
+        score = 0
+        for kw in keywords:
+            if kw in text:
+                # 越长关键词权重越高
+                score += len(kw) * 2
+        if score > best_score:
+            best_score = score
+            best_category = category
+
+    if best_score >= 4:  # 至少匹配到2字关键词
+        return best_category
+    # fallback: 根据室内/室外做粗分类
+    if "室内" in scene_type:
+        return "indoor_generic"
+    elif "室外" in scene_type:
+        return "outdoor_generic"
+    return ""
+
 
 # ============================================================
 # 风格积累（替代 style_cache.json 的 accumulate_styles）
 # ============================================================
 
-def accumulate(scene_type, discovered_styles, techniques_used):
+def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''):
     """
     积累发现的风格和技法到数据库。
     自动去重：同名风格追加 verify_count。
+    v3.8: 新增 scene_category 参数——按场景类别分组积累
     """
     if not scene_type:
         return
+
+    # 自动提取场景类别（如果调用方未传入）
+    if not scene_category:
+        scene_category = extract_scene_category(scene_type)
 
     conn = get_db()
     try:
@@ -217,12 +303,12 @@ def accumulate(scene_type, discovered_styles, techniques_used):
                     updated_at = datetime('now')
             """, (name, source_type, fit_rationale))
 
-            # link to scene
+            # link to scene (with category)
             style_id = conn.execute("SELECT id FROM styles WHERE name=?", (name,)).fetchone()[0]
             conn.execute("""
-                INSERT INTO scene_matches (scene_type, style_id, match_type)
-                VALUES (?, ?, 'style')
-            """, (scene_type, style_id))
+                INSERT INTO scene_matches (scene_type, style_id, match_type, scene_category)
+                VALUES (?, ?, 'style', ?)
+            """, (scene_type, style_id, scene_category))
 
         for t in (techniques_used or []):
             name = t.get('name', '').strip()
@@ -241,12 +327,12 @@ def accumulate(scene_type, discovered_styles, techniques_used):
 
             tech_id = conn.execute("SELECT id FROM techniques WHERE name=?", (name,)).fetchone()[0]
             conn.execute("""
-                INSERT INTO scene_matches (scene_type, technique_id, match_type)
-                VALUES (?, ?, 'technique')
-            """, (scene_type, tech_id))
+                INSERT INTO scene_matches (scene_type, technique_id, match_type, scene_category)
+                VALUES (?, ?, 'technique', ?)
+            """, (scene_type, tech_id, scene_category))
 
         conn.commit()
-        print(f"[DB] Accumulated to '{scene_type[:50]}': {len(discovered_styles or [])} styles, {len(techniques_used or [])} techniques",
+        print(f"[DB] Accumulated to '{scene_type[:50]}' (cat={scene_category}): {len(discovered_styles or [])} styles, {len(techniques_used or [])} techniques",
               file=sys.stderr, flush=True)
     except Exception as e:
         conn.rollback()
@@ -255,34 +341,74 @@ def accumulate(scene_type, discovered_styles, techniques_used):
         conn.close()
 
 
-def query_scene_context(scene_type):
+def query_scene_context(scene_type, category=''):
     """
-    查询同类型场景的历史积累（替代 style_cache.json 的 get_style_context）。
-    模糊匹配场景类型。
+    查询同类型场景的历史积累（v3.8: 按场景类别精确匹配）。
+
+    优先按 scene_category 精确匹配（如 'sports_venue'），
+    同类场景共享风格/技法经验，不同类别不交叉污染。
+    Fallback: LIKE 模糊匹配（兼容旧数据）。
     """
     if not scene_type:
         return ""
 
+    # 自动提取类别
+    if not category:
+        category = extract_scene_category(scene_type)
+
     conn = get_db()
     try:
-        # 模糊匹配：找包含关键词的场景
-        keywords = scene_type.replace("[观察]", "").replace("[推测]", "").replace("—", " ").split()
-        # 取前3个有意义的词
-        search_terms = [k for k in keywords if len(k) >= 2][:3]
+        params = []
 
-        if not search_terms:
+        if category:
+            # ── v3.8: 场景类别精确匹配 ──
+            where_clause = "sm.scene_category = ?"
+            params = [category]
+
+            # 同时统计同类场景总数
+            total_rows = conn.execute("""
+                SELECT COUNT(DISTINCT sm.scene_type) FROM scene_matches sm
+                WHERE sm.scene_category = ?
+            """, params).fetchone()[0]
+
+            # 如果同类数据为空，fallback 到室内/室外粗分类
+            if total_rows == 0:
+                if category.startswith("indoor"):
+                    fallback_cat = "indoor_generic"
+                elif category.startswith("outdoor"):
+                    fallback_cat = "outdoor_generic"
+                else:
+                    fallback_cat = ""
+                if fallback_cat:
+                    params = [fallback_cat]
+                    where_clause = "sm.scene_category = ?"
+                    total_rows = conn.execute("""
+                        SELECT COUNT(DISTINCT sm.scene_type) FROM scene_matches sm
+                        WHERE sm.scene_category = ?
+                    """, params).fetchone()[0]
+        else:
+            # ── Fallback: LIKE 模糊匹配（旧行为）──
+            keywords = scene_type.replace("[观察]", "").replace("[推测]", "").replace("—", " ").split()
+            search_terms = [k for k in keywords if len(k) >= 2][:3]
+            if not search_terms:
+                return ""
+            like_clauses = " OR ".join(["sm.scene_type LIKE ?" for _ in search_terms])
+            where_clause = like_clauses
+            params = [f"%{t}%" for t in search_terms]
+            total_rows = conn.execute(f"""
+                SELECT COUNT(DISTINCT sm.scene_type) FROM scene_matches sm
+                WHERE {where_clause}
+            """, params).fetchone()[0]
+
+        if total_rows == 0:
             return ""
-
-        # 构建 LIKE 查询
-        like_clauses = " OR ".join(["scene_type LIKE ?" for _ in search_terms])
-        params = [f"%{t}%" for t in search_terms]
 
         rows = conn.execute(f"""
             SELECT DISTINCT s.name as style_name, s.source_type, s.verify_count,
                    sm.scene_type, sm.use_count
             FROM scene_matches sm
             JOIN styles s ON sm.style_id = s.id
-            WHERE sm.match_type = 'style' AND ({like_clauses})
+            WHERE sm.match_type = 'style' AND ({where_clause})
             ORDER BY s.verify_count DESC
             LIMIT 10
         """, params).fetchall()
@@ -291,7 +417,7 @@ def query_scene_context(scene_type):
             SELECT DISTINCT t.name as tech_name, t.source_type, t.verify_count, t.description
             FROM scene_matches sm
             JOIN techniques t ON sm.technique_id = t.id
-            WHERE sm.match_type = 'technique' AND ({like_clauses})
+            WHERE sm.match_type = 'technique' AND ({where_clause})
             ORDER BY t.verify_count DESC
             LIMIT 10
         """, params).fetchall()
@@ -299,12 +425,8 @@ def query_scene_context(scene_type):
         if not rows and not tech_rows:
             return ""
 
-        total = conn.execute(f"""
-            SELECT COUNT(DISTINCT sm.scene_type) FROM scene_matches sm
-            WHERE {like_clauses}
-        """, params).fetchone()[0]
-
-        ctx = f"\n## 📚 历史积累（相似场景 {total} 次分析）\n"
+        cat_label = category or "未知"
+        ctx = f"\n## 📚 历史积累（「{cat_label}」类场景，{total_rows} 次分析）\n"
         if rows:
             ctx += "### 过往匹配的风格\n"
             seen = set()
@@ -490,17 +612,22 @@ def log_api_call(session_id, call_type, model='', prompt_tokens=0,
 
 def log_search(session_id, search_type, query_text='', result_count=0,
                result_quality='🔴', source_types=None, duration_ms=0,
-               results_summary=None):
-    """记录一次 Web 搜索执行（v3.7: 可选 results_summary 存搜索摘要）"""
+               results_summary=None, keywords_used=None, useful_data=None,
+               authenticity='unknown'):
+    """记录一次 Web 搜索执行（v3.8: 新增搜索关键词/有用数据/真实性监控）"""
     conn = get_db()
     try:
         conn.execute("""
             INSERT INTO search_log (session_id, search_type, query_text, result_count,
-                                    result_quality, source_types, duration_ms, results_summary)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                    result_quality, source_types, duration_ms, results_summary,
+                                    keywords_used, useful_data, authenticity)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (session_id, search_type, query_text[:300], result_count,
               result_quality, source_types or '', duration_ms,
-              (results_summary or '')[:500]))
+              (results_summary or '')[:500],
+              (keywords_used or '')[:500],
+              (useful_data or '')[:200],
+              authenticity or 'unknown'))
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -583,7 +710,8 @@ def get_search_stats():
         # 最近 30 条
         recent = [dict(r) for r in conn.execute("""
             SELECT session_id, search_type, query_text, result_count,
-                   result_quality, source_types, duration_ms, results_summary, created_at
+                   result_quality, source_types, duration_ms, results_summary,
+                   keywords_used, useful_data, authenticity, created_at
             FROM search_log ORDER BY id DESC LIMIT 30
         """).fetchall()]
 
@@ -595,12 +723,26 @@ def get_search_stats():
             GROUP BY day ORDER BY day
         """).fetchall()]
 
+        # v3.8: 真实性分布
+        auth_dist = [dict(r) for r in conn.execute("""
+            SELECT authenticity, COUNT(*) as cnt
+            FROM search_log WHERE authenticity != 'unknown'
+            GROUP BY authenticity ORDER BY cnt DESC
+        """).fetchall()]
+
+        # v3.8: 有用数据命中率
+        useful_total = conn.execute(
+            "SELECT COUNT(*) FROM search_log WHERE useful_data != ''"
+        ).fetchone()[0]
+
         return {
             "today_searches": [dict(r) for r in today_searches],
             "total_searches": total_searches,
             "total_with_results": total_with_results,
             "recent": recent,
             "trend": trend,
+            "auth_dist": auth_dist,
+            "useful_total": useful_total,
         }
     finally:
         conn.close()
@@ -651,6 +793,66 @@ def get_style_technique_panel():
             "top_techniques": top_techniques,
             "scene_dist": scene_dist,
         }
+    finally:
+        conn.close()
+
+
+# ============================================================
+# v3.8: 知识库种子数据——用 verified/real_world 内容初始化风格技法表
+# ============================================================
+
+def seed_from_knowledge_base():
+    """
+    从知识库中提取有可靠来源的风格/技法，写入数据库作为种子数据。
+    仅运行一次——检测已有 knowledge_base 来源的记录后跳过。
+    返回写入数量。
+    """
+    conn = get_db()
+    try:
+        # 门控：已有种子数据则跳过
+        existing = conn.execute(
+            "SELECT COUNT(*) FROM styles WHERE source_type = 'knowledge_base'"
+        ).fetchone()[0]
+        if existing > 0:
+            print(f"[DB] Seed: {existing} knowledge_base styles already exist, skipping", file=sys.stderr, flush=True)
+            return 0
+
+        # 从 knowledge_base 导入（避免循环导入）
+        try:
+            from knowledge_base import STYLE_ONE_LINERS, VERIFIED_TECHNIQUES
+        except ImportError:
+            print("[DB] Seed: Cannot import from knowledge_base", file=sys.stderr, flush=True)
+            return 0
+
+        count_styles = 0
+        count_techs = 0
+
+        # ── 种子风格 ──
+        for name, one_liner in STYLE_ONE_LINERS.items():
+            conn.execute("""
+                INSERT OR IGNORE INTO styles (name, one_liner, source_type, fit_rationale, verify_count)
+                VALUES (?, ?, 'knowledge_base', ?, 10)
+            """, (name, one_liner, f"知识库种子：{one_liner[:200]}"))
+            if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                count_styles += 1
+
+        # ── 种子技法 ──
+        for tech in (VERIFIED_TECHNIQUES or []):
+            conn.execute("""
+                INSERT OR IGNORE INTO techniques (name, source_type, description, verify_count)
+                VALUES (?, 'knowledge_base', ?, 10)
+            """, (tech['name'], tech.get('description', '')))
+            if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                count_techs += 1
+
+        conn.commit()
+        print(f"[DB] Seed: inserted {count_styles} styles + {count_techs} techniques from knowledge_base",
+              file=sys.stderr, flush=True)
+        return count_styles + count_techs
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Seed error: {e}", file=sys.stderr, flush=True)
+        return 0
     finally:
         conn.close()
 

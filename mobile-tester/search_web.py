@@ -135,7 +135,44 @@ def search_style_inspiration(scene_type, people_info=""):
     if overall == "🟡":
         honest_note = "社区搜索结果有限——以下风格推荐主要基于摄影原理推理，非社区验证。"
 
-    return summary_text, overall, {"sources": sources, "honest_note": honest_note}
+    # v3.8: 真实性判定 & 有用数据分类
+    community_count = sources.get("community", 0)
+    portfolio_count = sources.get("portfolio", 0)
+    tutorial_count = sources.get("tutorial", 0)
+
+    if community_count >= 3:
+        authenticity = "real_community"
+    elif community_count + portfolio_count >= 3:
+        authenticity = "mixed"
+    elif tutorial_count >= 2:
+        authenticity = "mixed"
+    else:
+        authenticity = "unknown"
+
+    # 有用数据标签
+    useful_tags = []
+    all_snippets = " ".join(r["snippet"][:100] for _, results in all_results for r in results[:2])
+    if any(kw in all_snippets for kw in ["姿势", "pose", "站", "动作", "表情"]):
+        useful_tags.append("pose_guides")
+    if any(kw in all_snippets for kw in ["风格", "色调", "滤镜", "调色", "氛围", "style"]):
+        useful_tags.append("style_names")
+    if any(kw in all_snippets for kw in ["构图", "角度", "机位", "光线", "光", "视角"]):
+        useful_tags.append("techniques")
+    if any(kw in all_snippets for kw in ["打卡", "机位", "拍照点", "最佳"]):
+        useful_tags.append("location_tips")
+    useful_data = ",".join(useful_tags) if useful_tags else "general"
+
+    # 实际搜索关键词
+    keywords_used = [q for q, _ in all_results]
+
+    return summary_text, overall, {
+        "sources": sources,
+        "honest_note": honest_note,
+        "keywords": keywords_used,
+        "authenticity": authenticity,
+        "useful_data": useful_data,
+        "total_results": sum(len(results) for _, results in all_results),
+    }
 
 
 def search_location_intel(place_name, scene_type=""):

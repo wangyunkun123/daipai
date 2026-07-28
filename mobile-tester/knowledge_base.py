@@ -344,6 +344,121 @@ def get_device_adaptation(device_key):
     return device_tips.get(device_key, "")
 
 
+# ============================================================
+# v3.8: 知识库来源质量验证
+# ============================================================
+
+# 可查证的真实来源（摄影教材/大师/艺术家）
+VERIFIED_SOURCES = [
+    "Freeman", "Adams", "Barnbaum", "Hunter", "Valenzuela",
+    "Cartier-Bresson", "Albers", "Arnheim", "Wertheimer", "Koffka", "Köhler",
+    "Barrett", "Morandi", "Hopper", "Slim Aarons",
+    "Monet", "Hokusai", "Hiroshige", "Vermeer", "Rembrandt",
+    "森山大道", "滨田英明", "何藩", "张艺谋", "王家卫", "杜可风",
+    "川内伦子", "张克纯", "Martin Parr", "William Klein", "Saul Leiter",
+    "Wes Anderson", "宫崎骏", "新海诚", "Christopher Doyle",
+    "Liam Wong", "Todd Hido",
+]
+
+# AI 工具名（出现在 source 字段中 = AI 参与生成）
+AI_SOURCES = ["豆包", "Claude", "ChatGPT"]
+
+# 互联网真实趋势（出现在 source 字段中 = 来自真实平台）
+REAL_WORLD_SOURCES = [
+    "小红书", "抖音", "Instagram", "IG", "TikTok",
+    "Pinterest", "Tumblr", "VOGUE", "Bilibili", "微博", "YouTube"
+]
+
+# 知识库种子技法（从 verified 文件中提取的构图/光线/姿势核心技法）
+VERIFIED_TECHNIQUES = [
+    {"name": "引导线构图", "description": "利用场景中的线条（道路/栏杆/建筑边缘）引导视线至主体——Freeman《摄影师的视界》"},
+    {"name": "三分法构图", "description": "将主体放在画面1/3处而非正中，创造视觉张力——Freeman《摄影师的视界》"},
+    {"name": "对称构图", "description": "利用水面倒影/建筑中轴创造镜像对称，表达秩序与稳定"},
+    {"name": "框架构图", "description": "用门窗/拱门/树枝作前景框架，增加空间层次感——Freeman《摄影师的视界》"},
+    {"name": "留白构图", "description": "大量负空间让主体呼吸，极简高级——Barnbaum《摄影的艺术》"},
+    {"name": "对角线构图", "description": "利用倾斜线条增加动感和张力，打破画面的静态平衡"},
+    {"name": "逆光人像", "description": "人物背对光源，产生轮廓光/发丝光——Hunter《Light Science & Magic》"},
+    {"name": "窗光侧光", "description": "利用窗户形成天然柔光箱，产生立体感——维米尔式布光"},
+    {"name": "黄金时刻拍摄", "description": "日落前后1小时的低角度暖光，色温约3000-4000K"},
+    {"name": "蓝调时刻拍摄", "description": "日落后20-40分钟天空呈深蓝色，适合城市灯光与天色冷暖对比"},
+    {"name": "决定性瞬间", "description": "等待人物动作/表情/光线最佳交汇的一瞬间按下快门——Cartier-Bresson"},
+    {"name": "景深虚化", "description": "用大光圈(f/1.4-f/2.8)分离主体与背景，突出人物"},
+    {"name": "低角度仰拍", "description": "从低处向上拍摄，让主体显得更有力量感和延伸感"},
+    {"name": "俯拍鸟瞰", "description": "从高处向下拍摄，创造扁平化图案感和上帝视角"},
+    {"name": "运动连拍选片", "description": "动态场景用高速连拍+后期选最佳瞬间，而非追求单张完美"},
+    {"name": "前景虚化增加层次", "description": "在镜头前放置半透明物体（树叶/玻璃/纱帘）虚化后形成梦幻前景"},
+]
+
+
+def get_source_quality_map():
+    """
+    扫描知识库全部文件，按 frontmatter source 字段标注来源质量。
+    返回 {filename: quality} 及分布统计。
+    quality: verified | real_world | ai_inferred | ai_generated
+    """
+    import os as _os
+    kb_dir = _os.path.join(_os.path.dirname(__file__), "..", ".claude", "skills", "daipai", "knowledge")
+    if not _os.path.isdir(kb_dir):
+        return {"distribution": {}, "files": {}}
+
+    distribution = {"verified": 0, "real_world": 0, "ai_inferred": 0, "ai_generated": 0}
+    files = {}
+
+    for root, dirs, filenames in _os.walk(kb_dir):
+        for fn in filenames:
+            if not fn.endswith(".md"):
+                continue
+            fpath = _os.path.join(root, fn)
+            rel = _os.path.relpath(fpath, kb_dir)
+            try:
+                with open(fpath, "r") as f:
+                    content = f.read(2000)  # 只读前面部分找 frontmatter
+                # 提取 source 字段
+                source_val = ""
+                in_fm = False
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if line == "---":
+                        if not in_fm:
+                            in_fm = True
+                            continue
+                        else:
+                            break
+                    if in_fm and line.startswith("source:"):
+                        source_val = line.split(":", 1)[1].strip()
+                        break
+
+                quality = _classify_source(source_val)
+                distribution[quality] = distribution.get(quality, 0) + 1
+                files[rel] = quality
+            except Exception:
+                files[rel] = "ai_generated"  # 读失败视为AI生成
+                distribution["ai_generated"] += 1
+
+    return {"distribution": distribution, "files": files}
+
+
+def _classify_source(source_str):
+    """分类单个 source 字段"""
+    if not source_str:
+        return "ai_generated"
+
+    has_verified = any(s in source_str for s in VERIFIED_SOURCES)
+    has_ai = any(s in source_str for s in AI_SOURCES)
+    has_real = any(s in source_str for s in REAL_WORLD_SOURCES)
+
+    if has_verified and not has_ai and not has_real:
+        return "verified"
+    if has_real:
+        return "real_world"
+    if has_verified and has_ai:
+        return "ai_inferred"
+    if has_ai:
+        return "ai_generated"
+    # 兜底：有来源但不是标准来源 → AI 推理
+    return "ai_inferred"
+
+
 def get_all_knowledge_for_prompt(scene_type="", device_key="", light_condition=""):
     """
     主入口：返回完整知识注入文本，直接拼入 LLM prompt。
