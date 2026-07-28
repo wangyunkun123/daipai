@@ -1592,6 +1592,44 @@ function renderPlans(plans, direction) {
   $('#reshootBtn').style.display = 'block';
   $('#plansArea').scrollIntoView({ behavior:'smooth' });
   saveSessionId();
+
+  // 🔬 溢出诊断：检查是否有点元素超出屏幕宽度
+  setTimeout(() => {
+    const vw = window.innerWidth;
+    const bodyW = document.body.scrollWidth;
+    const appW = document.querySelector('.app')?.scrollWidth || 0;
+    const issues = [];
+    if (bodyW > vw + 2) issues.push(`body溢出:${bodyW}px > 屏幕:${vw}px`);
+    if (appW > vw + 2) issues.push(`.app溢出:${appW}px > 屏幕:${vw}px`);
+    // 检查所有直接子元素
+    document.querySelectorAll('.app > *').forEach(el => {
+      if (el.scrollWidth > vw + 2) {
+        issues.push(`${el.className||el.tagName} 宽度:${el.scrollWidth}px > 屏幕:${vw}px`);
+      }
+    });
+    // 检查 plan-card-v5
+    document.querySelectorAll('.plan-card-v5').forEach((card, i) => {
+      if (card.scrollWidth > vw + 2) {
+        issues.push(`plan-card-v5[${i}] 溢出:${card.scrollWidth}px`);
+      }
+    });
+    // 检查 plan-img-wrap 里的图片
+    document.querySelectorAll('.plan-img-wrap img').forEach((img, i) => {
+      if (img.naturalWidth > 800) {
+        issues.push(`plan-img[${i}] 原始宽度:${img.naturalWidth}px 渲染宽度:${img.clientWidth}px`);
+      }
+    });
+    if (issues.length > 0) {
+      console.warn('🔴 溢出诊断:', issues);
+      // 在页面顶部显示红色警告
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(239,68,68,0.95);color:#fff;padding:8px 12px;font-size:10px;line-height:1.4';
+      banner.innerHTML = '🔴 溢出诊断: ' + issues.join('<br>');
+      document.body.prepend(banner);
+    } else {
+      console.log('🟢 无溢出，所有元素在屏幕宽度内');
+    }
+  }, 500);
 }
 
 function renderPlanCard(p, i, direction) {
