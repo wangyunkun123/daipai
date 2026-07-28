@@ -215,7 +215,7 @@ MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
 PLAN_IMG_VERSION = 1   # 增强图版本号，改布局/字体/尺寸后 +1 刷新全部缓存
 VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
 REQUEST_TIMEOUT = 300  # 含大图上传时间
-SESSION_TTL = 1800  # 30分钟
+SESSION_TTL = 86400  # 24小时——与前端 localStorage 恢复窗口一致
 
 # 并发控制
 _processing_lock = threading.Lock()
