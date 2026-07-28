@@ -210,6 +210,7 @@ STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")  
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "10"))  # 每人每天免费次数
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
+PLAN_IMG_VERSION = 1   # 增强图版本号，改布局/字体/尺寸后 +1 刷新全部缓存
 VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
 REQUEST_TIMEOUT = 300  # 含大图上传时间
 SESSION_TTL = 1800  # 30分钟
@@ -2223,7 +2224,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         if photo_path and os.path.exists(photo_path):
             for i, p in enumerate(plans):
                 if isinstance(p, dict) and p.get('annotations') and not p.get('plan_image'):
-                    img_key = f"{cache_key}_{i}"
+                    img_key = f"{cache_key}_v{PLAN_IMG_VERSION}_{i}"
                     img_url = generate_plan_image(photo_path, p, i, img_key)
                     if img_url:
                         p['plan_image'] = img_url
@@ -2352,7 +2353,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         if photo_path and os.path.exists(photo_path):
             for i, p in enumerate(plans):
                 if isinstance(p, dict) and p.get('annotations'):
-                    img_key = f"{cache_key}_{i}"
+                    img_key = f"{cache_key}_v{PLAN_IMG_VERSION}_{i}"
                     img_url = generate_plan_image(photo_path, p, i, img_key)
                     if img_url:
                         p['plan_image'] = img_url
