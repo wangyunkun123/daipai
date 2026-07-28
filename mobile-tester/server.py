@@ -194,6 +194,8 @@ def generate_plan_image(photo_path, plan, plan_index, output_key):
     result = result.convert("RGB")
 
     out_path = os.path.join(_get_plan_img_dir(), f"{output_key}.jpg")
+    if os.path.exists(out_path):
+        return f"/static/plan_images/{output_key}.jpg"
     result.save(out_path, "JPEG", quality=88)
     return f"/static/plan_images/{output_key}.jpg"
 
@@ -2223,11 +2225,13 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         photo_path = session.get('photo_path', '')
         if photo_path and os.path.exists(photo_path):
             for i, p in enumerate(plans):
-                if isinstance(p, dict) and p.get('annotations') and not p.get('plan_image'):
-                    img_key = f"{cache_key}_v{PLAN_IMG_VERSION}_{i}"
-                    img_url = generate_plan_image(photo_path, p, i, img_key)
-                    if img_url:
-                        p['plan_image'] = img_url
+                if isinstance(p, dict) and p.get('annotations'):
+                    cur_img = p.get('plan_image', '')
+                    if not cur_img or f'_v{PLAN_IMG_VERSION}_' not in cur_img:
+                        img_key = f"{cache_key}_v{PLAN_IMG_VERSION}_{i}"
+                        img_url = generate_plan_image(photo_path, p, i, img_key)
+                        if img_url:
+                            p['plan_image'] = img_url
         return plans, None
 
     # ── 防止重复 LLM 调用（retry/poll 并发时同一 key 只生成一次）──
@@ -2353,10 +2357,12 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         if photo_path and os.path.exists(photo_path):
             for i, p in enumerate(plans):
                 if isinstance(p, dict) and p.get('annotations'):
-                    img_key = f"{cache_key}_v{PLAN_IMG_VERSION}_{i}"
-                    img_url = generate_plan_image(photo_path, p, i, img_key)
-                    if img_url:
-                        p['plan_image'] = img_url
+                    cur_img = p.get('plan_image', '')
+                    if not cur_img or f'_v{PLAN_IMG_VERSION}_' not in cur_img:
+                        img_key = f"{cache_key}_v{PLAN_IMG_VERSION}_{i}"
+                        img_url = generate_plan_image(photo_path, p, i, img_key)
+                        if img_url:
+                            p['plan_image'] = img_url
                         print(f"[Plans] Image generated: {img_url}", file=sys.stderr, flush=True)
 
         # ── 更新使用统计 ──
