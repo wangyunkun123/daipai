@@ -25,7 +25,7 @@ from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map
 from search_web import search_style_inspiration, search_location_intel
-from database import accumulate, query_scene_context, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques
+from database import accumulate, query_scene_context, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques, get_pending_discoveries, promote_search_to_technique
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -38,7 +38,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "daipai2026")
 DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
 DOUBAO_MODEL = "doubao-seed-2.0-pro"
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
-STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")
+STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")  # v4.3: 已弃用，保留变量以防旧引用
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "10"))  # 每人每天免费次数
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
@@ -665,124 +665,6 @@ PLANS_PROMPT = """你是带拍的摄影知识工程师。你的唯一任务：�
     }}
   ]
 }}"""
-
-
-# ============================================================
-# 风格缓存（本地 JSON 积累，越用越聪明）
-# ============================================================
-
-def load_style_cache():
-    """加载风格积累缓存"""
-    if os.path.exists(STYLE_CACHE_FILE):
-        try:
-            with open(STYLE_CACHE_FILE, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return {}
-    return {}
-
-
-def save_style_cache(cache):
-    """保存风格积累缓存"""
-    try:
-        with open(STYLE_CACHE_FILE, 'w') as f:
-            json.dump(cache, f, ensure_ascii=False, indent=2)
-    except IOError as e:
-        print(f"[StyleCache] Save failed: {e}", file=sys.stderr, flush=True)
-
-
-def accumulate_styles(scene_type, discovered_styles, techniques_used):
-    """积累发现的风格和技法到本地缓存"""
-    if not scene_type:
-        return
-
-    cache = load_style_cache()
-    if scene_type not in cache:
-        cache[scene_type] = {'styles': [], 'techniques': [], 'count': 0}
-
-    entry = cache[scene_type]
-
-    for s in (discovered_styles or []):
-        name = s.get('name', '').strip()
-        if not name:
-            continue
-        existing = next((x for x in entry['styles'] if x['name'] == name), None)
-        if existing:
-            existing['count'] = existing.get('count', 1) + 1
-            existing['source_type'] = s.get('source_type', existing.get('source_type', ''))
-        else:
-            entry['styles'].append({
-                'name': name,
-                'source_type': s.get('source_type', ''),
-                'fit_rationale': s.get('fit_rationale', '')[:200],
-                'count': 1
-            })
-
-    for t in (techniques_used or []):
-        name = t.get('name', '').strip()
-        if not name:
-            continue
-        existing = next((x for x in entry['techniques'] if x['name'] == name), None)
-        if existing:
-            existing['count'] = existing.get('count', 1) + 1
-            existing['source_type'] = t.get('source_type', existing.get('source_type', ''))
-        else:
-            entry['techniques'].append({
-                'name': name,
-                'source_type': t.get('source_type', ''),
-                'description': t.get('description', '')[:200],
-                'count': 1
-            })
-
-    entry['count'] += 1
-    save_style_cache(cache)
-    print(f"[StyleCache] Accumulated to '{scene_type}': {len(entry['styles'])} styles, {len(entry['techniques'])} techniques (total {entry['count']} sessions)",
-          file=sys.stderr, flush=True)
-
-
-def get_style_context(scene_type):
-    """获取同类型场景的历史积累，注入 prompt"""
-    if not scene_type:
-        return ""
-
-    cache = load_style_cache()
-    # 模糊匹配：找最相似的 scene_type
-    best_key = None
-    for key in cache:
-        # 简单关键词重叠匹配
-        if scene_type in key or key in scene_type:
-            best_key = key
-            break
-    if not best_key:
-        # 尝试匹配第一个词（如 "室外" 匹配 "室外公园"）
-        first_word = scene_type.split('·')[0].split('—')[0].strip()
-        for key in cache:
-            if first_word and first_word in key:
-                best_key = key
-                break
-
-    if not best_key:
-        return ""
-
-    entry = cache[best_key]
-    top_styles = sorted(entry['styles'], key=lambda x: x['count'], reverse=True)[:5]
-    top_techniques = sorted(entry['techniques'], key=lambda x: x['count'], reverse=True)[:5]
-
-    if not top_styles and not top_techniques:
-        return ""
-
-    ctx = f"\n## 📚 历史积累（同类型场景「{best_key}」的风格发现，共{entry['count']}次分析）\n"
-    if top_styles:
-        ctx += "### 过往匹配的风格\n"
-        for s in top_styles:
-            ctx += f"- {s['name']}（{s['source_type']}, 使用{s['count']}次）\n"
-    if top_techniques:
-        ctx += "### 过往使用的技法\n"
-        for t in top_techniques:
-            ctx += f"- {t['name']}（{t['source_type']}, 使用{t['count']}次）\n"
-    ctx += "\n可以参考以上积累，但不强制使用。如果场景特征不匹配，忽略即可。\n"
-
-    return ctx
 
 
 # ============================================================
@@ -2037,9 +1919,11 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         except Exception as e:
             print(f"[Stats] Save usage session error: {e}", file=sys.stderr, flush=True)
 
-        # ── 风格积累（异步不影响响应）──
+        # ── 风格积累（v4.3: 传入搜索真实性，社区验证来源自动加分）──
         try:
-            accumulate(scene_type, discovered_styles, techniques_used, scene_category=scene_category)
+            accumulate(scene_type, discovered_styles, techniques_used,
+                      scene_category=scene_category,
+                      authenticity=search_meta.get('authenticity', 'unknown') if search_meta else 'unknown')
         except Exception as e:
             print(f"[StyleCache] Accumulate error: {e}", file=sys.stderr, flush=True)
 
@@ -2663,6 +2547,39 @@ def admin_stats():
     })
 
 
+# ── v4.3: 搜索发现审核 ──
+@app.route('/admin/discoveries')
+@login_required
+def admin_discoveries():
+    """获取待审核的搜索发现列表"""
+    try:
+        discoveries = get_pending_discoveries()
+        return jsonify({"discoveries": discoveries})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/admin/promote-discovery', methods=['POST'])
+@login_required
+def admin_promote_discovery():
+    """审批通过一个搜索发现，提升为正式技法"""
+    try:
+        data = request.get_json() or {}
+        search_log_id = data.get('search_log_id')
+        technique_name = data.get('technique_name', '').strip()
+        description = data.get('description', '').strip()
+        scene_category = data.get('scene_category', '')
+        if not search_log_id or not technique_name:
+            return jsonify({"error": "缺少必要参数"}), 400
+        ok = promote_search_to_technique(
+            search_log_id, technique_name, description,
+            source_type='community', scene_category=scene_category, verify_count=3
+        )
+        return jsonify({"success": ok})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── v3.6: 数据导入（本地 → 生产同步）──
 @app.route('/admin/import-data', methods=['POST'])
 @login_required
@@ -2770,6 +2687,10 @@ if __name__ == '__main__':
         practical_seeded = seed_practical_techniques()
         if practical_seeded:
             print(f"[Init] Seeded {practical_seeded} practical techniques from social media patterns", file=sys.stderr, flush=True)
+        # v4.3: 拍照姿势技法种子（Valenzuela/Barnbaum 教材）
+        posing_seeded = seed_posing_techniques()
+        if posing_seeded:
+            print(f"[Init] Seeded {posing_seeded} posing techniques from textbooks", file=sys.stderr, flush=True)
     except Exception as e:
         print(f"[Init] Migration/sync error (non-fatal): {e}", file=sys.stderr, flush=True)
 

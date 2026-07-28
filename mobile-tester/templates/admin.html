@@ -169,6 +169,17 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 <h2 style="font-size:13px;margin-top:12px">🌐 搜索真实性分布</h2>
 <div class="stats-grid" id="searchAuthGrid"></div>
 
+<!-- 🔍 v4.3: 搜索发现审核 -->
+<h2>🔍 待审核搜索发现 <button onclick="loadDiscoveries()" style="font-size:11px;padding:2px 8px;cursor:pointer">🔄 刷新</button></h2>
+<div style="overflow-x:auto">
+<table class="fb-table">
+<thead><tr><th>时间</th><th>搜索词</th><th>真实性</th><th>提取摘要</th><th>操作</th></tr></thead>
+<tbody id="discoveriesBody">
+<tr><td colspan="5" class="empty">点击刷新加载待审核发现...</td></tr>
+</tbody>
+</table>
+</div>
+
 <script>
 const REASON_LABELS = {
   'too_slow': '⏱️ 时间太久了',
@@ -603,6 +614,64 @@ function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ── v4.3: 搜索发现审核 ──
+async function loadDiscoveries() {
+  const tbody = document.getElementById('discoveriesBody');
+  tbody.innerHTML = '<tr><td colspan="5" class="empty">加载中...</td></tr>';
+  try {
+    const res = await fetch('/admin/discoveries');
+    const data = await res.json();
+    if (!data.discoveries || data.discoveries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无待审核的搜索发现（需要先有真实社区搜索命中）</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.discoveries.map(d => {
+      const kw = esc(d.keywords_used || '').substring(0, 40);
+      const hint = esc(d.extracted_hint || '').substring(0, 80);
+      const auth = d.authenticity === 'real_community' ? '🟢 真实社区' : '🟡 混合';
+      const time = (d.created_at || '').substring(0, 16);
+      return `<tr>
+        <td style="font-size:11px">${time}</td>
+        <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(d.query_text||'')}">${kw}</td>
+        <td>${auth}</td>
+        <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${hint}</td>
+        <td><button onclick="promoteDiscovery(${d.id}, '${esc(d.query_text||'').substring(0,30)}')" style="font-size:10px;padding:1px 5px;cursor:pointer">✅ 提升为技法</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">加载失败: '+esc(String(e))+'</td></tr>';
+  }
+}
+
+async function promoteDiscovery(searchLogId, hint) {
+  const name = prompt('技法名称（从搜索结果中提取）：', hint || '');
+  if (!name) return;
+  const desc = prompt('技法描述：', '');
+  if (desc === null) return;
+  const cat = prompt('场景分类（如 urban_street / park_nature / f_and_b / commercial / cultural_site）：', 'urban_street');
+  if (cat === null) return;
+  try {
+    const res = await fetch('/admin/promote-discovery', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({search_log_id: searchLogId, technique_name: name, description: desc, scene_category: cat})
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ 已提升为正式技法！');
+      loadDiscoveries();
+      loadData(); // 刷新主面板统计
+    } else {
+      alert('❌ 失败: ' + (data.error || '未知错误'));
+    }
+  } catch(e) {
+    alert('❌ 请求失败: ' + String(e));
+  }
+}
+
+// 首次加载时也拉取待审核发现
+setTimeout(loadDiscoveries, 500);
 
 loadData();
 setInterval(loadData, 30000);

@@ -16,7 +16,10 @@ _KNOWLEDGE_DIR = os.path.join(os.path.dirname(__file__), "..", ".claude", "skill
 # 内置紧凑知识（无需文件 I/O 的兜底——部署时知识文件可能不在）
 # ============================================================
 
-# ── 风格 one_liner 表（来自 style-recipes/_index.md）──
+# ── 风格 one_liner 表 ──
+# 数据源: .claude/skills/daipai/knowledge/style-recipes/_index.md（17个风格配方）
+# 这是运行时权威源——所有 prompt 注入和数据库种子均从此读取。
+# 与 markdown 文件保持同步：修改风格列表时需同时更新此 dict 和 _index.md。
 STYLE_ONE_LINERS = {
     "日系清新": "空气感——像被阳光漂白过的画面。高调、低饱和、蓝绿偏移、大量留白",
     "电影感": "不是照片——是电影里决定性的一帧。叙事、宽画幅、方向性光、色彩分级",
@@ -37,8 +40,10 @@ STYLE_ONE_LINERS = {
     "新中式": "既有东方的骨，又有鲜活的气。低饱和、留白、青绿棕、静中有动",
 }
 
-# ── 跨媒介风格 one_liner 表（来自 cross-media-styles/*.md）──
+# ── 跨媒介风格 one_liner 表 ──
+# 数据源: .claude/skills/daipai/knowledge/cross-media-styles/*.md（22个跨媒介风格）
 # 导演/画派/互联网原生美学 → 摄影可执行描述
+# 每个 one_liner 对应其源 .md 文件的「一句话」字段
 CROSS_MEDIA_STYLE_ONE_LINERS = {
     "宫崎骏吉卜力": "像宫崎骏动画里的一帧——天空的比例、草地的绿色、光穿过树叶的样子，都有一种『这个世界是温柔的』的感觉。",
     "王家卫电影": "霓虹灯在晃动、人物有残影、绿色覆盖了所有阴影——像王家卫电影里一个记不住的瞬间。",

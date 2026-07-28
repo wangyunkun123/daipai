@@ -14,7 +14,7 @@ import os
 import sqlite3
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "daipai.db")
 
@@ -26,7 +26,10 @@ def get_db():
     """获取数据库连接（自动创建表）"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    # WAL 模式只需设置一次（持久化到数据库），后续连接跳过
+    if not hasattr(get_db, '_wal_checked'):
+        conn.execute("PRAGMA journal_mode=WAL")
+        get_db._wal_checked = True
     conn.execute("PRAGMA foreign_keys=ON")
     _init_tables(conn)
     return conn
@@ -81,6 +84,11 @@ def _init_tables(conn):
 
     CREATE INDEX IF NOT EXISTS idx_scene_matches_scene ON scene_matches(scene_type);
     CREATE INDEX IF NOT EXISTS idx_scene_matches_style ON scene_matches(style_id);
+    CREATE INDEX IF NOT EXISTS idx_scene_matches_category ON scene_matches(scene_category);
+    CREATE INDEX IF NOT EXISTS idx_scene_matches_tech ON scene_matches(technique_id);
+    CREATE INDEX IF NOT EXISTS idx_techniques_verify ON techniques(verify_count);
+    CREATE INDEX IF NOT EXISTS idx_styles_source ON styles(source_type);
+    CREATE INDEX IF NOT EXISTS idx_techniques_source ON techniques(source_type);
     CREATE INDEX IF NOT EXISTS idx_knowledge_sync_status ON knowledge_sync(status);
 
     -- v3.5: 使用统计与反馈
@@ -211,6 +219,18 @@ def _init_tables(conn):
     except Exception:
         pass
 
+    # v4.3: 迁移——补建性能索引（已有则跳过）
+    try:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_scene_matches_category ON scene_matches(scene_category)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_scene_matches_tech ON scene_matches(technique_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_techniques_verify ON techniques(verify_count)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_styles_source ON styles(source_type)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_techniques_source ON techniques(source_type)")
+        conn.commit()
+        print("[DB] Migration: added performance indexes", file=sys.stderr, flush=True)
+    except Exception:
+        pass
+
 
 # ============================================================
 # 场景分类体系（v3.8——替代 LIKE 模糊匹配）
@@ -271,11 +291,12 @@ def extract_scene_category(scene_type, location_clues=''):
 # 风格积累（替代 style_cache.json 的 accumulate_styles）
 # ============================================================
 
-def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''):
+def accumulate(scene_type, discovered_styles, techniques_used, scene_category='', authenticity='unknown'):
     """
     积累发现的风格和技法到数据库。
     自动去重：同名风格追加 verify_count。
     v3.8: 新增 scene_category 参数——按场景类别分组积累
+    v4.3: 新增 authenticity 参数——real_community 来源额外 +1 verify_count
     """
     if not scene_type:
         return
@@ -286,6 +307,9 @@ def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''
 
     conn = get_db()
     try:
+        # v4.3: 社区验证来源 → 更高初始 verify_count
+        community_boost = 2 if authenticity == 'real_community' else 1
+
         for s in (discovered_styles or []):
             name = s.get('name', '').strip()
             if not name:
@@ -293,18 +317,21 @@ def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''
             source_type = s.get('source_type', 'inference')
             fit_rationale = s.get('fit_rationale', '')[:500]
 
-            # upsert style
-            conn.execute("""
+            # upsert style + RETURNING id (v4.3: community_boost + N+1 消除)
+            row = conn.execute("""
                 INSERT INTO styles (name, source_type, fit_rationale, verify_count)
-                VALUES (?, ?, ?, 1)
+                VALUES (?, ?, ?, ?)
                 ON CONFLICT(name) DO UPDATE SET
-                    verify_count = verify_count + 1,
+                    verify_count = verify_count + ?,
                     source_type = CASE WHEN excluded.source_type != 'inference' THEN excluded.source_type ELSE source_type END,
                     updated_at = datetime('now')
-            """, (name, source_type, fit_rationale))
+                RETURNING id
+            """, (name, source_type, fit_rationale, community_boost, community_boost)).fetchone()
+            style_id = row[0] if row else None
+            if style_id is None:
+                style_id = conn.execute("SELECT id FROM styles WHERE name=?", (name,)).fetchone()[0]
 
             # link to scene (with category)
-            style_id = conn.execute("SELECT id FROM styles WHERE name=?", (name,)).fetchone()[0]
             conn.execute("""
                 INSERT INTO scene_matches (scene_type, style_id, match_type, scene_category)
                 VALUES (?, ?, 'style', ?)
@@ -317,15 +344,18 @@ def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''
             source_type = t.get('source_type', 'tutorial')
             description = t.get('description', '')[:500]
 
-            conn.execute("""
+            row = conn.execute("""
                 INSERT INTO techniques (name, source_type, description, verify_count)
-                VALUES (?, ?, ?, 1)
+                VALUES (?, ?, ?, ?)
                 ON CONFLICT(name) DO UPDATE SET
-                    verify_count = verify_count + 1,
+                    verify_count = verify_count + ?,
                     updated_at = datetime('now')
-            """, (name, source_type, description))
+                RETURNING id
+            """, (name, source_type, description, community_boost, community_boost)).fetchone()
+            tech_id = row[0] if row else None
+            if tech_id is None:
+                tech_id = conn.execute("SELECT id FROM techniques WHERE name=?", (name,)).fetchone()[0]
 
-            tech_id = conn.execute("SELECT id FROM techniques WHERE name=?", (name,)).fetchone()[0]
             conn.execute("""
                 INSERT INTO scene_matches (scene_type, technique_id, match_type, scene_category)
                 VALUES (?, ?, 'technique', ?)
@@ -631,18 +661,29 @@ def apply_pending_sync():
 
 
 def get_db_stats():
-    """获取数据库统计信息"""
+    """获取数据库统计信息（v4.3: 合并为单次查询）"""
     conn = get_db()
     try:
+        row = conn.execute("""
+            SELECT
+                (SELECT COUNT(*) FROM styles) as styles,
+                (SELECT COUNT(*) FROM techniques) as techniques,
+                (SELECT COUNT(DISTINCT scene_type) FROM scene_matches) as scenes,
+                (SELECT COUNT(*) FROM scene_matches) as total_matches,
+                (SELECT COUNT(*) FROM knowledge_sync WHERE status='pending') as pending_sync,
+                (SELECT COUNT(*) FROM usage_sessions) as usage_sessions,
+                (SELECT COUNT(*) FROM plan_feedback) as feedback_entries,
+                (SELECT COALESCE(SUM(count),0) FROM daily_usage WHERE usage_date=date('now')) as today_analyses
+        """).fetchone()
         return {
-            "styles": conn.execute("SELECT COUNT(*) FROM styles").fetchone()[0],
-            "techniques": conn.execute("SELECT COUNT(*) FROM techniques").fetchone()[0],
-            "scenes": conn.execute("SELECT COUNT(DISTINCT scene_type) FROM scene_matches").fetchone()[0],
-            "total_matches": conn.execute("SELECT COUNT(*) FROM scene_matches").fetchone()[0],
-            "pending_sync": conn.execute("SELECT COUNT(*) FROM knowledge_sync WHERE status='pending'").fetchone()[0],
-            "usage_sessions": conn.execute("SELECT COUNT(*) FROM usage_sessions").fetchone()[0],
-            "feedback_entries": conn.execute("SELECT COUNT(*) FROM plan_feedback").fetchone()[0],
-            "today_analyses": conn.execute("SELECT COALESCE(SUM(count),0) FROM daily_usage WHERE usage_date=date('now')").fetchone()[0],
+            "styles": row['styles'],
+            "techniques": row['techniques'],
+            "scenes": row['scenes'],
+            "total_matches": row['total_matches'],
+            "pending_sync": row['pending_sync'],
+            "usage_sessions": row['usage_sessions'],
+            "feedback_entries": row['feedback_entries'],
+            "today_analyses": row['today_analyses'],
         }
     finally:
         conn.close()
@@ -698,19 +739,23 @@ def log_search(session_id, search_type, query_text='', result_count=0,
 
 
 def get_api_call_stats():
-    """获取 AI API 调用统计数据"""
+    """获取 AI API 调用统计数据（v4.3: 用范围查询替代 date() 包裹）"""
     conn = get_db()
     try:
         today = datetime.now().strftime('%Y-%m-%d')
+        today_start = f"{today} 00:00:00"
+        today_end = f"{today} 23:59:59"
+        seven_days_ago = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        seven_days_ago = (seven_days_ago - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
 
-        # 今日汇总
+        # 今日汇总（范围查询利用 idx_api_log_time 索引）
         today_calls = conn.execute("""
             SELECT call_type, COUNT(*) as cnt,
                    COALESCE(SUM(total_tokens),0) as tokens,
                    COALESCE(AVG(duration_ms),0) as avg_ms
-            FROM api_call_log WHERE date(created_at)=?
+            FROM api_call_log WHERE created_at >= ? AND created_at <= ?
             GROUP BY call_type
-        """, (today,)).fetchall()
+        """, (today_start, today_end)).fetchall()
 
         # 总计
         total_calls = conn.execute(
@@ -730,9 +775,9 @@ def get_api_call_stats():
         trend = [dict(r) for r in conn.execute("""
             SELECT date(created_at) as day, COUNT(*) as cnt,
                    COALESCE(SUM(total_tokens),0) as tokens
-            FROM api_call_log WHERE created_at >= date('now','-7 days')
+            FROM api_call_log WHERE created_at >= ?
             GROUP BY day ORDER BY day
-        """).fetchall()]
+        """, (seven_days_ago,)).fetchall()]
 
         return {
             "today_calls": [dict(r) for r in today_calls],
@@ -746,19 +791,23 @@ def get_api_call_stats():
 
 
 def get_search_stats():
-    """获取 Web 搜索执行统计数据"""
+    """获取 Web 搜索执行统计数据（v4.3: 用范围查询替代 date() 包裹）"""
     conn = get_db()
     try:
         today = datetime.now().strftime('%Y-%m-%d')
+        today_start = f"{today} 00:00:00"
+        today_end = f"{today} 23:59:59"
+        seven_days_ago = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                         - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
 
-        # 今日搜索
+        # 今日搜索（范围查询）
         today_searches = conn.execute("""
             SELECT search_type, COUNT(*) as cnt,
                    COALESCE(AVG(result_count),0) as avg_results,
                    AVG(CASE WHEN result_count > 0 THEN 1 ELSE 0 END) as hit_rate
-            FROM search_log WHERE date(created_at)=?
+            FROM search_log WHERE created_at >= ? AND created_at <= ?
             GROUP BY search_type
-        """, (today,)).fetchall()
+        """, (today_start, today_end)).fetchall()
 
         # 总计
         total_searches = conn.execute(
@@ -780,9 +829,9 @@ def get_search_stats():
         trend = [dict(r) for r in conn.execute("""
             SELECT date(created_at) as day, COUNT(*) as cnt,
                    SUM(CASE WHEN result_count > 0 THEN 1 ELSE 0 END) as with_results
-            FROM search_log WHERE created_at >= date('now','-7 days')
+            FROM search_log WHERE created_at >= ?
             GROUP BY day ORDER BY day
-        """).fetchall()]
+        """, (seven_days_ago,)).fetchall()]
 
         # v3.8: 真实性分布
         auth_dist = [dict(r) for r in conn.execute("""
@@ -854,6 +903,83 @@ def get_style_technique_panel():
             "top_techniques": top_techniques,
             "scene_dist": scene_dist,
         }
+    finally:
+        conn.close()
+
+
+def get_pending_discoveries():
+    """
+    v4.3: 获取待审核的搜索发现——高真实性但尚未入库的搜索结果。
+    返回 search_log 行列表，每条附带是否已有对应技法/风格。
+    """
+    conn = get_db()
+    try:
+        rows = [dict(r) for r in conn.execute("""
+            SELECT id, session_id, query_text, result_count, result_quality,
+                   source_types, keywords_used, useful_data, authenticity,
+                   results_summary, created_at
+            FROM search_log
+            WHERE authenticity IN ('real_community', 'mixed')
+              AND useful_data != ''
+              AND useful_data NOT LIKE '%[promoted]%'
+              AND created_at >= date('now', '-30 days')
+            ORDER BY id DESC LIMIT 50
+        """).fetchall()]
+
+        results = []
+        for row in rows:
+            useful = (row.get('results_summary') or '')[:200]
+            results.append({
+                **row,
+                'has_techniques': False,
+                'extracted_hint': useful,
+            })
+
+        return results
+    finally:
+        conn.close()
+
+
+def promote_search_to_technique(search_log_id, technique_name, description, source_type='community',
+                                scene_category='', verify_count=3):
+    """
+    v4.3: 将搜索发现提升为正式技法（管理面板审批通过）。
+    写入 techniques 表 + scene_matches 表。
+    """
+    conn = get_db()
+    try:
+        conn.execute("""
+            INSERT INTO techniques (name, source_type, description, verify_count)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET
+                verify_count = verify_count + ?,
+                source_type = CASE WHEN excluded.source_type = 'tutorial' THEN ? ELSE excluded.source_type END,
+                updated_at = datetime('now')
+        """, (technique_name, source_type, description, verify_count, verify_count, source_type))
+
+        tech_id = conn.execute(
+            "SELECT id FROM techniques WHERE name=?", (technique_name,)
+        ).fetchone()
+        if tech_id and scene_category:
+            conn.execute("""
+                INSERT OR IGNORE INTO scene_matches (scene_type, technique_id, match_type, scene_category)
+                VALUES (?, ?, 'technique', ?)
+            """, (scene_category, tech_id[0], scene_category))
+
+        # 标记已处理
+        conn.execute("""
+            UPDATE search_log SET useful_data = useful_data || ' [promoted]'
+            WHERE id = ?
+        """, (search_log_id,))
+
+        conn.commit()
+        print(f"[DB] Promoted search #{search_log_id} → technique '{technique_name}' (cat={scene_category})",
+              file=sys.stderr, flush=True)
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Promote error: {e}", file=sys.stderr, flush=True)
+        return False
     finally:
         conn.close()
 
@@ -1106,8 +1232,8 @@ def seed_practical_techniques():
         count_matches = 0
 
         for tech in PRACTICAL_TECHNIQUES:
-            # upsert technique
-            conn.execute("""
+            # upsert technique + RETURNING id (v4.3: 消除 N+1 查询)
+            row = conn.execute("""
                 INSERT INTO techniques (name, source_type, description, verify_count)
                 VALUES (?, ?, ?, 5)
                 ON CONFLICT(name) DO UPDATE SET
@@ -1115,14 +1241,15 @@ def seed_practical_techniques():
                                   THEN excluded.description ELSE techniques.description END,
                     source_type = excluded.source_type,
                     updated_at = datetime('now')
-            """, (tech['name'], tech['source_type'], tech['description']))
+                RETURNING id
+            """, (tech['name'], tech['source_type'], tech['description'])).fetchone()
+            tech_id = row[0] if row else None
+            if tech_id is None:
+                tech_id = conn.execute(
+                    "SELECT id FROM techniques WHERE name=?", (tech['name'],)
+                ).fetchone()[0]
             if conn.execute("SELECT changes()").fetchone()[0] > 0:
                 count_techs += 1
-
-            # link to scene
-            tech_id = conn.execute(
-                "SELECT id FROM techniques WHERE name=?", (tech['name'],)
-            ).fetchone()[0]
             conn.execute("""
                 INSERT OR IGNORE INTO scene_matches (scene_type, technique_id, match_type, scene_category)
                 VALUES (?, ?, 'technique', ?)
@@ -1137,6 +1264,126 @@ def seed_practical_techniques():
     except Exception as e:
         conn.rollback()
         print(f"[DB] Seed practical error: {e}", file=sys.stderr, flush=True)
+        return 0
+    finally:
+        conn.close()
+
+
+# ============================================================
+# v4.3: 拍照姿势技法——来自 Valenzuela/Barnbaum 教材
+# ============================================================
+
+POSING_TECHNIQUES = [
+    # ── 站姿基础 ──
+    {"name": "重心单腿站姿——两条腿永远不做同一件事", "source_type": "verified",
+     "description": "重心放后腿，前腿微曲膝盖微靠内侧→放松自然。重心放前腿→主动有活力。双腿均匀→僵硬。操作指令：'把重心放一条腿上，另一条腿自然弯着——像等公交车不是站军姿。' 来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "urban_street"},
+    {"name": "脊柱S曲线展开——侧身30-45度对镜头", "source_type": "verified",
+     "description": "正对镜头时脊柱S曲线被压扁成直线→显宽。让脊柱轴线与相机成30-45度角→S曲线在画面中展开→自然身体轮廓。操作指令：'脚不动，上半身往左转一点...对，再回来一点。' 来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "urban_street"},
+    {"name": "肩部后展开锁骨——深呼吸吐气法", "source_type": "verified",
+     "description": "最快打开锁骨的方法：'深呼吸一口气，保持这个姿势吐出来。' 吐气=肩部肌肉自然下沉→锁骨自动打开→姿势瞬间变好。不需要说'肩膀后转'。来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "urban_street"},
+
+    # ── 手部管理 ──
+    {"name": "手有任务不悬空——给手一个明确指令", "source_type": "verified",
+     "description": "手不知道放哪=最常见拍照焦虑。给手一个任务：拿咖啡/撩头发/扶帽檐/插口袋（拇指必须露外面）。双手不同动作=画面更丰富。手夹腿间=手消失=身体线条断开。来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "urban_street"},
+    {"name": "腋下关节留白——手臂与躯干留2-3指空隙", "source_type": "verified",
+     "description": "手臂紧贴身体=腋下无三角空隙=视觉上胳膊变粗一倍。任何姿势都要确保腋下/膝盖内侧/手肘内侧有'呼吸空间'。这不是体重问题，是几何问题。来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "urban_street"},
+    {"name": "手掌不直接对镜头——转45度看手背", "source_type": "verified",
+     "description": "手掌面积大，正对镜头时视觉上过大→抢走面部注意力。转手45°让镜头看手背或侧面。手指不全并也不全张——自然微曲，像轻轻握着一颗葡萄。来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "urban_street"},
+
+    # ── 坐姿 ──
+    {"name": "只坐椅子边缘1/3——大腿悬空保持形状", "source_type": "verified",
+     "description": "坐满时大腿压扁展开显粗→坐边缘大腿悬空保持形状。腿向镜头方向延伸（不缩在椅子下）。脚踝交叉>膝盖交叉（膝盖交叉大腿展开面积太大）。从侧面拍坐姿通常比正面好看。来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "commercial"},
+    {"name": "地面坐姿双腿不对称——不用两条腿做一样的事", "source_type": "verified",
+     "description": "地面5种基本坐姿：屈膝抱腿(温暖)/双腿侧放(优雅)/盘腿(冥想)/手撑身后仰(享受)/一侧屈一侧伸(最自然)。核心：双腿永远不对称。正面+低角度拍=亲密感，侧面拍=脊柱曲线最佳。来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "park_nature"},
+
+    # ── 表情引导 ──
+    {"name": "不让被拍者'做表情'——让TA'做一件事'", "source_type": "verified",
+     "description": "不要说'笑！'→假笑。说'他刚才说了个冷笑话，你在忍住不笑'→忍笑=真实微表情。不要说'自然点！'→更紧张。说'你慢慢往前走三步，中间回头看我一秒'→有任务→注意力从被拍转移→自然。来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "urban_street"},
+    {"name": "偷拍比摆拍自然——调参数法放松被拍者", "source_type": "verified",
+     "description": "告诉被拍者'我先调一下参数'→他们放松→你实际上在拍。拍完一分钟后说'好了'→在对方松一口气的反应中再抓一张（通常是最好的那张）。来源：Valenzuela《拍出绝世美姿》",
+     "scene_category": "urban_street"},
+
+    # ── 眼神方向 ──
+    {"name": "眼神方向决定故事感——不看镜头更自然", "source_type": "verified",
+     "description": "看镜头=连接自信。看远方=叙事故事感'她在想什么'。看下方/闭眼=内省安静。看手中东西=生活感不刻意。回头看=动态邀请'跟我来'。不看镜头=观众变成路过观察者→可以安静地看→最自然。来源：Valenzuela/Barnbaum",
+     "scene_category": "urban_street"},
+
+    # ── 动态抓拍 ──
+    {"name": "回头连拍——0.5-1秒黄金窗口", "source_type": "verified",
+     "description": "让TA往前走→喊名字回头→连拍。回头后0.5-1秒是最佳窗口（'刚看到你'的自然状态），1秒后表情从'刚看到你'变成'在看镜头'→刻意。第一个回头帧通常最好。同时解决表情僵硬+体型显胖两个问题。来源：Valenzuela",
+     "scene_category": "urban_street"},
+    {"name": "走路代替站着——第2-5步是最佳抓拍窗口", "source_type": "verified",
+     "description": "走路时身体在动→手在摆、头发在飘、衣服在动→生命力。第1步=启动不自然，第2-5步=进入节奏最佳，5步后开始想'还要走多远'。站着不动时身体自动紧张进入'被观察'状态。连拍选脚离地的帧>脚着地的帧。来源：Valenzuela",
+     "scene_category": "urban_street"},
+
+    # ── 摄影师导演力 ──
+    {"name": "教学三明治——示范→执行→反馈", "source_type": "verified",
+     "description": "第一步示范5秒：'你看我做一遍'（视觉示范比语言快3倍）。第二步执行+观察10秒。第三步反馈5秒：'对就这样...再放松一点点'（先肯定再微调，永远不在快门前说否定词）。来源：Valenzuela教学法",
+     "scene_category": "urban_street"},
+    {"name": "指令降级链——L1叙事→L2感受→L3物理", "source_type": "verified",
+     "description": "同一姿势意图备3层指令。L1叙事：'像刚打完一局坐下来喘口气'（适合有经验者）。L2感受：'叹一口大气——叹气完那一瞬间的感觉'（适合多数人）。L3物理：'膝盖收起来手搭膝盖下巴微抬'（适合紧张者）。L1失败1次→立即降级，不在同层级重复3次。来源：Valenzuela",
+     "scene_category": "urban_street"},
+]
+
+
+def seed_posing_techniques():
+    """
+    v4.3: 写入教材验证的拍照姿势技法（Valenzuela/Barnbaum）。
+    门控：检测已有 verified 来源的姿势技法后跳过。
+    """
+    conn = get_db()
+    try:
+        existing = conn.execute(
+            "SELECT COUNT(*) FROM techniques WHERE source_type = 'verified' AND name LIKE '%坐姿%'"
+        ).fetchone()[0]
+        if existing > 0:
+            print(f"[DB] Seed posing: {existing} verified posing techniques already exist, skipping",
+                  file=sys.stderr, flush=True)
+            return 0
+
+        count_techs = 0
+        count_matches = 0
+
+        for tech in POSING_TECHNIQUES:
+            row = conn.execute("""
+                INSERT INTO techniques (name, source_type, description, verify_count)
+                VALUES (?, ?, ?, 8)
+                ON CONFLICT(name) DO UPDATE SET
+                    description = CASE WHEN LENGTH(excluded.description) > LENGTH(techniques.description)
+                                  THEN excluded.description ELSE techniques.description END,
+                    source_type = excluded.source_type,
+                    updated_at = datetime('now')
+                RETURNING id
+            """, (tech['name'], tech['source_type'], tech['description'])).fetchone()
+            tech_id = row[0] if row else None
+            if tech_id is None:
+                tech_id = conn.execute("SELECT id FROM techniques WHERE name=?", (tech['name'],)).fetchone()[0]
+            if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                count_techs += 1
+
+            conn.execute("""
+                INSERT OR IGNORE INTO scene_matches (scene_type, technique_id, match_type, scene_category)
+                VALUES (?, ?, 'technique', ?)
+            """, (tech['scene_category'], tech_id, tech['scene_category']))
+            if conn.execute("SELECT changes()").fetchone()[0] > 0:
+                count_matches += 1
+
+        conn.commit()
+        print(f"[DB] Seed posing: inserted {count_techs} techniques + {count_matches} scene_matches",
+              file=sys.stderr, flush=True)
+        return count_techs + count_matches
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Seed posing error: {e}", file=sys.stderr, flush=True)
         return 0
     finally:
         conn.close()
