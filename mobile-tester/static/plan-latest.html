@@ -26,14 +26,13 @@ h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;backgroun
 .plan-card-v5 .plan-img-wrap{position:relative;line-height:0;background:#000;overflow:hidden}
 .plan-card-v5 .plan-img-wrap img{width:100%;max-width:100%;height:auto;display:block}
 
-/* ── Unified item rows（统一用后期模块的 tag+text 结构）── */
-.v5-item{display:flex;align-items:flex-start;gap:8px;padding:9px 12px;font-size:12px;line-height:1.5}
+/* ── Unified item rows（标签在上，文字在下，左顶满）── */
+.v5-item{display:flex;flex-direction:column;gap:6px;padding:9px 12px;font-size:12px;line-height:1.5}
 .v5-item+.v5-item{border-top:1px solid rgba(255,255,255,0.04)}
 .v5-item.vibe{background:rgba(245,158,11,0.03)}
-.v5-item .v5-item-bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 
-/* Tag pills — same base as 后期 categories, plus variants for main rows */
-.v5-pcat{flex-shrink:0;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;white-space:nowrap;text-align:center;line-height:1.6}
+/* Tag pills — 与后期标签尺寸一致 */
+.v5-pcat{display:inline-block;width:fit-content;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;white-space:nowrap;text-align:center;line-height:1.6}
 .v5-pcat.vibe{background:rgba(245,158,11,.12);color:var(--fire)}
 .v5-pcat.shoot{background:rgba(34,211,238,.10);color:var(--cyan)}
 .v5-pcat.pose{background:rgba(74,222,128,.10);color:var(--green)}
@@ -42,8 +41,8 @@ h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;backgroun
 .v5-pcat.fx{background:rgba(244,114,182,.12);color:#f472b6}
 .v5-pcat.ai{background:rgba(167,139,250,.12);color:var(--purple)}
 
-/* Text next to tag */
-.v5-post-text{color:var(--dim);padding-top:1px;word-break:break-word;flex:1;min-width:0;font-size:12px;line-height:1.5}
+/* Text — 全宽左顶满，自然换行 */
+.v5-post-text{color:var(--dim);word-break:break-word;font-size:12px;line-height:1.5}
 .v5-item.vibe .v5-post-text{color:var(--fire);font-weight:500}
 
 /* Small sub-tags（gear / posture）*/
@@ -99,24 +98,20 @@ h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;backgroun
   <!-- 2. 你怎么拍 -->
   <div class="v5-item">
     <span class="v5-pcat shoot">📍 你怎么拍</span>
-    <div class="v5-item-bd">
-      <div class="v5-post-text">📷 向前靠近一步，蹲下至胸口高度，与人物保持平视——让观众感觉就站在她面前，不是远远地拍</div>
-      <div class="v5-tags"><span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄（24mm等效）· 轻点人脸锁定对焦</span></div>
-    </div>
+    <div class="v5-post-text">📷 向前靠近一步，蹲下至胸口高度，与人物保持平视——让观众感觉就站在她面前，不是远远地拍</div>
+    <div class="v5-tags"><span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄（24mm等效）· 轻点人脸锁定对焦</span></div>
   </div>
 
   <!-- 3. 被摄者动作 -->
   <div class="v5-item">
     <span class="v5-pcat pose">🧍 被摄者动作</span>
-    <div class="v5-item-bd">
-      <div class="v5-tags">
-        <span class="v5-tg ps">🧍 站姿</span>
-        <span class="v5-tg ps">👀 眼神望远处</span>
-        <span class="v5-tg ps">😊 自然表情</span>
-        <span class="v5-tg ps">✋ 手自然垂放</span>
-      </div>
-      <div class="v5-post-text">侧身 45° 站立，手自然垂放，眼神看向远处——不是摆拍，是"刚好被拍到"的自然感。</div>
+    <div class="v5-tags">
+      <span class="v5-tg ps">🧍 站姿</span>
+      <span class="v5-tg ps">👀 眼神望远处</span>
+      <span class="v5-tg ps">😊 自然表情</span>
+      <span class="v5-tg ps">✋ 手自然垂放</span>
     </div>
+    <div class="v5-post-text">侧身 45° 站立，手自然垂放，眼神看向远处——不是摆拍，是"刚好被拍到"的自然感。</div>
   </div>
 
   <!-- 4. 构图详解（折叠·默认展开） -->
@@ -205,22 +200,18 @@ h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;backgroun
 
   <div class="v5-item">
     <span class="v5-pcat shoot">📍 你怎么拍</span>
-    <div class="v5-item-bd">
-      <div class="v5-post-text">📷 退后几步拉开距离，站立拍摄，利用垂下的柳枝靠近镜头作为虚化前景</div>
-      <div class="v5-tags"><span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄 · 打开网格保持水平</span></div>
-    </div>
+    <div class="v5-post-text">📷 退后几步拉开距离，站立拍摄，利用垂下的柳枝靠近镜头作为虚化前景</div>
+    <div class="v5-tags"><span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄 · 打开网格保持水平</span></div>
   </div>
 
   <div class="v5-item">
     <span class="v5-pcat pose">🧍 被摄者动作</span>
-    <div class="v5-item-bd">
-      <div class="v5-tags">
-        <span class="v5-tg ps">🧍 自然站立</span>
-        <span class="v5-tg ps">🐕 牵狗绳</span>
-        <span class="v5-tg ps">🌿 面朝河对岸</span>
-      </div>
-      <div class="v5-post-text">人宠保持自然站姿，面朝河对岸或低头互动。不需要刻意摆拍——松弛感来自真实状态。</div>
+    <div class="v5-tags">
+      <span class="v5-tg ps">🧍 自然站立</span>
+      <span class="v5-tg ps">🐕 牵狗绳</span>
+      <span class="v5-tg ps">🌿 面朝河对岸</span>
     </div>
+    <div class="v5-post-text">人宠保持自然站姿，面朝河对岸或低头互动。不需要刻意摆拍——松弛感来自真实状态。</div>
   </div>
 
   <div class="v5-detail">
