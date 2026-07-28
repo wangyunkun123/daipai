@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>带拍 · 混合卡片 v4</title>
+<style>
+  :root {
+    --bg: #0a0a0a; --card: #141414; --text: #e8e8e8;
+    --dim: #8a8a8a; --dimmer: #5a5a5a;
+    --green: #4ade80; --gold: #f59e0b;
+    --purple: #a78bfa; --cyan: #22d3ee; --border: #262626;
+    --radius: 18px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { max-width: 480px; margin: 0 auto; padding: 0 0 40px; }
+
+  /* ── Header ── */
+  .header {
+    text-align: center; padding: 24px 16px 8px;
+  }
+  .header h1 {
+    font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header .tagline { font-size: 12px; color: var(--dim); margin-top: 4px; }
+
+  /* ── Carousel ── */
+  .carousel { position: relative; margin: 12px 0; }
+  .carousel-track {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius); background: #000;
+  }
+  .carousel-track::-webkit-scrollbar { display: none; }
+
+  .plan-slide {
+    flex: 0 0 100%; scroll-snap-align: start;
+    position: relative;
+  }
+  .plan-slide img { width: 100%; display: block; }
+
+  /* Dots */
+  .dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0; }
+  .dot {
+    width: 6px; height: 6px; border-radius: 3px;
+    background: var(--border); transition: all 0.3s;
+  }
+  .dot.active { background: var(--gold); width: 20px; }
+
+  /* ── Action Strip (Layer 2: 你怎么拍) ── */
+  .action-strip {
+    margin: 0 16px 6px; padding: 14px 16px;
+    background: var(--card); border-radius: var(--radius);
+    border: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .action-strip .icon-col {
+    font-size: 22px; flex-shrink: 0; line-height: 1.4;
+  }
+  .action-strip .content-col { flex: 1; }
+  .action-strip .label {
+    font-size: 11px; color: var(--dimmer); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+  .action-strip .actions {
+    font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.5;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  }
+  .action-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .action-tag.move  { background: rgba(34,211,238,0.10); color: var(--cyan); }
+  .action-tag.height{ background: rgba(167,139,250,0.10); color: var(--purple); }
+  .action-tag.gear  { background: rgba(138,138,138,0.12); color: var(--dim); }
+
+  /* ── Vibe Strip (Layer 5: 效果预期) ── */
+  .vibe-strip {
+    margin: 0 16px 6px; padding: 12px 16px;
+    background: rgba(245,158,11,0.05); border-radius: 12px;
+    border: 1px solid rgba(245,158,11,0.10);
+    font-size: 13px; color: var(--gold); line-height: 1.6;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .vibe-strip .vibe-icon { font-size: 16px; flex-shrink: 0; }
+
+  /* ── Detail Strip (Layer 3: 构图关键，可折叠) ── */
+  .detail-strip {
+    margin: 0 16px 8px; border-radius: 12px;
+    overflow: hidden;
+  }
+  .detail-header {
+    padding: 12px 16px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px;
+    font-size: 13px; color: var(--dim);
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+  }
+  .detail-header .arrow { transition: transform 0.2s; font-size: 11px; }
+  .detail-strip.open .detail-header .arrow { transform: rotate(180deg); }
+  .detail-strip.open .detail-header { border-radius: 12px 12px 0 0; }
+
+  .detail-body {
+    max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    background: var(--card); border: 1px solid var(--border);
+    border-top: none; border-radius: 0 0 12px 12px;
+  }
+  .detail-strip.open .detail-body { max-height: 300px; }
+
+  .detail-body .detail-row {
+    padding: 10px 16px; font-size: 13px; line-height: 1.7;
+    color: var(--dim); display: flex; gap: 8px;
+  }
+  .detail-body .detail-row + .detail-row { border-top: 1px solid rgba(255,255,255,0.03); }
+  .detail-body .detail-icon { flex-shrink: 0; font-size: 14px; }
+
+  /* ── Comparison: Old Text Card ── */
+  .section-title {
+    margin: 24px 16px 8px; font-size: 13px; color: var(--dimmer);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .old-card {
+    margin: 0 16px 8px; padding: 16px;
+    background: var(--card); border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .old-card .plan-name {
+    font-size: 15px; font-weight: 600; margin-bottom: 12px;
+  }
+  .old-row { margin-bottom: 6px; font-size: 13px; line-height: 1.7; color: var(--dim); }
+
+  /* ── Key difference callout ── */
+  .callout {
+    margin: 16px; padding: 16px;
+    background: rgba(34,211,238,0.05); border-radius: 12px;
+    border: 1px solid rgba(34,211,238,0.12);
+  }
+  .callout h3 { font-size: 14px; color: var(--cyan); margin-bottom: 8px; }
+  .callout ul { font-size: 12px; color: var(--dim); line-height: 1.8; padding-left: 18px; }
+  .callout ul li { margin-bottom: 4px; }
+  .callout .good { color: var(--green); }
+  .callout .bad  { color: #ef4444; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>带拍 · 混合卡片</h1>
+    <div class="tagline">增强图标注构图 · 三行文字给指令 · 3秒看完</div>
+  </div>
+
+  <!-- ============ HYBRID CARDS ============ -->
+
+  <!-- Carousel -->
+  <div class="carousel">
+    <div class="carousel-track" id="carouselTrack"></div>
+    <div class="dots" id="carouselDots"></div>
+  </div>
+
+  <!-- Action Strip (dynamically updated) -->
+  <div class="action-strip" id="actionStrip">
+    <div class="icon-col">📍</div>
+    <div class="content-col">
+      <div class="label">你怎么拍</div>
+      <div class="actions" id="actionContent"></div>
+    </div>
+  </div>
+
+  <!-- Vibe Strip (dynamically updated) -->
+  <div class="vibe-strip" id="vibeStrip">
+    <span class="vibe-icon">✨</span>
+    <span id="vibeContent"></span>
+  </div>
+
+  <!-- Detail Strip (collapsible) -->
+  <div class="detail-strip" id="detailStrip">
+    <div class="detail-header" onclick="this.parentElement.classList.toggle('open')">
+      <span>📐 构图详解</span>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="detail-body" id="detailContent"></div>
+  </div>
+
+  <!-- ============ COMPARISON: Old Text Cards ============ -->
+  <div class="section-title">📋 对比：旧版纯文字卡片</div>
+
+  <div class="old-card">
+    <div class="plan-name">📷 人宠互动特写</div>
+    <div class="old-row">📋 观察狗的动态，等待它看向镜头的时机</div>
+    <div class="old-row">👤 人物放在画面左三分之一处，狗放在右三分之一处</div>
+    <div class="old-row">📷 向前走两步，蹲下来，机位降低到与人和狗平齐</div>
+    <div class="old-row">⚙️ iPhone 主摄（24mm等效），轻点人脸锁定对焦和曝光</div>
+    <div class="old-row">🎨 顶部虚化树枝太乱，拍的时候往上移一点裁掉</div>
+    <div class="old-row">✨ 春日河边，柔和阳光洒在人与狗身上，金黄光线穿过树梢</div>
+  </div>
+
+  <!-- Key Differences -->
+  <div class="callout">
+    <h3>⚡ v4 混合卡片的 4 个关键差异</h3>
+    <ul>
+      <li><span class="good">✓ 照片上只标注构图/光线/主体</span> — 不写文字，不画箭头，不标地面位置</li>
+      <li><span class="good">✓ 拍摄者动作独立成行</span> — 图标+标签，动词先行，一行扫完</li>
+      <li><span class="good">✓ 效果预期用感性语言</span> — 不写技术术语，写"拍出来是什么感觉"</li>
+      <li><span class="good">✓ 构图详情默认折叠</span> — 想看的展开，不看的直接跳过</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// Plan Data
+// ============================================================
+const plans = [
+  {
+    id: 'now-1',
+    name: '人宠互动特写',
+    image: 'plan_v4_clean.jpg',
+    color: '#f59e0b',
+    actions: [
+      { text: '蹲下', icon: '🧎', type: 'height' },
+      { text: '靠近一步', icon: '→', type: 'move' },
+      { text: '主摄 24mm', icon: '📷', type: 'gear' },
+    ],
+    vibe: '春日暖阳从左上洒落，发丝透出金边。宠物和人对视的那一刻——温暖、自然、有故事。',
+    details: [
+      { icon: '👤', text: '人物放在画面左三分之一竖线上，身体占画面中下部' },
+      { icon: '🐕', text: '穿红衣的泰迪放在右下方交叉点，与人物形成对角线呼应' },
+      { icon: '✂️', text: '顶部虚化的树枝太乱——机位稍微往上移，让树枝只在画面最上方占一小条' },
+      { icon: '💡', text: '光线从左上角（树叶缝隙）射入，让阳光刚好照亮人物侧脸和狗的红衣' },
+      { icon: '⚙️', text: '轻点人物脸部锁定对焦，拍的时候连拍 3 张，选眼神最好的那张' },
+    ],
+  },
+  {
+    id: 'best-1',
+    name: '郊野氛围全景',
+    image: 'plan_v4_clean.jpg',  // Would be a different annotated image in production
+    color: '#22d3ee',
+    actions: [
+      { text: '退后 3 步', icon: '←', type: 'move' },
+      { text: '站立', icon: '🧍', type: 'height' },
+      { text: '主摄 24mm', icon: '📷', type: 'gear' },
+    ],
+    vibe: '郊野河畔的松弛感——小人影在开阔景色中，绿叶做天然画框。像一张电影截图，不是一张游客照。',
+    details: [
+      { icon: '👤', text: '人物和狗的组合放在画面左下三分之一区域，留出大面积天空和河水' },
+      { icon: '🌿', text: '利用垂下的柳枝做前景虚化画框——把手机贴近树枝，对焦在远景人物上' },
+      { icon: '📐', text: '水平面保持在中线附近，天空和地面各占一半，营造开阔感' },
+      { icon: '💡', text: '阳光从左上方来，让人物的轮廓被柔和地勾勒出来' },
+      { icon: '⚙️', text: '保持手机水平（打开相机网格），对焦在人物上，让前景枝叶自然虚化' },
+    ],
+  },
+];
+
+// ============================================================
+// Render
+// ============================================================
+function render() {
+  const track = document.getElementById('carouselTrack');
+  const dots  = document.getElementById('carouselDots');
+
+  let trackHTML = '', dotsHTML = '';
+  plans.forEach((p, i) => {
+    trackHTML += `
+      <div class="plan-slide" data-idx="${i}">
+        <img src="${p.image}" alt="${p.name}" loading="${i === 0 ? 'eager' : 'lazy'}">
+      </div>`;
+    dotsHTML += `<span class="dot${i === 0 ? ' active' : ''}" data-idx="${i}"></span>`;
+  });
+
+  track.innerHTML = trackHTML;
+  dots.innerHTML = dotsHTML;
+
+  // Scroll → update dots + info
+  track.addEventListener('scroll', () => {
+    const center = track.scrollLeft + track.clientWidth / 2;
+    let activeIdx = 0, minDist = Infinity;
+    track.querySelectorAll('.plan-slide').forEach((slide, i) => {
+      const dist = Math.abs(center - (slide.offsetLeft + slide.clientWidth / 2));
+      if (dist < minDist) { minDist = dist; activeIdx = i; }
+    });
+    dots.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+    updateInfo(activeIdx);
+  });
+
+  // Dot click
+  dots.querySelectorAll('.dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.dataset.idx);
+      const slide = track.querySelector(`[data-idx="${idx}"]`);
+      if (slide) slide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    });
+  });
+
+  updateInfo(0);
+}
+
+function updateInfo(idx) {
+  const p = plans[idx];
+  if (!p) return;
+
+  // Actions
+  const actionsHTML = p.actions.map(a =>
+    `<span class="action-tag ${a.type}">${a.icon} ${a.text}</span>`
+  ).join('');
+  document.getElementById('actionContent').innerHTML = actionsHTML;
+
+  // Vibe
+  document.getElementById('vibeContent').textContent = p.vibe;
+
+  // Details
+  const detailsHTML = p.details.map(d =>
+    `<div class="detail-row"><span class="detail-icon">${d.icon}</span><span>${d.text}</span></div>`
+  ).join('');
+  document.getElementById('detailContent').innerHTML = detailsHTML;
+}
+
+render();
+</script>
+</body>
+</html>

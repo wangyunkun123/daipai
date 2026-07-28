@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>带拍 · 增强方案卡片 Demo</title>
+<style>
+  :root {
+    --bg: #0a0a0a; --card: #141414; --text: #e8e8e8;
+    --dim: #8a8a8a; --green: #4ade80; --fire: #f59e0b;
+    --purple: #a78bfa; --cyan: #22d3ee; --border: #262626;
+    --radius: 18px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100dvh;
+    -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  }
+
+  .app { max-width: 480px; margin: 0 auto; padding: 12px 0 32px; }
+
+  /* Header */
+  .header { text-align:center; padding:20px 16px 0; }
+  .header h1 {
+    font-size:18px; font-weight:700; letter-spacing:-0.3px;
+    background: linear-gradient(135deg, #4ade80, #22d3ee);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .header .sub { font-size:12px; color:var(--dim); margin-top:4px; }
+
+  /* Mode toggle */
+  .mode-bar {
+    display: flex; gap: 8px; padding: 16px 16px 0;
+  }
+  .mode-btn {
+    flex:1; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card); color: var(--dim); font-size:13px; font-weight:600;
+    text-align: center; cursor: pointer; transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: rgba(74,222,128,0.1); border-color: var(--green); color: var(--green);
+  }
+
+  /* ====== ENHANCED IMAGE CARD ====== */
+  .enhanced-carousel {
+    position: relative; margin: 16px 0;
+  }
+  .carousel-viewport {
+    border-radius: var(--radius); overflow: hidden;
+    background: #000; /* black background for image letterboxing */
+  }
+  .carousel-track {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+  }
+  .carousel-track::-webkit-scrollbar { display: none; }
+
+  .enhanced-card {
+    flex: 0 0 100%; scroll-snap-align: start;
+    position: relative;
+  }
+  .enhanced-card img {
+    width: 100%; display: block;
+  }
+
+  /* Card overlay interactions */
+  .card-actions {
+    position: absolute; bottom: 16px; right: 16px;
+    display: flex; gap: 8px;
+  }
+  .card-action {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; font-size: 16px; display: flex;
+    align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .card-action:active {
+    background: rgba(255,255,255,0.2); transform: scale(0.94);
+  }
+
+  /* Dots */
+  .carousel-dots {
+    display: flex; justify-content: center; gap: 6px; padding: 14px 0 4px;
+  }
+  .carousel-dot {
+    width: 6px; height: 6px; border-radius: 3px;
+    background: var(--border); transition: all 0.3s;
+  }
+  .carousel-dot.active { background: var(--cyan); width: 20px; }
+
+  /* ====== INFO STRIP (below image) ====== */
+  .info-strip {
+    margin: 0 16px; padding: 14px 16px;
+    background: var(--card); border-radius: var(--radius);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .info-strip .shot-num {
+    width: 28px; height: 28px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; display: flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .info-strip .shot-num.now { background: rgba(74,222,128,0.15); color: var(--green); }
+  .info-strip .shot-num.best { background: rgba(245,158,11,0.15); color: var(--fire); }
+  .info-strip .shot-name { font-size:15px; font-weight:600; flex:1; }
+  .info-strip .shot-hint {
+    font-size:12px; color: var(--dim); white-space: nowrap;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ====== TIPS STRIP ====== */
+  .tips-strip {
+    margin: 8px 16px; padding: 12px 14px;
+    background: rgba(167,139,250,0.06); border-radius: 12px;
+    border: 1px solid rgba(167,139,250,0.12);
+    font-size: 12px; color: var(--dim); line-height: 1.7;
+  }
+  .tips-strip .tip-icon { margin-right: 4px; }
+
+  /* ====== TEXT PLAN CARD (OLD STYLE, FOR COMPARISON) ====== */
+  .plan-card {
+    margin: 8px 16px; padding: 16px;
+    background: var(--card); border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .plan-card .plan-name {
+    font-size:15px; font-weight:600; margin-bottom:12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .plan-card .plan-name .idx {
+    width:24px; height:24px; border-radius:8px; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .plan-section {
+    margin-bottom: 8px; font-size:13px; line-height:1.7;
+    display:flex; gap:8px;
+  }
+  .plan-section .sec-icon { flex-shrink:0; font-size:14px; width:20px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.85); color: #fff; padding: 10px 20px;
+    border-radius: 20px; font-size:13px; font-weight:600;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.15);
+    opacity:0; pointer-events:none; transition: opacity 0.3s;
+    z-index: 100;
+  }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>带拍 · 增强方案卡片</h1>
+    <div class="sub">一张图就是一条方案 · 截图即带走</div>
+  </div>
+
+  <!-- Mode Switch -->
+  <div class="mode-bar">
+    <button class="mode-btn active" data-mode="enhanced">🖼️ 增强图方案</button>
+    <button class="mode-btn" data-mode="text">📋 传统文字方案</button>
+  </div>
+
+  <!-- ============ ENHANCED MODE ============ -->
+  <div id="enhancedMode">
+
+    <!-- Carousel -->
+    <div class="enhanced-carousel">
+      <div class="carousel-viewport">
+        <div class="carousel-track" id="enhancedTrack">
+          <!-- Cards injected by JS -->
+        </div>
+      </div>
+      <!-- Overlay: screenshot hint -->
+      <div style="text-align:center;padding:6px 0 0;">
+        <span style="font-size:11px;color:var(--dimmer);">← 左右滑动切换方案 · 长按截图保存 →</span>
+      </div>
+      <div class="carousel-dots" id="enhancedDots"></div>
+    </div>
+
+    <!-- Shot info -->
+    <div class="info-strip" id="enhancedInfo">
+      <div class="shot-num now" id="enhancedNum">1</div>
+      <div class="shot-name" id="enhancedName">人宠互动特写</div>
+      <div class="shot-hint">📸 <span id="enhancedHint">共2个方案</span></div>
+    </div>
+
+    <!-- Quick tips -->
+    <div class="tips-strip">
+      <span class="tip-icon">💡</span> 截图保存增强图 → 打开系统相机 → 对齐网格线 → 按快门。<strong>不需要回来看文字。</strong>
+    </div>
+
+  </div>
+
+  <!-- ============ TEXT MODE (OLD STYLE) ============ -->
+  <div id="textMode" style="display:none;">
+    <div class="plan-card">
+      <div class="plan-name"><span class="idx" style="background:rgba(74,222,128,0.1);color:var(--green)">1</span>人宠互动特写</div>
+      <div class="plan-section sec-prep"><span class="sec-icon">📋</span><span class="sec-text">观察狗的动态，等待它看向镜头的时机</span></div>
+      <div class="plan-section sec-subject"><span class="sec-icon">👤</span><span class="sec-text">人物放在画面左三分之一处，狗放在右三分之一处，两者形成眼神交流</span></div>
+      <div class="plan-section sec-shooter"><span class="sec-icon">📷</span><span class="sec-text">向前走两步，蹲下来，机位降低到与人和狗平齐的高度</span></div>
+      <div class="plan-section sec-gear"><span class="sec-icon">⚙️</span><span class="sec-text">iPhone 主摄（24mm等效），轻点人脸锁定对焦和曝光</span></div>
+      <div class="plan-section sec-enhance"><span class="sec-icon">🎨</span><span class="sec-text">顶部虚化树枝太乱，拍的时候往上移一点裁掉</span></div>
+      <div class="plan-section sec-result"><span class="sec-icon">✨</span><span class="sec-text">春日河边，柔和阳光洒在人与狗身上，金黄光线穿过树梢，温暖治愈</span></div>
+    </div>
+
+    <div class="plan-card">
+      <div class="plan-name"><span class="idx" style="background:rgba(34,211,238,0.1);color:var(--cyan)">2</span>郊野氛围全景</div>
+      <div class="plan-section sec-prep"><span class="sec-icon">📋</span><span class="sec-text">寻找一个能框住整个场景的位置</span></div>
+      <div class="plan-section sec-subject"><span class="sec-icon">👤</span><span class="sec-text">人宠组合放在画面左下区域，留出大面积的环境空间</span></div>
+      <div class="plan-section sec-shooter"><span class="sec-icon">📷</span><span class="sec-text">后退几步拉远距离，让顶部和左侧的树叶形成天然框架</span></div>
+      <div class="plan-section sec-gear"><span class="sec-icon">⚙️</span><span class="sec-text">iPhone 主摄（24mm等效），保持画面水平，对焦在人和狗身上</span></div>
+      <div class="plan-section sec-enhance"><span class="sec-icon">🎨</span><span class="sec-text">利用前景虚化树叶做画框，形成"画中画"的层次感</span></div>
+      <div class="plan-section sec-result"><span class="sec-icon">✨</span><span class="sec-text">郊野河畔的松弛氛围，小人影在开阔景致中，像一张电影剧照</span></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">✅ 截图已保存到相册（模拟）</div>
+
+</div>
+
+<script>
+// ============================================================
+// Data
+// ============================================================
+const plans = [
+  {
+    id: 'now-1',
+    direction: 'now',
+    name: '人宠互动特写',
+    instruction: '蹲下 · 人物在左竖线 · 宠物在右竖线 · 裁顶部乱枝',
+    image: 'data:placeholder', // Will use actual image path
+    color: 'var(--green)',
+    colorClass: 'now'
+  },
+  {
+    id: 'best-1',
+    direction: 'best',
+    name: '郊野氛围全景',
+    instruction: '后退 · 人宠放左下交叉点 · 绿叶做天然画框',
+    image: 'data:placeholder',
+    color: 'var(--cyan)',
+    colorClass: 'best'
+  }
+];
+
+// ============================================================
+// Render Enhanced Cards
+// ============================================================
+function renderEnhancedCards() {
+  const track = document.getElementById('enhancedTrack');
+  const dots = document.getElementById('enhancedDots');
+
+  // NOTE: In production, these would be dynamically generated by the server
+  // using the same Python/PIL pipeline that created the demo images
+  const demoImages = [
+    '../static/plan_mobile_1.jpg',  // Placeholder - use actual path in prod
+    '../static/plan_mobile_2.jpg'
+  ];
+
+  let trackHtml = '';
+  let dotsHtml = '';
+
+  plans.forEach((p, i) => {
+    // For demo: use the actual generated images if available
+    // In production, the server generates these per-upload
+    trackHtml += `
+      <div class="enhanced-card" data-idx="${i}">
+        <img src="${demoImages[i]}" alt="${p.name}"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+             loading="eager">
+        <div style="display:none;aspect-ratio:9/19.5;background:var(--card);align-items:center;justify-content:center;color:var(--dim);font-size:13px;">
+          📷 增强图将由服务端实时生成<br><small>基于用户上传的照片</small>
+        </div>
+        <!-- Screenshot action button -->
+        <div class="card-actions">
+          <button class="card-action" onclick="simulateScreenshot(${i})" title="截图保存">📸</button>
+          <button class="card-action" onclick="shareCard(${i})" title="分享方案">↗</button>
+        </div>
+      </div>`;
+    dotsHtml += `<span class="carousel-dot${i===0?' active':''}" data-idx="${i}"></span>`;
+  });
+
+  track.innerHTML = trackHtml;
+  dots.innerHTML = dotsHtml;
+
+  // Scroll listener for dots
+  track.addEventListener('scroll', () => updateDots(track, dots));
+
+  // Dot click
+  dots.querySelectorAll('.carousel-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.dataset.idx);
+      const card = track.querySelector(`[data-idx="${idx}"]`);
+      if (card) card.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'start' });
+    });
+  });
+
+  // Update info strip on scroll
+  track.addEventListener('scroll', () => {
+    const center = track.scrollLeft + track.clientWidth / 2;
+    let activeIdx = 0, minDist = Infinity;
+    track.querySelectorAll('.enhanced-card').forEach((card, i) => {
+      const dist = Math.abs(center - (card.offsetLeft + card.clientWidth / 2));
+      if (dist < minDist) { minDist = dist; activeIdx = i; }
+    });
+    updateInfoStrip(activeIdx);
+  });
+}
+
+function updateDots(track, dotsContainer) {
+  const center = track.scrollLeft + track.clientWidth / 2;
+  let activeIdx = 0, minDist = Infinity;
+  track.querySelectorAll('.enhanced-card').forEach((card, i) => {
+    const dist = Math.abs(center - (card.offsetLeft + card.clientWidth / 2));
+    if (dist < minDist) { minDist = dist; activeIdx = i; }
+  });
+  dotsContainer.querySelectorAll('.carousel-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === activeIdx);
+  });
+}
+
+function updateInfoStrip(idx) {
+  const p = plans[idx];
+  if (!p) return;
+  const num = document.getElementById('enhancedNum');
+  const name = document.getElementById('enhancedName');
+  const hint = document.getElementById('enhancedHint');
+
+  num.textContent = idx + 1;
+  num.className = 'shot-num ' + p.colorClass;
+  name.textContent = p.name;
+  hint.textContent = p.instruction;
+}
+
+function simulateScreenshot(idx) {
+  const toast = document.getElementById('toast');
+  toast.textContent = '📸 截图已保存！打开相机，对齐网格线开始拍摄';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function shareCard(idx) {
+  const p = plans[idx];
+  const toast = document.getElementById('toast');
+  // In production: actually share the image
+  if (navigator.share) {
+    toast.textContent = '↗ 打开分享面板...';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+
+    navigator.share({
+      title: `带拍方案：${p.name}`,
+      text: `带拍给我推荐了「${p.name}」——${p.instruction}`,
+    }).catch(() => {});
+  } else {
+    toast.textContent = '📋 方案链接已复制，粘贴发给朋友';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+}
+
+// ============================================================
+// Mode Switch
+// ============================================================
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const mode = btn.dataset.mode;
+    document.getElementById('enhancedMode').style.display = mode === 'enhanced' ? 'block' : 'none';
+    document.getElementById('textMode').style.display = mode === 'text' ? 'block' : 'none';
+  });
+});
+
+// ============================================================
+// Init
+// ============================================================
+renderEnhancedCards();
+updateInfoStrip(0);
+</script>
+</body>
+</html>
