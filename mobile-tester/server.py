@@ -58,15 +58,15 @@ def generate_plan_image(photo_path, plan, plan_index, output_key):
         return None
 
     W, H = img.size
-    # Resize for mobile: width = 1290 (3x retina of 430px)
-    MOBILE_W = 1290
+    # Resize for mobile: width = 750 (2x of 375px, fits 390-430px screens)
+    MOBILE_W = 750
     scale = MOBILE_W / W
     img = img.resize((MOBILE_W, int(H * scale)), Image.LANCZOS)
     W, H = img.size
 
-    font_lg = _load_font(34)
-    font_md = _load_font(28)
-    font_sm = _load_font(22)
+    font_lg = _load_font(26)
+    font_md = _load_font(20)
+    font_sm = _load_font(16)
 
     color = (245, 158, 11)  # gold default
     name = plan.get('name', f'方案{plan_index+1}')
@@ -111,6 +111,7 @@ def generate_plan_image(photo_path, plan, plan_index, output_key):
         vd.rectangle([m,m,W-m,H-m], outline=(0,0,0,a), width=int(min(W,H)*0.04))
 
     # ── Subjects ──
+    bar_h = 36  # bottom bar height, used for clamping subject labels
     for ann in annotations:
         if ann.get('type') == 'subject':
             c = color_map.get(ann.get('color',''), color)
@@ -131,7 +132,7 @@ def generate_plan_image(photo_path, plan, plan_index, output_key):
                 px,py=14,8; lw=tw+px; lh=th+py
                 lx=cx+r+10; ly=cy-lh//2
                 if lx+lw>W-16: lx=cx-r-lw-10
-                bar_top=H-56
+                bar_top=H-bar_h
                 if ly+lh>bar_top-8: ly=bar_top-lh-8
                 if ly<8: ly=8
                 sd.rounded_rectangle([lx,ly,lx+lw,ly+lh], radius=7, fill=(8,8,12,225))
@@ -179,7 +180,7 @@ def generate_plan_image(photo_path, plan, plan_index, output_key):
         bx0 += btw+8
 
     # ── Bottom bar ──
-    bar_h=56; y0=H-bar_h
+    y0 = H - bar_h
     bad.rectangle([(0,y0),(W,H)], fill=(0,0,0,140))
     bad.text((20,y0+12), f"📷 {plan_index+1}/{4}", fill=(200,200,200,255), font=font_lg)
     try: bb=bad.textbbox((0,0),name,font=font_lg); nw=bb[2]-bb[0]

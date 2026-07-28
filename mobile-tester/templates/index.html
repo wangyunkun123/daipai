@@ -312,7 +312,7 @@
   .plan-card-v5 .plan-img-wrap {
     position: relative; line-height: 0; background: #000;
   }
-  .plan-card-v5 .plan-img-wrap img { width: 100%; display: block; }
+  .plan-card-v5 .plan-img-wrap img { width: 100%; max-width: 100%; height: auto; display: block; }
 
   /* v5 卡片行 */
   .v5-row { padding: 11px 14px; display: flex; align-items: flex-start; gap: 8px; }
@@ -1709,8 +1709,13 @@ function copyPromptV5(i) {
   });
 }
 function genPromptV5(i) {
-  copyPromptV5(i);
-  setTimeout(()=>showToast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成'),500);
+  const el = document.getElementById('pt'+i);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(()=>{
+    showToast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成');
+  }).catch(()=>{
+    showToast('⚠️ 复制失败，请手动长按选择文字');
+  });
 }
 function showToast(msg) {
   let t = document.getElementById('v5toast');
