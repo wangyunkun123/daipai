@@ -1694,10 +1694,10 @@ function renderPlanCard(p, i, direction) {
       if (p.enhance) detailItems.push({i:'② 增强',t:p.enhance});
       if (p.why) detailItems.push({i:'③ 原理',t:p.why});
       if (p.perspective) detailItems.push({i:'④ 视角',t:p.perspective});
+  if (detailItems.length) {
     c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
       detailItems.forEach(d => { c += `<div class="v5-post-item"><span class="v5-pcat comp">${d.i}</span><span class="v5-post-text">${esc(d.t)}</span></div>`; });
     c += `</div></div></div>`;
-    c += `</div></div>`;
   }
 
   // ── 5. 后期（折叠面板）──
