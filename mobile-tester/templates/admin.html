@@ -203,6 +203,26 @@ const REASON_LABELS = {
   'other': '💬 其他'
 };
 
+// DB stores UTC; convert to local for display. Input: "2026-07-28 14:30:00"
+// Returns: { datetime: "2026-07-28 22:30", time: "22:30:00" }
+function toLocal(utcStr) {
+  if (!utcStr || utcStr.length < 16) return { datetime: utcStr||'', time: '' };
+  try {
+    // Append 'Z' to mark as UTC, then browser converts to local
+    const d = new Date(utcStr.replace(' ','T') + 'Z');
+    if (isNaN(d.getTime())) return { datetime: utcStr.slice(0,16), time: utcStr.slice(11,19) };
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    const h = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    const s = String(d.getSeconds()).padStart(2,'0');
+    return { datetime: `${y}-${m}-${day} ${h}:${mi}`, time: `${h}:${mi}:${s}` };
+  } catch(e) {
+    return { datetime: utcStr.slice(0,16), time: utcStr.slice(11,19) };
+  }
+}
+
 // ── 折叠/展开通用函数 ──
 function toggleCollapse(btn) {
   const tbody = btn.closest('tbody') || btn.parentElement;
@@ -293,7 +313,7 @@ function render(d) {
         <div class="req-row">
           <div class="req-info">
             <span class="ip">${esc(r.ip_address)}</span>
-            <div class="meta">已用 ${r.used_count||0}/${limit} 次 · ${(r.created_at||'').slice(0,16)}</div>
+            <div class="meta">已用 ${r.used_count||0}/${limit} 次 · ${toLocal(r.created_at).datetime}</div>
           </div>
           <div class="req-actions">
             <button class="btn-approve" onclick="approve(${r.id},'approve')">✅ 批准 +5次</button>
@@ -337,7 +357,7 @@ function render(d) {
     rfb.innerHTML = '<tr><td colspan="6" class="empty">暂无反馈数据</td></tr>';
   } else {
     rfb.innerHTML = recent.map(r => {
-      const time = (r.updated_at||r.created_at||'').slice(0,16);
+      const time = toLocal(r.updated_at||r.created_at).datetime;
       const scene = (r.scene_type||r.us_scene_type||'-').slice(0,15);
       const style = (r.style||'-').slice(0,12);
       const plan = '#' + ((r.plan_index||0)+1);
@@ -399,7 +419,7 @@ function renderApiStats(as) {
   } else {
     const typeLabel = {vision:'👁 视觉识别', directions:'🎬 方向生成', plans:'📋 方案生成'};
     const renderRow = (r, hidden) => {
-      const time = (r.created_at||'').slice(11,19);
+      const time = toLocal(r.created_at).time;
       const icon = r.success ? '✅' : '❌';
       const sid = (r.session_id||'').slice(0,8);
       return `<tr class="${hidden?'hidden-row':''}">
@@ -447,7 +467,7 @@ function renderSearchStats(ss) {
   } else {
     const typeLabel = {style:'🎨 风格', location:'📍 位置'};
     const renderRow = (r, hidden) => {
-      const time = (r.created_at||'').slice(11,19);
+      const time = toLocal(r.created_at).time;
       const query = (r.query_text||'').slice(0,80);
       const qualityIcon = r.result_count > 0 ? '🟢' : '🔴';
       const summary = r.results_summary
@@ -693,7 +713,7 @@ async function loadDiscoveries() {
       const kw = esc(d.keywords_used || '').substring(0, 40);
       const hint = esc(d.extracted_hint || '').substring(0, 80);
       const auth = d.authenticity === 'real_community' ? '🟢 真实社区' : '🟡 混合';
-      const time = (d.created_at || '').substring(0, 16);
+      const time = toLocal(d.created_at).datetime;
       return `<tr>
         <td style="font-size:11px">${time}</td>
         <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(d.query_text||'')}">${kw}</td>

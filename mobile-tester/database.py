@@ -564,7 +564,7 @@ def export_for_claude():
         return {
             "styles": styles,
             "techniques": techniques,
-            "exported_at": datetime.now().isoformat(),
+            "exported_at": datetime.utcnow().isoformat(),
             "total_scenes": conn.execute("SELECT COUNT(DISTINCT scene_type) FROM scene_matches").fetchone()[0],
             "total_matches": conn.execute("SELECT COUNT(*) FROM scene_matches").fetchone()[0],
         }
@@ -742,11 +742,11 @@ def get_api_call_stats():
     """获取 AI API 调用统计数据（v4.3: 用范围查询替代 date() 包裹）"""
     conn = get_db()
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
+        now = datetime.utcnow()
+        today = now.strftime('%Y-%m-%d')
         today_start = f"{today} 00:00:00"
         today_end = f"{today} 23:59:59"
-        seven_days_ago = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        seven_days_ago = (seven_days_ago - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        seven_days_ago = (now - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
 
         # 今日汇总（范围查询利用 idx_api_log_time 索引）
         today_calls = conn.execute("""
@@ -794,11 +794,11 @@ def get_search_stats():
     """获取 Web 搜索执行统计数据（v4.3: 用范围查询替代 date() 包裹）"""
     conn = get_db()
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
+        now = datetime.utcnow()
+        today = now.strftime('%Y-%m-%d')
         today_start = f"{today} 00:00:00"
         today_end = f"{today} 23:59:59"
-        seven_days_ago = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                         - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        seven_days_ago = (now - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
 
         # 今日搜索（范围查询）
         today_searches = conn.execute("""
@@ -862,9 +862,7 @@ def get_style_technique_panel():
     """获取风格/技法发现面板数据"""
     conn = get_db()
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
-
-        # 风格统计
+        today = datetime.utcnow().strftime('%Y-%m-%d')
         total_styles = conn.execute("SELECT COUNT(*) FROM styles").fetchone()[0]
         styles_by_source = [dict(r) for r in conn.execute("""
             SELECT source_type, COUNT(*) as cnt FROM styles GROUP BY source_type ORDER BY cnt DESC
@@ -1400,7 +1398,7 @@ def check_and_increment_usage(ip_address, daily_limit=10):
     """
     conn = get_db()
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
+        today = datetime.utcnow().strftime('%Y-%m-%d')
         row = conn.execute(
             "SELECT count, extra_quota FROM daily_usage WHERE ip_address=? AND usage_date=?",
             (ip_address, today)
@@ -1437,7 +1435,7 @@ def get_daily_usage(ip_address):
     """获取某 IP 今天的用量"""
     conn = get_db()
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
+        today = datetime.utcnow().strftime('%Y-%m-%d')
         row = conn.execute(
             "SELECT count, extra_quota FROM daily_usage WHERE ip_address=? AND usage_date=?",
             (ip_address, today)
@@ -1457,7 +1455,7 @@ def submit_quota_request(ip_address):
     """提交配额申请。返回 (ok, message)"""
     conn = get_db()
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
+        today = datetime.utcnow().strftime('%Y-%m-%d')
         # 检查是否已有待处理的申请
         existing = conn.execute(
             "SELECT id, status FROM quota_requests WHERE ip_address=? AND request_date=? AND status='pending'",
@@ -1483,7 +1481,7 @@ def get_quota_request_status(ip_address):
     """查询某 IP 今天的申请状态"""
     conn = get_db()
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
+        today = datetime.utcnow().strftime('%Y-%m-%d')
         row = conn.execute(
             "SELECT status FROM quota_requests WHERE ip_address=? AND request_date=? ORDER BY created_at DESC LIMIT 1",
             (ip_address, today)
@@ -1688,7 +1686,7 @@ def export_feedback_markdown():
     like_pct = round(stats['total_likes'] / total * 100) if total > 0 else 0
 
     md = f"""# 带拍 · 反馈报告
-> 更新时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}
+> 更新时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC
 
 ## 📊 概览
 - 总反馈数：{total} 条
