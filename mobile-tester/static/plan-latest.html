@@ -26,16 +26,14 @@ h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;backgroun
 .plan-card-v5 .plan-img-wrap{position:relative;line-height:0;background:#000;overflow:hidden}
 .plan-card-v5 .plan-img-wrap img{width:100%;max-width:100%;height:auto;display:block}
 
-/* ── Unified item rows（标签在上，文字在下，左顶满）── */
-.v5-item{display:flex;flex-direction:column;gap:6px;padding:9px 12px;font-size:12px;line-height:1.5}
+/* ── Unified item rows（纯文字标签在上，内容在下，左顶满）── */
+.v5-item{display:flex;flex-direction:column;gap:4px;padding:9px 12px;font-size:12px;line-height:1.5}
 .v5-item+.v5-item{border-top:1px solid rgba(255,255,255,0.04)}
 .v5-item.vibe{background:rgba(245,158,11,0.03)}
+.v5-label{font-size:10px;color:var(--dimmer);letter-spacing:0.5px;text-transform:uppercase}
 
-/* Tag pills — 与后期标签尺寸一致 */
+/* Tag pills — 仅后期 & 构图详解用 */
 .v5-pcat{display:inline-block;width:fit-content;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;white-space:nowrap;text-align:center;line-height:1.6}
-.v5-pcat.vibe{background:rgba(245,158,11,.12);color:var(--fire)}
-.v5-pcat.shoot{background:rgba(34,211,238,.10);color:var(--cyan)}
-.v5-pcat.pose{background:rgba(74,222,128,.10);color:var(--green)}
 .v5-pcat.comp{background:rgba(138,138,138,.10);color:var(--dim)}
 .v5-pcat.color{background:rgba(245,158,11,.12);color:var(--fire)}
 .v5-pcat.fx{background:rgba(244,114,182,.12);color:#f472b6}
@@ -91,20 +89,20 @@ h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;backgroun
 
   <!-- 1. 效果预期 -->
   <div class="v5-item vibe">
-    <span class="v5-pcat vibe">✨ 效果预期</span>
-    <span class="v5-post-text">柔和侧光打亮人物侧脸和发丝，金棕色暖调。人物和狗安静待在画面里，像一张有温度的日常胶片。</span>
+    <div class="v5-label">✨ 效果预期</div>
+    <div class="v5-post-text">柔和侧光打亮人物侧脸和发丝，金棕色暖调。人物和狗安静待在画面里，像一张有温度的日常胶片。</div>
   </div>
 
   <!-- 2. 你怎么拍 -->
   <div class="v5-item">
-    <span class="v5-pcat shoot">📍 你怎么拍</span>
+    <div class="v5-label">📍 你怎么拍</div>
     <div class="v5-post-text">📷 向前靠近一步，蹲下至胸口高度，与人物保持平视——让观众感觉就站在她面前，不是远远地拍</div>
     <div class="v5-tags"><span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄（24mm等效）· 轻点人脸锁定对焦</span></div>
   </div>
 
   <!-- 3. 被摄者动作 -->
   <div class="v5-item">
-    <span class="v5-pcat pose">🧍 被摄者动作</span>
+    <div class="v5-label">🧍 被摄者动作</div>
     <div class="v5-tags">
       <span class="v5-tg ps">🧍 站姿</span>
       <span class="v5-tg ps">👀 眼神望远处</span>
@@ -114,8 +112,8 @@ h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;backgroun
     <div class="v5-post-text">侧身 45° 站立，手自然垂放，眼神看向远处——不是摆拍，是"刚好被拍到"的自然感。</div>
   </div>
 
-  <!-- 4. 构图详解（折叠·默认展开） -->
-  <div class="v5-detail open">
+  <!-- 4. 构图详解（折叠·默认收起） -->
+  <div class="v5-detail">
     <div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')">
       <span>📐 构图详解</span><span class="ar">▼</span>
     </div>
@@ -194,18 +192,18 @@ h2{font-size:14px;color:var(--cyan);margin:20px 0 8px;padding:8px 12px;backgroun
   <div class="plan-img-wrap"><img src="plan_v5_plan2.jpg" alt="全景氛围方案" loading="lazy"></div>
 
   <div class="v5-item vibe">
-    <span class="v5-pcat vibe">✨ 效果预期</span>
-    <span class="v5-post-text">郊野河畔的松弛感——小人影在开阔景中，柳枝做天然前景画框。像一张电影剧照，不是游客照。</span>
+    <div class="v5-label">✨ 效果预期</div>
+    <div class="v5-post-text">郊野河畔的松弛感——小人影在开阔景中，柳枝做天然前景画框。像一张电影剧照，不是游客照。</div>
   </div>
 
   <div class="v5-item">
-    <span class="v5-pcat shoot">📍 你怎么拍</span>
+    <div class="v5-label">📍 你怎么拍</div>
     <div class="v5-post-text">📷 退后几步拉开距离，站立拍摄，利用垂下的柳枝靠近镜头作为虚化前景</div>
     <div class="v5-tags"><span class="v5-tg gr">⚙️ iPhone 17 Pro 主摄 · 打开网格保持水平</span></div>
   </div>
 
   <div class="v5-item">
-    <span class="v5-pcat pose">🧍 被摄者动作</span>
+    <div class="v5-label">🧍 被摄者动作</div>
     <div class="v5-tags">
       <span class="v5-tg ps">🧍 自然站立</span>
       <span class="v5-tg ps">🐕 牵狗绳</span>
