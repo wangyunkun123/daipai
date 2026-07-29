@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""豆包视觉 API 调用脚本 - 用于 /daipai 管道的阶段 1A"""
+"""带拍 - 豆包视觉 API 调用脚本 v3.7 | /daipai 管道阶段 1A"""
 import base64, json, sys, os
 
 API_KEY = os.environ.get("DOUBAO_API_KEY", "")
