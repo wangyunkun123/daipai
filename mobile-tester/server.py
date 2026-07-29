@@ -23,7 +23,7 @@ load_dotenv()
 from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map, get_knowledge_files_by_quality
-from database import accumulate, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, get_api_call_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques
+from database import accumulate, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, get_api_call_stats, get_style_technique_panel, get_style_exploration_stats, log_style_exploration, promote_exploration_to_style, delete_exploration, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
@@ -2831,7 +2831,10 @@ def admin_stats():
         api_stats = get_api_call_stats()
     except Exception:
         api_stats = {}
-    search_stats = {}  # 搜索已移除，保留空字典兼容前端
+    try:
+        style_exploration = get_style_exploration_stats()
+    except Exception:
+        style_exploration = {}
     try:
         style_panel = get_style_technique_panel()
     except Exception:
@@ -2850,13 +2853,60 @@ def admin_stats():
         "active_sessions": len(_sessions),
         "processing": _processing,
         "api_stats": api_stats,
-        "search_stats": search_stats,
+        "style_exploration": style_exploration,
         "style_panel": style_panel,
         "knowledge_quality": knowledge_quality
     })
 
 
-# ── 搜索发现审核 ──
+# ── AI 风格探索日志 ──
+@app.route('/api/log-style-exploration', methods=['POST'])
+def api_log_style_exploration():
+    """记录 AI 自由探索风格名的选取/舍弃决定"""
+    try:
+        data = request.get_json(force=True)
+        style_name = (data.get('style_name') or '').strip()
+        decision = (data.get('decision') or '').strip()
+        reason = (data.get('reason') or '').strip()
+        session_id = (data.get('session_id') or request.remote_addr or '')
+
+        if not style_name:
+            return jsonify({"success": False, "error": "style_name 不能为空"}), 400
+        if decision not in ('selected', 'rejected'):
+            return jsonify({"success": False, "error": "decision 必须是 selected 或 rejected"}), 400
+
+        log_style_exploration(session_id, style_name, decision, reason)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ── 搜索发现审核（已废弃——搜索已移除）──
+@app.route('/admin/promote-exploration', methods=['POST'])
+@login_required
+def admin_promote_exploration():
+    """将 AI 探索到的风格入库为正式风格"""
+    data = request.get_json() or {}
+    exploration_id = data.get('exploration_id')
+    if not exploration_id:
+        return jsonify({"success": False, "error": "exploration_id 不能为空"}), 400
+    result = promote_exploration_to_style(int(exploration_id))
+    return jsonify(result)
+
+
+@app.route('/admin/delete-exploration', methods=['POST'])
+@login_required
+def admin_delete_exploration():
+    """删除一条 AI 风格探索记录"""
+    data = request.get_json() or {}
+    exploration_id = data.get('exploration_id')
+    if not exploration_id:
+        return jsonify({"success": False, "error": "exploration_id 不能为空"}), 400
+    ok = delete_exploration(int(exploration_id))
+    return jsonify({"success": ok})
+
+
+# ── 以下为已废弃的搜索发现审核端点（保留兼容性）──
 @app.route('/admin/discoveries')
 @login_required
 def admin_discoveries():

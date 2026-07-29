@@ -136,15 +136,29 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 </table>
 </div>
 
-<!-- 🌐 v3.6: Web 搜索追踪 -->
-<h2>🌐 Web 搜索追踪</h2>
-<div class="stats-grid" id="searchStatsGrid"></div>
-<div style="overflow-x:auto;margin-top:8px">
-<table class="fb-table">
-<thead><tr><th>时间</th><th>类型</th><th>查询关键词</th><th>搜索结果</th><th>质量</th><th>耗时</th></tr></thead>
-<tbody id="searchLog"></tbody>
-</table>
-</div>
+<!-- 🧭 v4.0: AI 自由探索风格名 -->
+	<h2>🧭 AI 自由探索风格名</h2>
+	<div class="stats-grid" id="explorationStatsGrid"></div>
+	<div style="overflow-x:auto;margin-top:8px">
+	<table class="fb-table">
+	<thead><tr><th>时间</th><th>风格名</th><th>决策</th><th>理由</th><th>操作</th><th>Session</th></tr></thead>
+	<tbody id="explorationLog"></tbody>
+	</table>
+	</div>
+	<h2 style="font-size:13px;margin-top:12px">✅ 高频选取 Top</h2>
+	<div style="overflow-x:auto">
+	<table class="fb-table">
+	<thead><tr><th>风格名</th><th>选取次数</th></tr></thead>
+	<tbody id="topSelectedStyles"></tbody>
+	</table>
+	</div>
+	<h2 style="font-size:13px;margin-top:12px">❌ 高频舍弃 Top</h2>
+	<div style="overflow-x:auto">
+	<table class="fb-table">
+	<thead><tr><th>风格名</th><th>舍弃次数</th></tr></thead>
+	<tbody id="topRejectedStyles"></tbody>
+	</table>
+	</div>
 
 <!-- 🎨 v3.6: 风格技法发现面板 -->
 <h2>🎨 风格技法发现</h2>
@@ -187,19 +201,6 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
   </div>
 </div>
 
-<h2 style="font-size:13px;margin-top:12px">🌐 搜索真实性分布</h2>
-<div class="stats-grid" id="searchAuthGrid"></div>
-
-<!-- 🔍 v4.3: 搜索发现审核 -->
-<h2>🔍 待审核搜索发现 <button onclick="loadDiscoveries()" style="font-size:11px;padding:2px 8px;cursor:pointer">🔄 刷新</button></h2>
-<div style="overflow-x:auto">
-<table class="fb-table">
-<thead><tr><th>时间</th><th>搜索词</th><th>真实性</th><th>提取摘要</th><th>操作</th></tr></thead>
-<tbody id="discoveriesBody">
-<tr><td colspan="5" class="empty">点击刷新加载待审核发现...</td></tr>
-</tbody>
-</table>
-</div>
 
 <script>
 const REASON_LABELS = {
@@ -386,10 +387,139 @@ function render(d) {
 
   // ── v3.6: 三块新监控 ──
   renderApiStats(d.api_stats);
-  renderSearchStats(d.search_stats);
+  renderStyleExploration(d.style_exploration);
   renderStylePanel(d.style_panel);
   renderKnowledgeQuality(d.knowledge_quality);
-  renderSearchAuth(d.search_stats);
+}
+
+// ── v4.0: AI 自由探索风格名渲染 ──
+function renderStyleExploration(se) {
+  if (!se || !se.total) {
+    document.getElementById('explorationStatsGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">暂无探索记录（AI 生成方案时自动积累）</div>';
+    document.getElementById('explorationLog').innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+    document.getElementById('topSelectedStyles').innerHTML = '<tr><td colspan="2" class="empty">暂无数据</td></tr>';
+    document.getElementById('topRejectedStyles').innerHTML = '<tr><td colspan="2" class="empty">暂无数据</td></tr>';
+    return;
+  }
+
+  const selPct = se.total > 0 ? Math.round(se.selected / se.total * 100) : 0;
+  document.getElementById('explorationStatsGrid').innerHTML = `
+    <div class="stat-card"><div class="val purple">${se.total||0}</div><div class="lbl">总探索 ${se.today_total ? '(今日+'+se.today_total+')' : ''}</div></div>
+    <div class="stat-card"><div class="val green">${se.selected||0}</div><div class="lbl">✅ 选取 (${selPct}%)</div></div>
+    <div class="stat-card"><div class="val red">${se.rejected||0}</div><div class="lbl">❌ 舍弃 (${100-selPct}%)</div></div>
+  `;
+
+  // 最近探索记录（默认 5 条，其余折叠）
+  const recent = se.recent || [];
+  const elog = document.getElementById('explorationLog');
+  if (recent.length === 0) {
+    elog.innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+  } else {
+    const renderRow = (r, hidden) => {
+      const time = toLocal(r.created_at).time;
+      const decisionIcon = r.decision === 'selected' ? '✅ 选取' : '❌ 舍弃';
+      const decisionColor = r.decision === 'selected' ? 'var(--green)' : 'var(--red)';
+      const sid = (r.session_id||'').slice(0,8);
+
+      // 操作按钮
+      let actionHtml;
+      if (r.promoted) {
+        actionHtml = '<span style="font-size:10px;color:var(--green)">✅ 已入库</span>';
+      } else {
+        actionHtml = `<button onclick="promoteExploration(${r.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:var(--green);color:#000;border:none;border-radius:4px;white-space:nowrap">📥 入库</button>
+          <button onclick="deleteExploration(${r.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);border-radius:4px;margin-left:4px;white-space:nowrap">🗑 删除</button>`;
+      }
+
+      return `<tr class="${hidden?'hidden-row':''}">
+        <td>${time}</td>
+        <td style="font-weight:600">${esc(r.style_name)}</td>
+        <td style="color:${decisionColor}">${decisionIcon}</td>
+        <td style="font-size:11px;color:var(--dim);max-width:200px;word-break:break-all">${esc(r.reason||'-')}</td>
+        <td style="white-space:nowrap">${actionHtml}</td>
+        <td style="font-size:10px;color:var(--dimmer)">${sid}</td>
+      </tr>`;
+    };
+
+    const DEFAULT_SHOW = 5;
+    let html = recent.slice(0, DEFAULT_SHOW).map(r => renderRow(r, false)).join('');
+    if (recent.length > DEFAULT_SHOW) {
+      html += recent.slice(DEFAULT_SHOW).map(r => renderRow(r, true)).join('');
+      html += `<tr class="collapse-btn-row"><td colspan="6">
+        <button class="collapse-btn" data-expand-text="展开全部 (${recent.length}条) ▼" onclick="toggleCollapse(this)">展开全部 (${recent.length}条) ▼</button>
+      </td></tr>`;
+    }
+    elog.innerHTML = html;
+  }
+
+  // 高频选取
+  const ts = document.getElementById('topSelectedStyles');
+  const topSel = se.top_selected || [];
+  if (topSel.length === 0) {
+    ts.innerHTML = '<tr><td colspan="2" class="empty">暂无数据</td></tr>';
+  } else {
+    ts.innerHTML = topSel.map(s =>
+      `<tr><td>${esc(s.style_name)}</td><td style="color:var(--green);font-weight:600">${s.cnt}次</td></tr>`
+    ).join('');
+  }
+
+  // 高频舍弃
+  const tr = document.getElementById('topRejectedStyles');
+  const topRej = se.top_rejected || [];
+  if (topRej.length === 0) {
+    tr.innerHTML = '<tr><td colspan="2" class="empty">暂无数据</td></tr>';
+  } else {
+    tr.innerHTML = topRej.map(s =>
+      `<tr><td>${esc(s.style_name)}</td><td style="color:var(--red);font-weight:600">${s.cnt}次</td></tr>`
+    ).join('');
+  }
+}
+
+// ── 探索记录操作 ──
+async function promoteExploration(id) {
+  if (!confirm('确认将此风格入库？\n入库后风格名和选取理由会自动整理写入知识库，下次可直接匹配使用。')) return;
+  const row = event.target.closest('tr');
+  if (row) row.style.opacity = '0.5';
+  try {
+    const res = await fetch('/admin/promote-exploration', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({exploration_id: id})
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ 已入库！\n风格: ' + data.name);
+      loadData();
+    } else {
+      if (row) row.style.opacity = '1';
+      alert('❌ 入库失败: ' + (data.error || '未知错误'));
+    }
+  } catch(e) {
+    if (row) row.style.opacity = '1';
+    alert('❌ 请求失败: ' + String(e));
+  }
+}
+
+async function deleteExploration(id) {
+  if (!confirm('确定删除这条探索记录？此操作不可恢复。')) return;
+  const row = event.target.closest('tr');
+  if (row) row.style.opacity = '0.5';
+  try {
+    const res = await fetch('/admin/delete-exploration', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({exploration_id: id})
+    });
+    const data = await res.json();
+    if (data.success) {
+      loadData();
+    } else {
+      if (row) row.style.opacity = '1';
+      alert('❌ 删除失败');
+    }
+  } catch(e) {
+    if (row) row.style.opacity = '1';
+    alert('❌ 请求失败: ' + String(e));
+  }
 }
 
 // ── v3.6: AI API 调用监控渲染 ──
@@ -451,58 +581,6 @@ function renderApiStats(as) {
     alog.innerHTML = html;
   }
 }
-
-// ── v3.6: Web 搜索追踪渲染 ──
-function renderSearchStats(ss) {
-  if (!ss || !ss.total_searches) {
-    document.getElementById('searchStatsGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">暂无搜索记录</div>';
-    document.getElementById('searchLog').innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
-    return;
-  }
-
-  const hitRate = ss.total_searches > 0 ? Math.round(ss.total_with_results / ss.total_searches * 100) : 0;
-  document.getElementById('searchStatsGrid').innerHTML = `
-    <div class="stat-card"><div class="val purple">${ss.total_searches||0}</div><div class="lbl">总搜索次数</div></div>
-    <div class="stat-card"><div class="val green">${ss.total_with_results||0}</div><div class="lbl">有结果 (${hitRate}%)</div></div>
-    <div class="stat-card"><div class="val red">${(ss.total_searches||0) - (ss.total_with_results||0)}</div><div class="lbl">无结果</div></div>
-  `;
-
-  // 最近搜索（默认显示 1 条，其余折叠）
-  const recent = ss.recent || [];
-  const slog = document.getElementById('searchLog');
-  if (recent.length === 0) {
-    slog.innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
-  } else {
-    const typeLabel = {style:'🎨 风格', location:'📍 位置'};
-    const renderRow = (r, hidden) => {
-      const time = toLocal(r.created_at).time;
-      const query = (r.query_text||'').slice(0,80);
-      const qualityIcon = r.result_count > 0 ? '🟢' : '🔴';
-      const summary = r.results_summary
-        ? esc(r.results_summary.slice(0, 80)) + (r.results_summary.length > 80 ? '…' : '')
-        : ((r.source_types||'') ? esc(r.source_types).slice(0,60) : '-');
-      return `<tr class="${hidden?'hidden-row':''}">
-        <td>${time}</td>
-        <td>${typeLabel[r.search_type]||r.search_type}</td>
-        <td style="font-size:11px;word-break:break-all">${esc(query)||'-'}</td>
-        <td style="font-size:10px;color:var(--dim);word-break:break-all">${summary}</td>
-        <td>${qualityIcon}</td>
-        <td>${r.duration_ms||0}ms</td>
-      </tr>`;
-    };
-
-    const DEFAULT_SHOW = 1;
-    let html = recent.slice(0, DEFAULT_SHOW).map(r => renderRow(r, false)).join('');
-    if (recent.length > DEFAULT_SHOW) {
-      html += recent.slice(DEFAULT_SHOW).map(r => renderRow(r, true)).join('');
-      html += `<tr class="collapse-btn-row"><td colspan="6">
-        <button class="collapse-btn" data-expand-text="展开全部 (${recent.length}条) ▼" onclick="toggleCollapse(this)">展开全部 (${recent.length}条) ▼</button>
-      </td></tr>`;
-    }
-    slog.innerHTML = html;
-  }
-}
-
 // ── v3.6: 风格技法发现面板 ──
 function renderStylePanel(sp) {
   if (!sp) {
@@ -599,39 +677,6 @@ function renderKnowledgeQuality(kq) {
     </tr>`;
   }).join('');
 }
-
-// ── v3.8: 搜索真实性分布渲染 ──
-function renderSearchAuth(ss) {
-  const grid = document.getElementById('searchAuthGrid');
-  if (!ss || !ss.auth_dist || ss.auth_dist.length === 0) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">暂无搜索真实性数据（新搜索后自动积累）</div>';
-    return;
-  }
-
-  const labels = {
-    'real_community': '✅ 真实社区内容',
-    'mixed': '🟡 混合来源',
-    'unknown': '❓ 未知来源',
-    'ai_content': '🤖 AI内容农场'
-  };
-  const colors = {
-    'real_community': '#4ade80',
-    'mixed': '#f59e0b',
-    'unknown': '#8a8a8a',
-    'ai_content': '#ef4444'
-  };
-
-  grid.innerHTML = ss.auth_dist.map(a =>
-    `<div class="stat-card"><div class="val" style="color:${colors[a.authenticity]||'#888'}">${a.cnt}</div><div class="lbl">${labels[a.authenticity]||a.authenticity}</div></div>`
-  ).join('');
-
-  // 如果有有用数据统计也显示
-  if (ss.useful_total != null) {
-    grid.innerHTML += `<div class="stat-card"><div class="val green">${ss.useful_total||0}</div><div class="lbl">📌 含可用数据的搜索</div></div>`;
-    grid.innerHTML += `<div class="stat-card"><div class="val" style="color:#a78bfa">${ss.total_with_results||0}</div><div class="lbl">🎯 有返回结果的搜索</div></div>`;
-  }
-}
-
 async function approve(id, action) {
   const card = document.getElementById('req'+id);
   if (card) card.style.opacity = '0.5';
@@ -705,100 +750,7 @@ async function showKnowledgeFiles(quality) {
 function closeKnowledgeDetail() {
   document.getElementById('knowledgeFileDetail').style.display = 'none';
 }
-
-// ── v5.0: 摘要 pill 格式化 ──
-function formatHint(text) {
-  if (!text) return '<span class="d-pill dim">无摘要</span>';
-  const esc2 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  // 按 | 分割成段，每段转成彩色 pill
-  return text.split(' | ').map(seg => {
-    const s = seg.trim();
-    let cls = 'd-pill';
-    if (s.startsWith('风格:')) cls += ' style';
-    else if (s.startsWith('技法:')) cls += ' tech';
-    else if (s.startsWith('含姿势')) cls += ' pose';
-    else if (s.startsWith('含机位')) cls += ' loc';
-    else cls += ' dim';
-    return '<span class="' + cls + '">' + esc2(s) + '</span>';
-  }).join(' ');
-}
-
-// ── 搜索发现审核（原版）──
-async function loadDiscoveries() {
-  const tbody = document.getElementById('discoveriesBody');
-  tbody.innerHTML = '<tr><td colspan="5" class="empty">加载中...</td></tr>';
-  try {
-    const res = await fetch('/admin/discoveries');
-    const data = await res.json();
-    if (!data.discoveries || data.discoveries.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无待审核的搜索发现（需要先有真实社区搜索命中）</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.discoveries.map(d => {
-      const kw = esc(d.keywords_used || '').substring(0, 40);
-      const hintHtml = formatHint(d.extracted_hint || d.discovery_hint || '');
-      const auth = d.authenticity === 'real_community' ? '🟢 真实社区' : '🟡 混合';
-      const time = toLocal(d.created_at).datetime;
-      return `<tr>
-        <td style="font-size:11px">${time}</td>
-        <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${esc(d.query_text||'')}">${kw}</td>
-        <td>${auth}</td>
-        <td style="font-size:10px;max-width:240px">${hintHtml}</td>
-        <td style="white-space:nowrap">
-          <button onclick="promoteDiscovery(${d.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:var(--green);color:#000;border:none;border-radius:4px">✅ 入库</button>
-          <button onclick="deleteDiscovery(${d.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);border-radius:4px;margin-left:4px">🗑 删除</button>
-        </td>
-      </tr>`;
-    }).join('');
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">加载失败: '+esc(String(e))+'</td></tr>';
-  }
-}
-
-async function promoteDiscovery(searchLogId) {
-  // 一键入库：自动从搜索结果提取名称/描述/分类
-  if (!confirm('确认将此搜索结果自动提取并入库为正式技法？')) return;
-  try {
-    const res = await fetch('/admin/promote-discovery', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({search_log_id: searchLogId, auto: true})
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('✅ 已入库！\n技法: ' + data.name + '\n分类: ' + data.category);
-      loadDiscoveries();
-      loadData();
-    } else {
-      alert('❌ 入库失败: ' + (data.error || '未知错误'));
-    }
-  } catch(e) {
-    alert('❌ 请求失败: ' + String(e));
-  }
-}
-
-async function deleteDiscovery(searchLogId) {
-  if (!confirm('确定删除这条搜索记录？此操作不可恢复。')) return;
-  try {
-    const res = await fetch('/admin/delete-discovery', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({search_log_id: searchLogId})
-    });
-    const data = await res.json();
-    if (data.success) {
-      loadDiscoveries();
-      loadData();
-    } else {
-      alert('❌ 删除失败: ' + (data.error || '未知错误'));
-    }
-  } catch(e) {
-    alert('❌ 请求失败: ' + String(e));
-  }
-}
-
 // 首次加载时也拉取待审核发现
-setTimeout(loadDiscoveries, 500);
 
 loadData();
 setInterval(loadData, 30000);

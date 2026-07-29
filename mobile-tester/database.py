@@ -181,6 +181,18 @@ def _init_tables(conn):
     CREATE INDEX IF NOT EXISTS idx_api_log_time ON api_call_log(created_at);
     CREATE INDEX IF NOT EXISTS idx_search_log_session ON search_log(session_id);
     CREATE INDEX IF NOT EXISTS idx_search_log_type ON search_log(search_type);
+
+    -- AI 自由探索风格名日志
+    CREATE TABLE IF NOT EXISTS style_exploration_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT,
+        style_name TEXT NOT NULL,
+        decision TEXT NOT NULL CHECK(decision IN ('selected','rejected')),
+        reason TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_style_exploration_session ON style_exploration_log(session_id);
+    CREATE INDEX IF NOT EXISTS idx_style_exploration_decision ON style_exploration_log(decision);
     """)
     conn.commit()
 
@@ -235,6 +247,14 @@ def _init_tables(conn):
         conn.execute("CREATE INDEX IF NOT EXISTS idx_techniques_source ON techniques(source_type)")
         conn.commit()
         print("[DB] Migration: added performance indexes", file=sys.stderr, flush=True)
+    except Exception:
+        pass
+
+    # 迁移——style_exploration_log 加 promoted 列
+    try:
+        conn.execute("ALTER TABLE style_exploration_log ADD COLUMN promoted INTEGER DEFAULT 0")
+        conn.commit()
+        print("[DB] Migration: added promoted column to style_exploration_log", file=sys.stderr, flush=True)
     except Exception:
         pass
 
@@ -862,6 +882,155 @@ def get_search_stats():
             "auth_dist": auth_dist,
             "useful_total": useful_total,
         }
+    finally:
+        conn.close()
+
+
+def log_style_exploration(session_id, style_name, decision, reason=''):
+    """记录 AI 自由探索风格名的选取/舍弃决定
+
+    Args:
+        session_id: 会话 ID
+        style_name: 探索到的风格名
+        decision: 'selected' 或 'rejected'
+        reason: 选取或舍弃的理由
+    """
+    conn = get_db()
+    try:
+        conn.execute("""
+            INSERT INTO style_exploration_log (session_id, style_name, decision, reason)
+            VALUES (?, ?, ?, ?)
+        """, (session_id, style_name[:200], decision, reason[:500]))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_style_exploration_stats():
+    """获取 AI 风格探索统计数据"""
+    conn = get_db()
+    try:
+        now = datetime.utcnow()
+        today = now.strftime('%Y-%m-%d')
+        today_start = f"{today} 00:00:00"
+        today_end = f"{today} 23:59:59"
+
+        total = conn.execute(
+            "SELECT COUNT(*) FROM style_exploration_log"
+        ).fetchone()[0]
+        selected = conn.execute(
+            "SELECT COUNT(*) FROM style_exploration_log WHERE decision='selected'"
+        ).fetchone()[0]
+        rejected = conn.execute(
+            "SELECT COUNT(*) FROM style_exploration_log WHERE decision='rejected'"
+        ).fetchone()[0]
+        today_total = conn.execute(
+            "SELECT COUNT(*) FROM style_exploration_log WHERE created_at >= ? AND created_at <= ?",
+            (today_start, today_end)
+        ).fetchone()[0]
+
+        # 最近 50 条
+        recent = [dict(r) for r in conn.execute("""
+            SELECT id, session_id, style_name, decision, reason, promoted, created_at
+            FROM style_exploration_log ORDER BY id DESC LIMIT 50
+        """).fetchall()]
+
+        # 高频选取的风格 Top
+        top_selected = [dict(r) for r in conn.execute("""
+            SELECT style_name, COUNT(*) as cnt
+            FROM style_exploration_log WHERE decision='selected'
+            GROUP BY style_name ORDER BY cnt DESC LIMIT 15
+        """).fetchall()]
+
+        # 高频舍弃的风格 Top
+        top_rejected = [dict(r) for r in conn.execute("""
+            SELECT style_name, COUNT(*) as cnt
+            FROM style_exploration_log WHERE decision='rejected'
+            GROUP BY style_name ORDER BY cnt DESC LIMIT 15
+        """).fetchall()]
+
+        # 7 天趋势
+        seven_days_ago = (now - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        trend = [dict(r) for r in conn.execute("""
+            SELECT date(created_at) as day, decision, COUNT(*) as cnt
+            FROM style_exploration_log WHERE created_at >= ?
+            GROUP BY day, decision ORDER BY day
+        """, (seven_days_ago,)).fetchall()]
+
+        return {
+            "total": total,
+            "selected": selected,
+            "rejected": rejected,
+            "today_total": today_total,
+            "recent": recent,
+            "top_selected": top_selected,
+            "top_rejected": top_rejected,
+            "trend": trend,
+        }
+    finally:
+        conn.close()
+
+
+def promote_exploration_to_style(exploration_id):
+    """将 AI 探索到的风格入库为正式风格
+
+    从 style_exploration_log 提取 style_name 和 reason，
+    自动整理写入 styles 表，标记探索记录为已入库。
+    """
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT style_name, decision, reason FROM style_exploration_log WHERE id=?",
+            (exploration_id,)
+        ).fetchone()
+        if not row:
+            return {"success": False, "error": "探索记录不存在"}
+
+        style_name = row['style_name']
+        reason = row['reason'] or ''
+        # 取 reason 前 120 字作为 one_liner
+        one_liner = (reason[:120] + '…') if len(reason) > 120 else (reason or '')
+
+        # 写入 styles 表（ON CONFLICT 累加 verify_count）
+        conn.execute("""
+            INSERT INTO styles (name, one_liner, source_type, fit_rationale, verify_count)
+            VALUES (?, ?, 'ai_exploration', ?, 1)
+            ON CONFLICT(name) DO UPDATE SET
+                verify_count = verify_count + 1,
+                fit_rationale = CASE WHEN excluded.fit_rationale != ''
+                    THEN excluded.fit_rationale ELSE fit_rationale END,
+                one_liner = CASE WHEN excluded.one_liner != ''
+                    THEN excluded.one_liner ELSE one_liner END,
+                updated_at = datetime('now')
+        """, (style_name, one_liner, reason[:500]))
+
+        # 标记探索记录为已入库
+        conn.execute(
+            "UPDATE style_exploration_log SET promoted=1 WHERE id=?",
+            (exploration_id,)
+        )
+        conn.commit()
+        print(f"[DB] Promoted exploration #{exploration_id} '{style_name}' → styles table",
+              file=sys.stderr, flush=True)
+        return {"success": True, "name": style_name}
+    except Exception as e:
+        conn.rollback()
+        return {"success": False, "error": str(e)}
+    finally:
+        conn.close()
+
+
+def delete_exploration(exploration_id):
+    """删除一条 AI 风格探索记录"""
+    conn = get_db()
+    try:
+        conn.execute("DELETE FROM style_exploration_log WHERE id=?", (exploration_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Delete exploration error: {e}", file=sys.stderr, flush=True)
+        return False
     finally:
         conn.close()
 
