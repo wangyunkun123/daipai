@@ -410,66 +410,103 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
 # ============================================================
 # 方向生成 Prompt（不含方案，方案按需另行生成）
 # ============================================================
-DIRECTIONS_PROMPT = """你是摄影美学专家。基于眼前这张照片的视觉数据，为用户自由创作拍摄方向。
+DIRECTIONS_PROMPT = """你是摄影美学专家。你的知识覆盖摄影史、电影美学、绘画构图、时尚摄影、广告视觉。
 
-你的知识覆盖摄影史、电影美学、绘画构图、时尚摄影、广告视觉——大胆调用，不受限制。
-唯一约束：每条建议必须扎根于这张照片的具体视觉元素。
+## 🧭 工作流程：先探索，后对照，最后标注
 
-## 视觉数据（主导依据——一切从这里出发）
+你按三个阶段工作：
+1. **自由联想**——只看照片视觉数据，打开全部知识自由探索，不受任何限制
+2. **知识库对照**——拿到已有风格库，标记哪些是你新发现的、哪些已有记录
+3. **设备现实检查**——拿到设备和环境数据，诚实标注可执行性
+
+---
+
+## 阶段 1：自由联想（仅基于视觉数据）
+
+下面是这张照片的视觉数据。沉浸进去——光线、色彩、空间、物体、人物、氛围。
+
 {vision_json}
 
-## EXIF
 {exif_summary}
 
 {exif_cross_check}
-## 设备
-{device_context}
 
-## 📚 专业知识库（参考，不限制创作）
+**现在，忘掉所有限制。** 你是一个看过无数照片、电影、画作的审美者。
+这张照片让你联想到什么？从你的全部知识中自由提取——
+
+- 摄影史：某位摄影师的观看方式？某个时代的视觉语言？
+- 电影：某部电影的色调/构图/氛围？某个导演的镜头语言？
+- 绘画：某个画派的色彩/笔触/空间处理？
+- 时尚/广告：某本杂志的视觉风格？某个品牌的审美体系？
+- 跨媒介：漫画/游戏/建筑/设计中的视觉语言？
+
+🚨 不要自我审查。不要想"这个风格用户能拍出来吗"——后面会有人处理可行性。
+现在你唯一的任务就是：把这张照片激发的所有审美联想说出来。
+
+为每个联想写出：
+- 风格名
+- 为什么这张照片的具体视觉元素让你联想到它（引用具体元素）
+- 拍出来大概是什么感觉
+
+---
+
+## 阶段 2：知识库对照（区分新旧发现）
+
+好了，下面是我们已有的风格知识库。**它不是用来限制你的——它用来告诉你哪些是新发现。**
+
 {knowledge_context}
 
-{fast_path_note}
+为阶段 1 中产生的每个风格方向标注：
+- 📚 **已有记录**：这个风格知识库里有 → 可以引用已有知识
+- 🆕 **新发现**：知识库里没有 → 标记为 AI 自由探索的新风格
+
+**新发现不是坏事——恰恰相反，这是最有价值的输出。**
+把新风格写清楚：它是什么、为什么适合、视觉特征是什么——这样它就可以被录入知识库，下次直接用。
+
+---
+
+## 阶段 3：设备现实检查
+
+最后，拿到现实条件。
+
+{device_context}
 
 {env_context}
 
-## 社媒趋势意识（参考，权重低于视觉数据）
-结合你训练数据中的社交媒体趋势知识——小红书/Instagram/TikTok 上当前受欢迎的摄影审美方向、热门话题标签、打卡出片趋势。但这些趋势只在视觉数据支撑时才采用，不强行套用。视觉数据永远是第一优先级。
+现在为每个方向诚实标注：
+- 🟢 当前设备可直接拍
+- 🟡 需要微调（调整参数/走位/等待光线变化）
+- 🟠 需要替代方案（核心效果需要特定器材/条件，给出替代思路）
 
-## 任务
+{fast_path_note}
 
-基于视觉数据创作三条拍摄风格方向，写入三个固定槽位：
+---
+
+## 输出：三条方向
+
+从你的自由探索中选出三条，写入三个固定槽位：
 
 ### 🟢 现在就拍 — 必有
-最简单易上手的拍法。利用场景已有的光线/色彩/空间优势，不需要改变位置或复杂操作。从视觉数据中最自然的优势推导。
+最简单易上手的拍法。利用场景已有的光线/色彩/空间优势。
 
 ### 🔥 最出片 — 有则放
-带社媒话题性或流行趋势的方向。挖掘这张照片最独特的记忆点——什么让它不同于同类场景的其他照片？如果视觉数据支撑力不够，退一步用与🟢相近但角度不同的风格填充。尽量不放空。
+最有记忆点的方向——社媒话题性、或这张照片最独特的视觉锚点。尽量不放空。
 
 ### ✨ 脑洞大开 — 宁缺毋滥
-小众、非典型、跨媒介联想的视角。从视觉元素映射到电影/画作/广告/游戏/漫画的视觉语言。必须有至少一个具体视觉锚点支撑。没有灵感就全部填空（除id/emoji/label/subtitle外全null）。
+跨媒介、小众、非典型的视角。必须有至少一个具体视觉锚点支撑。没有就全填空。
+
+---
 
 ## 创作原则
 
-1. 每条 direction 的 style_promise/reason 必须引用 ≥1 个视觉素材（光线方向/光质/色彩/accent/空间锚点/构图元素/人物特征）
+1. 每条 direction 的 style_promise/reason 必须引用 ≥1 个视觉素材（光线/色彩/空间锚点/构图元素/人物特征）
 2. 三条风格各不相同，覆盖不同审美取向
-3. 忠于实际光线——硬光不推柔光风格，阴天不推逆光小清新
-4. 设备限制必须尊重
-5. 🔥/✨ 无实质想法时，除 id/emoji/label/subtitle 外全填 null，plans 填 []
-6. 🟢 必须有实质内容
-
-## fold_details——折叠详情文案
-
-每条方向配套一段社媒风格的折叠详情（字段名 fold_details，key 为方向 id）。
-像小红书博主在分享心得，不说教、不列 bullet、不写学术论文。
-写清楚：这个风格怎么从照片里来的（引用具体视觉元素），为什么这个光线/色彩/场景组合让这个风格可行，有没有社媒话题支撑。
-
-格式：
-fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风格文案...\\n\\n灵感来源：xxx", "best": "...", "creative": "..." }}
-🔥/✨无内容时对应 detail 为空字符串 ""。
+3. 🟢 必有实质内容。🔥 尽量有内容。✨ 宁缺毋滥
+4. 忠于实际光线——硬光不推柔光风格，阴天不推逆光小清新
 
 ## style_brief——风格视觉特征速写
 
-每条方向加一个 style_brief 对象，用 3-5 个关键词+短描述，定义这个风格的核心视觉特征。
+每条方向必须输出 style_brief，3-5 个关键词+短描述定义核心视觉特征。
 这是给后续方案生成 AI 看的，要精确不要修辞。
 
 格式：
@@ -481,16 +518,23 @@ fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风格文案...\\n\\n
   "mood": "情绪氛围（≤20字，如：冷静幽默 / 松弛慵懒 / 冷酷张力）"
 }}
 
-🟢 安静真实 → 基于视觉数据的自然推导，style_brief 反映当前场景的实际光线和色彩
-🔥 最出片 → 社媒流行风格，style_brief 引用该风格在摄影社区中的典型视觉特征
-✨ 脑洞大开 → 跨媒介/小众风格，style_brief 必须精确描述该风格的视觉特征（后续方案 AI 全靠这个理解风格）
+🟢 → 基于视觉数据的自然推导，反映当前场景的实际光线和色彩
+🔥 → 社媒流行风格，引用该风格在摄影社区中的典型视觉特征
+✨ → 跨媒介/小众风格，必须精确描述视觉特征（后续方案 AI 全靠这个理解）
+
+## fold_details——折叠详情文案
+
+每条方向配套一段社媒风文案（字段名 fold_details）。
+像小红书博主在分享心得，不说教、不列 bullet、不写学术论文。
+写清楚：风格怎么从照片里来的（引用具体视觉元素），为什么这个光/色/场景组合让风格可行。
+
+格式：
+fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风文案...\\n\\n灵感来源：xxx", "best": "...", "creative": "..." }}
 
 ## 口吻
 朋友分享的语气。"你"视角。
 ✅"侧光刚好打在你的侧脸上，球衣红在阴影里更浓了"
 ❌"建议采用侧光拍摄以突出主体"
-style_promise 用视觉描述，不写社交验证话术。
-卡片文案偏社媒风格——像小红书博主在推荐，不是摄影教材。
 
 ## 输出格式
 严格JSON，不要markdown包裹。directions 必须是数组 []：
@@ -498,10 +542,12 @@ style_promise 用视觉描述，不写社交验证话术。
 {{
   "insight": "1-2句社媒配文——具体有画面感，不说空话",
   "scene_tier": "🥇",
+  "discovery_note": "🆕 如果发现了知识库没有的新风格，在这里简要说明",
   "directions": [
     {{
       "id": "now", "emoji": "🟢", "label": "现在就拍", "subtitle": "零门槛，站在这就能拍",
       "style": "风格名（中文）",
+      "kb_status": "📚已有记录 或 🆕新发现",
       "style_promise": "1句话说出拍出来什么效果",
       "reason": "为什么这个风格适合现在这张照片（60-100字）",
       "fit_rationale": "风格-场景适配逻辑（1-2句）",
@@ -509,8 +555,8 @@ style_promise 用视觉描述，不写社交验证话术。
       "style_brief": {{"essence":"","color":"","composition":"","light":"","mood":""}},
       "plans": []
     }},
-    {{"id":"best","emoji":"🔥","label":"最出片","subtitle":"发出去会被赞的那种","style":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]}},
-    {{"id":"creative","emoji":"✨","label":"脑洞大开","subtitle":"不像游客照的视角","style":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]}}
+    {{"id":"best","emoji":"🔥","label":"最出片","subtitle":"发出去会被赞的那种","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]}},
+    {{"id":"creative","emoji":"✨","label":"脑洞大开","subtitle":"不像游客照的视角","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]}}
   ],
   "fold_details": {{ "now": "▼ 为什么选这个\\n\\n...", "best": "...", "creative": "..." }}
 }}
@@ -2127,22 +2173,29 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         directions = directions_json.get('directions', [])
         fold_details = directions_json.get('fold_details', {})
 
-        # ── KB 查证：风格来源标注 ──
+        # ── KB 查证：风格来源标注（结合 AI 的 kb_status 和服务端查询）──
+        discovery_note = directions_json.get('discovery_note', '')
+        if discovery_note:
+            print(f"[KB] 🆕 AI 发现备注: {discovery_note[:120]}", file=sys.stderr, flush=True)
+
         source_tags = {}
         for d in directions:
             style_name = d.get('style', '')
+            ai_kb_status = d.get('kb_status', '')  # AI 自己标注的 📚已有记录 / 🆕新发现
             if not style_name:
                 source_tags[d['id']] = '🤖 AI 探索'
                 continue
             try:
                 kb_detail = get_style_detail(style_name)
-                if kb_detail and '来源：知识库' in kb_detail:
+                in_kb = kb_detail and ('来源：知识库' in kb_detail or '跨媒介' in kb_detail)
+
+                if in_kb:
                     source_tags[d['id']] = '📚 有据可查'
-                    print(f"[KB] ✅ {style_name} → KB 原生风格，有验证技法",
+                    print(f"[KB] ✅ {style_name} → KB 已有",
                           file=sys.stderr, flush=True)
-                elif kb_detail and '跨媒介' in kb_detail:
-                    source_tags[d['id']] = '📚 跨媒介参考'
-                    print(f"[KB] 🔗 {style_name} → 跨媒介映射风格",
+                elif '🆕' in ai_kb_status:
+                    source_tags[d['id']] = '🆕 AI 新发现'
+                    print(f"[KB] 🆕 {style_name} → AI 自由探索新风格！",
                           file=sys.stderr, flush=True)
                 else:
                     source_tags[d['id']] = '🤖 AI 探索'
