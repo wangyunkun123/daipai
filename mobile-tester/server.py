@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-带拍 · 移动端测试工具 v3.6
-在电脑上启动后，手机浏览器访问 http://<电脑IP>:8888
-拍照上传 → 渐进式展示（EXIF→场景→方向→方案按需生成）→ Canvas 标注 → 生图提示词
+带拍 · 移动端测试工具 在电脑上启动后，手机浏览器访问 http://<电脑IP>:8888
+拍照上传 → 渐进式展示（EXIF→场景→方向→方案按需生成）→ 生图提示词
 """
 
 import base64
@@ -21,224 +20,12 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 load_dotenv()
-from PIL import Image, ImageOps, ImageDraw, ImageFont
+from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map, get_knowledge_files_by_quality
-from search_web import search_style_inspiration, search_location_intel
-from database import accumulate, query_scene_context, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, log_search, get_api_call_stats, get_search_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques, get_pending_discoveries, promote_search_to_technique
-
-# ═══════════════════════════════════════════════════════════
-# v5: 增强方案图生成（PIL）
-# ═══════════════════════════════════════════════════════════
-
+from database import accumulate, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, get_api_call_stats, get_style_technique_panel, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-
-
-def _get_plan_img_dir():
-    d = os.path.join(os.path.dirname(__file__), "static", "plan_images")
-    try: os.makedirs(d, exist_ok=True)
-    except Exception: pass
-    return d
-
-def _load_font(size):
-    for fp in ["/System/Library/Fonts/STHeiti Medium.ttc", "/System/Library/Fonts/PingFang.ttc",
-               "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-               "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"]:
-        try: return ImageFont.truetype(fp, size)
-        except: pass
-    return ImageFont.load_default()
-
-def generate_plan_image(photo_path, plan, plan_index, output_key):
-    """Generate an enhanced plan image with visual overlays.
-    Returns the URL path relative to /static/, or None on failure."""
-    try:
-        img = Image.open(photo_path).convert("RGB")
-    except Exception:
-        return None
-
-    W, H = img.size
-    # Resize for mobile: width = 750 (2x of 375px, fits 390-430px screens)
-    MOBILE_W = 750
-    scale = MOBILE_W / W
-    img = img.resize((MOBILE_W, int(H * scale)), Image.LANCZOS)
-    W, H = img.size
-
-    font_lg = _load_font(26)
-    font_md = _load_font(20)
-    font_sm = _load_font(16)
-
-    color = (245, 158, 11)  # gold default
-    name = plan.get('name', f'方案{plan_index+1}')
-    shot_size = plan.get('shot_size', '')
-    angle = plan.get('angle', '')
-    annotations = plan.get('annotations', [])
-    color_map = {'#4ade80': (74,222,128), '#f59e0b': (245,158,11), '#a78bfa': (167,139,250)}
-
-    base = img.copy().convert("RGBA")
-    light_l = Image.new("RGBA", (W, H), (0,0,0,0))
-    grid_l  = Image.new("RGBA", (W, H), (0,0,0,0))
-    subj_l  = Image.new("RGBA", (W, H), (0,0,0,0))
-    vign_l  = Image.new("RGBA", (W, H), (0,0,0,0))
-    frame_l = Image.new("RGBA", (W, H), (0,0,0,0))
-    badge_l = Image.new("RGBA", (W, H), (0,0,0,0))
-    bar_l   = Image.new("RGBA", (W, H), (0,0,0,0))
-
-    ld = ImageDraw.Draw(light_l)
-    gd = ImageDraw.Draw(grid_l)
-    sd = ImageDraw.Draw(subj_l)
-    vd = ImageDraw.Draw(vign_l)
-    fd = ImageDraw.Draw(frame_l)
-    bd = ImageDraw.Draw(badge_l)
-    bad = ImageDraw.Draw(bar_l)
-
-    # ── Light gradient ──
-    cx_l, cy_l = int(W*0.2), int(H*0.15)
-    for i in range(30):
-        a = int(22*(1-i/30))
-        r = int(W*0.35*(i+1)/30)
-        ld.ellipse([cx_l-r, cy_l-r, cx_l+r, cy_l+r], fill=(255,200,120,a))
-
-    # ── Grid ──
-    gc = (255,255,255,55)
-    for i in [1,2]:
-        x = int(W*i/3); gd.line([(x,0),(x,H)], fill=gc, width=2)
-        y = int(H*i/3); gd.line([(0,y),(W,y)], fill=gc, width=2)
-
-    # ── Vignette ──
-    for i in range(20):
-        a = int(38*(1-i/20)); m = int(min(W,H)*0.02*i)
-        vd.rectangle([m,m,W-m,H-m], outline=(0,0,0,a), width=int(min(W,H)*0.04))
-
-    # ── Subjects ──
-    bar_h = 36  # bottom bar height, used for clamping subject labels
-    for ann in annotations:
-        if ann.get('type') == 'subject':
-            c = color_map.get(ann.get('color',''), color)
-            cx = int(W * ann.get('x', 0.5))
-            cy = int(H * ann.get('y', 0.5))
-            r  = int(W * ann.get('r', 0.06))
-            label = ann.get('label', '')
-            for i in range(3):
-                gr = r+5+i*3; sd.ellipse([cx-gr,cy-gr,cx+gr,cy+gr], outline=(*c,80-i*20), width=2)
-            sd.ellipse([cx-r,cy-r,cx+r,cy+r], outline=(*c,210), width=4)
-            for a_deg in [0,90,180,270]:
-                rad = math.radians(a_deg); dx=int(r*0.7*math.cos(rad)); dy=int(r*0.7*math.sin(rad))
-                sd.ellipse([cx+dx-4,cy+dy-4,cx+dx+4,cy+dy+4], fill=(*c,220))
-            if label:
-                try:
-                    bb = sd.textbbox((0,0), label, font=font_md); tw=bb[2]-bb[0]; th=bb[3]-bb[1]
-                except: tw=len(label)*18; th=22
-                px,py=14,8; lw=tw+px; lh=th+py
-                lx=cx+r+10; ly=cy-lh//2
-                if lx+lw>W-16: lx=cx-r-lw-10
-                bar_top=H-bar_h
-                if ly+lh>bar_top-8: ly=bar_top-lh-8
-                if ly<8: ly=8
-                sd.rounded_rectangle([lx,ly,lx+lw,ly+lh], radius=7, fill=(8,8,12,225))
-                sd.text((lx+px//2,ly+py//2), label, fill=(*c,255), font=font_md)
-
-    # ── Shot frame ──
-    frame_ann = next((a for a in annotations if a.get('type')=='frame'), None)
-    if frame_ann:
-        l = int(W*frame_ann.get('l',0.05)); t=int(H*frame_ann.get('t',0.05))
-        r = int(W*frame_ann.get('r',0.95)); b=int(H*frame_ann.get('b',0.85))
-        dark=(0,0,0,55)
-        if t>0: fd.rectangle([(0,0),(W,t)], fill=dark)
-        if b<H: fd.rectangle([(0,b),(W,H)], fill=dark)
-        if l>0: fd.rectangle([(0,t),(l,b)], fill=dark)
-        if r<W: fd.rectangle([(r,t),(W,b)], fill=dark)
-        fc=(*color,110); fd.rectangle([(l,t),(r,b)], outline=fc, width=3)
-        bk=36; bkc=(*color,200)
-        fd.line([(l,t),(l+bk,t)], fill=bkc, width=4)
-        fd.line([(l,t),(l,t+bk)], fill=bkc, width=4)
-        fd.line([(r-bk,t),(r,t)], fill=bkc, width=4)
-        fd.line([(r,t),(r,t+bk)], fill=bkc, width=4)
-        fd.line([(l,b-bk),(l,b)], fill=bkc, width=4)
-        fd.line([(l,b),(l+bk,b)], fill=bkc, width=4)
-        fd.line([(r-bk,b),(r,b)], fill=bkc, width=4)
-        fd.line([(r,b-bk),(r,b)], fill=bkc, width=4)
-        flabel = shot_size if shot_size else '取景'
-        try: fb=fd.textbbox((0,0),flabel,font=font_md); fw=fb[2]-fb[0]; fh=fb[3]-fb[1]
-        except: fw=len(flabel)*18; fh=22
-        fp=16; flw=fw+fp; flh=fh+10
-        flx=l+(r-l)//2-flw//2; fly=t+10
-        fd.rounded_rectangle([flx,fly,flx+flw,fly+flh], radius=8, fill=(*color,160))
-        fd.text((flx+fp//2,fly+5), flabel, fill=(0,0,0,255), font=font_md)
-
-    # ── Badges ──
-    badges = []
-    if shot_size: badges.append((shot_size, color))
-    if angle: badges.append((angle, (180,180,190)))
-    bx0, by0 = 16, 16
-    for btext, bclr in badges:
-        try: bb=bd.textbbox((0,0),btext,font=font_sm); bw=bb[2]-bb[0]; bh=bb[3]-bb[1]
-        except: bw=len(btext)*16; bh=18
-        bpad=16; btw=bw+bpad; bth=bh+10
-        bd.rounded_rectangle([bx0,by0,bx0+btw,by0+bth], radius=7, fill=(8,8,12,210))
-        bd.text((bx0+bpad//2,by0+5), btext, fill=(*bclr,255), font=font_sm)
-        bx0 += btw+8
-
-    # ── Camera position diagram (when angle suggests position change) ──
-    angle_l = Image.new("RGBA", (W, H), (0,0,0,0))
-    ad = ImageDraw.Draw(angle_l)
-    has_angle_change = angle and any(kw in angle for kw in ['仰','俯','侧','低','高','蹲','移','绕','转','背'])
-    if has_angle_change:
-        box_w, box_h = 160, 100
-        bx = W - box_w - 20
-        by = H - bar_h - box_h - 16
-        ad.rounded_rectangle([bx, by, bx+box_w, by+box_h], radius=10, fill=(8,8,12,200))
-        title = "📷 机位移动"
-        try:
-            tb = ad.textbbox((0,0), title, font=font_sm)
-            tw_l = tb[2]-tb[0]
-        except: tw_l = len(title)*12
-        ad.text((bx + (box_w-tw_l)//2, by+6), title, fill=(200,200,200,255), font=font_sm)
-        # Current position (left)
-        cur_cx, cur_cy = bx+30, by+55
-        ad.ellipse([cur_cx-12, cur_cy-12, cur_cx+12, cur_cy+12], fill=(100,100,110,200))
-        ad.text((cur_cx-6, cur_cy-8), "📷", fill=(180,180,180,255), font=font_sm)
-        cur_label = "现在"
-        try:
-            cb2 = ad.textbbox((0,0), cur_label, font=font_sm)
-            cw = cb2[2]-cb2[0]
-        except: cw = len(cur_label)*12
-        ad.text((cur_cx-cw//2, cur_cy+16), cur_label, fill=(120,120,130,255), font=font_sm)
-        # Target position (right)
-        tgt_cx, tgt_cy = bx+130, by+55
-        ad.ellipse([tgt_cx-14, tgt_cy-14, tgt_cx+14, tgt_cy+14], fill=(*color,180))
-        ad.text((tgt_cx-6, tgt_cy-8), "📷", fill=(255,255,255,255), font=font_sm)
-        tgt_label = angle[:6] if len(angle)>6 else angle
-        try:
-            tb3 = ad.textbbox((0,0), tgt_label, font=font_sm)
-            tw3 = tb3[2]-tb3[0]
-        except: tw3 = len(tgt_label)*12
-        ad.text((tgt_cx-tw3//2, tgt_cy+16), tgt_label, fill=(*color,255), font=font_sm)
-        # Arrow
-        arrow_y = cur_cy
-        ad.line([(cur_cx+14, arrow_y), (tgt_cx-16, arrow_y)], fill=(*color,150), width=2)
-        ax_h = tgt_cx-16
-        ad.polygon([(ax_h, arrow_y), (ax_h-8, arrow_y-5), (ax_h-8, arrow_y+5)], fill=(*color,150))
-
-    # ── Bottom bar ──
-    y0 = H - bar_h
-    bad.rectangle([(0,y0),(W,H)], fill=(0,0,0,140))
-    bad.text((20,y0+12), f"📷 {plan_index+1}/{4}", fill=(200,200,200,255), font=font_lg)
-    try: bb=bad.textbbox((0,0),name,font=font_lg); nw=bb[2]-bb[0]
-    except: nw=len(name)*20
-    bad.text((W-nw-24,y0+12), name, fill=color, font=font_lg)
-
-    # ── Composite ──
-    result = base
-    for layer in [light_l, grid_l, subj_l, vign_l, frame_l, badge_l, angle_l, bar_l]:
-        result = Image.alpha_composite(result, layer)
-    result = result.convert("RGB")
-
-    out_path = os.path.join(_get_plan_img_dir(), f"{output_key}.jpg")
-    if os.path.exists(out_path):
-        return f"/static/plan_images/{output_key}.jpg"
-    result.save(out_path, "JPEG", quality=88)
-    return f"/static/plan_images/{output_key}.jpg"
 
 
 # ============================================================
@@ -250,11 +37,10 @@ DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
 DOUBAO_MODEL = "doubao-seed-2.0-pro"
 DOUBAO_FAST_MODEL = "doubao-seed-2.0-lite"  # 方案生成用快速模型——结构化JSON不需要最强推理
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
-STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")  # v4.3: 已弃用，保留变量以防旧引用
+STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")  # 已弃用，保留变量以防旧引用
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "10"))  # 每人每天免费次数
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
-PLAN_IMG_VERSION = 3   # v3: 修复示意图版本不匹配——强制重新生成所有增强图
 VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
 REQUEST_TIMEOUT = 300  # 含大图上传时间
 SESSION_TTL = 86400  # 24小时——与前端 localStorage 恢复窗口一致
@@ -290,12 +76,13 @@ def _save_session(session_id):
             "directions": sess.get("directions"),
             "scene_tier": sess.get("scene_tier"),
             "env_context": sess.get("env_context", ""),
-            "search_context": sess.get("search_context", ""),
+            "fold_details": sess.get("fold_details", {}),
             "scene_category": sess.get("scene_category", ""),
             "photo_path": sess.get("photo_path", ""),
             "insight": sess.get("insight", ""),
             "client_ip": sess.get("client_ip"),
             "daily_count_key": sess.get("daily_count_key", ""),
+            "plan_cache": sess.get("plan_cache", {}),
         }
         with open(_session_path(session_id), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -324,16 +111,16 @@ def _load_session_from_disk(session_id):
             "created_at": data.get("created_at", time.time()),
             "client_ip": data.get("client_ip"),
             "env_context": data.get("env_context", ""),
-            "search_context": data.get("search_context", ""),
+            "fold_details": data.get("fold_details", {}),
             "scene_category": data.get("scene_category", ""),
             "photo_path": data.get("photo_path", ""),
             "insight": data.get("insight", ""),
             "daily_count_key": data.get("daily_count_key", ""),
+            "plan_cache": data.get("plan_cache", {}),
         }
         if sess["photo_path"] and not os.path.exists(sess["photo_path"]):
             sess["photo_path"] = ""
         _sessions[session_id] = sess
-        _cleanup_old_sessions()
         print(f"[Session] Restored from disk: {session_id}", file=sys.stderr, flush=True)
         return sess
     except Exception as e:
@@ -613,7 +400,9 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
     "anchors": "[观察]列出场景中可作为空间锚点的具体物体——门口盆栽、窗边沙发、路边消防栓、树荫边缘等。至少3个。这些将用于下游生成空间化拍摄指令。"
   },
   "composition": "[观察]当前构图方式 + [观察]画面中可利用的构图元素（线条/框架/光影区域）",
-  "location_clues": "从画面识别位置线索。检查：招牌文字、建筑风格/颜色、地标轮廓、植被类型、山形地貌、室内装修风格、菜单/包装/标识。能推断具体场所就写场所名（如'太舞滑雪场山顶餐厅后方观景台'），只能到城区级就写级别，完全无法识别写'无法识别'"
+  "location_clues": "从画面识别位置线索。检查：招牌文字、建筑风格/颜色、地标轮廓、植被类型、山形地貌、室内装修风格、菜单/包装/标识。能推断具体场所就写场所名（如'太舞滑雪场山顶餐厅后方观景台'），只能到城区级就写级别，完全无法识别写'无法识别'",
+  "specific_location": "从 location_clues 中提取最精确的地点名称，用于网络搜索。格式：'国家/城市 + 具体场所'（如'马来西亚亚庇沙皮岛''北京故宫角楼''上海武康路'）。若无明确地点写'无'",
+  "distinctive_traits": "🚨不是描述场景中常见的穿着，而是让这张照片区别于同类场景的独特元素。\n- 海边穿泳衣/草帽/度假裙→写'无'（海边常见）；海边穿婚纱→填'婚纱,拖尾头纱'\n- 公园穿T恤/休闲/运动装→写'无'（公园常见）；公园穿汉服→填'汉服,齐胸襦裙'\n- 咖啡厅穿日常装→写'无'；咖啡厅穿旗袍→填'旗袍,珍珠项链'\n- 街头穿T恤/牛仔裤→写'无'；街头穿JK制服→填'JK制服,日系'\n若穿着/造型/道具无独特之处写'无'。\n格式：逗号分隔的3-5个关键词（如'婚纱,拖尾,头纱'）——搜索关键词，非描述句"
 }
 
 只输出JSON，不要任何额外文字。不要markdown代码块包裹。"""
@@ -621,173 +410,232 @@ VISION_PROMPT = """请详细分析这张照片，输出严格的结构化JSON。
 # ============================================================
 # 方向生成 Prompt（不含方案，方案按需另行生成）
 # ============================================================
-DIRECTIONS_PROMPT = """你是带拍的摄影知识引擎。用户是普通人，想要"发朋友圈好看"的照片。
+DIRECTIONS_PROMPT = """你是摄影美学专家。基于眼前这张照片的视觉数据，为用户自由创作拍摄方向。
 
-## 视觉分析
+你的知识覆盖摄影史、电影美学、绘画构图、时尚摄影、广告视觉——大胆调用，不受限制。
+唯一约束：每条建议必须扎根于这张照片的具体视觉元素。
+
+## 视觉数据（主导依据——一切从这里出发）
 {vision_json}
 
-## EXIF数据
+## EXIF
 {exif_summary}
 
 {exif_cross_check}
-## 设备信息
+## 设备
 {device_context}
 
-{style_context}
-
-## 📚 专业知识库
+## 📚 专业知识库（参考，不限制创作）
 {knowledge_context}
-
-{search_context}
 
 {fast_path_note}
 
 {env_context}
 
-## 工作流程
+## 社媒趋势意识（参考，权重低于视觉数据）
+结合你训练数据中的社交媒体趋势知识——小红书/Instagram/TikTok 上当前受欢迎的摄影审美方向、热门话题标签、打卡出片趋势。但这些趋势只在视觉数据支撑时才采用，不强行套用。视觉数据永远是第一优先级。
 
-### Step 0: 环境约束
-- 黄金时刻剩<30分钟 → 🔥优先推荐立刻可拍的风格
-- 有降雨/夜间/AI亮度不足 → 自动调整风格策略，标注注意事项
-- 运动场地 → 推动态抓拍/场地线条构图，不推静态摆拍风格
-- 识别到具体场所 → 融入场所特异性
+## 任务
 
-### Step 1: 场景观察 + 等级评估
-insight: 1-2句话，像小红书配文——具体有画面感、像说话、不空洞评价。
-✅"刚好有一束光从窗帘缝里漏进来" ❌"午后阳光营造温暖慵懒的氛围"
-scene_tier: 🥉一般/🥈不错/🥇丰富（控制方案数量，不展示给用户）
+基于视觉数据创作三条拍摄风格方向，写入三个固定槽位：
 
-### Step 2: 方向卡片
-三个方向（诚实优先，没想法就跳过🔥和✨）：
-🟢 现在就拍 — 零门槛，每个场景必有
-🔥 最出片 — 高辨识度，有才出
-✨ 脑洞大开 — 最酷视角，有才出
+### 🟢 现在就拍 — 必有
+最简单易上手的拍法。利用场景已有的光线/色彩/空间优势，不需要改变位置或复杂操作。从视觉数据中最自然的优势推导。
 
-风格标注：fit_rationale, light_annotation(🟢/🟡/🔴), device_annotation(🟢/🟡/🟠), source_type, name_source
-三个方向必须不同风格名。无实质内容时除id/emoji/label/subtitle外全null。plans=[]。
-reason: 80-120字，让用户理解为什么推荐。insight≤60字 reason≤120字 how≤50字。
+### 🔥 最出片 — 有则放
+带社媒话题性或流行趋势的方向。挖掘这张照片最独特的记忆点——什么让它不同于同类场景的其他照片？如果视觉数据支撑力不够，退一步用与🟢相近但角度不同的风格填充。尽量不放空。
 
-### Step 3: 知识收获
-discovered_styles: 从搜索中提取新中文风格名（❌已有风格名 ❌英文名），标注source_type/fit_rationale。无→[]
-techniques_used: 从搜索中提取可操作技法（不是通用构图法则），标注source_type/description。无→[]
+### ✨ 脑洞大开 — 宁缺毋滥
+小众、非典型、跨媒介联想的视角。从视觉元素映射到电影/画作/广告/游戏/漫画的视觉语言。必须有至少一个具体视觉锚点支撑。没有灵感就全部填空（除id/emoji/label/subtitle外全null）。
 
-## 约束
-- EXIF交叉：ISO≥800但视觉说"明亮"→采信EXIF；闪光灯→修正光质；快门<1/60→标注稳定
-- 口吻：朋友分享观察 ✅"你"视角 ❌摄影术语 ❌"我"
-- style用中文名，style_promise用视觉描述（❌社交验证话术如"发朋友圈被赞"）
-- style_promise ✅"暖黄光从侧面打过来，头发丝是金色的" ❌"小红书爆款"
-- name_source: discovered(知识库已有/搜索到/摄影师名)/translated(英文翻译)/generated(AI自创)
-- 宁可空数组，不填低质量通用概念
+## 创作原则
+
+1. 每条 direction 的 style_promise/reason 必须引用 ≥1 个视觉素材（光线方向/光质/色彩/accent/空间锚点/构图元素/人物特征）
+2. 三条风格各不相同，覆盖不同审美取向
+3. 忠于实际光线——硬光不推柔光风格，阴天不推逆光小清新
+4. 设备限制必须尊重
+5. 🔥/✨ 无实质想法时，除 id/emoji/label/subtitle 外全填 null，plans 填 []
+6. 🟢 必须有实质内容
+
+## fold_details——折叠详情文案
+
+每条方向配套一段社媒风格的折叠详情（字段名 fold_details，key 为方向 id）。
+像小红书博主在分享心得，不说教、不列 bullet、不写学术论文。
+写清楚：这个风格怎么从照片里来的（引用具体视觉元素），为什么这个光线/色彩/场景组合让这个风格可行，有没有社媒话题支撑。
+
+格式：
+fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风格文案...\\n\\n灵感来源：xxx", "best": "...", "creative": "..." }}
+🔥/✨无内容时对应 detail 为空字符串 ""。
+
+## style_brief——风格视觉特征速写
+
+每条方向加一个 style_brief 对象，用 3-5 个关键词+短描述，定义这个风格的核心视觉特征。
+这是给后续方案生成 AI 看的，要精确不要修辞。
+
+格式：
+{{
+  "essence": "一句话定义这个风格（≤20字）",
+  "color": "色彩策略（≤30字，如：高饱和红蓝撞色 / 低饱和粉彩 / 金色暖调）",
+  "composition": "构图偏好（≤30字，如：绝对对称居中 / 三分法偏移 / 平面化水平分割）",
+  "light": "光线偏好（≤30字，如：全柔光零阴影 / 侧硬光强对比 / 金色逆光）",
+  "mood": "情绪氛围（≤20字，如：冷静幽默 / 松弛慵懒 / 冷酷张力）"
+}}
+
+🟢 安静真实 → 基于视觉数据的自然推导，style_brief 反映当前场景的实际光线和色彩
+🔥 最出片 → 社媒流行风格，style_brief 引用该风格在摄影社区中的典型视觉特征
+✨ 脑洞大开 → 跨媒介/小众风格，style_brief 必须精确描述该风格的视觉特征（后续方案 AI 全靠这个理解风格）
+
+## 口吻
+朋友分享的语气。"你"视角。
+✅"侧光刚好打在你的侧脸上，球衣红在阴影里更浓了"
+❌"建议采用侧光拍摄以突出主体"
+style_promise 用视觉描述，不写社交验证话术。
+卡片文案偏社媒风格——像小红书博主在推荐，不是摄影教材。
 
 ## 输出格式
-严格JSON，不要markdown包裹。directions 必须是 ARRAY：
+严格JSON，不要markdown包裹。directions 必须是数组 []：
 
 {{
-  "insight": "1-2句话，小红书配文风格",
-  "scene_tier": "🥉/🥈/🥇",
+  "insight": "1-2句社媒配文——具体有画面感，不说空话",
+  "scene_tier": "🥇",
   "directions": [
     {{
       "id": "now", "emoji": "🟢", "label": "现在就拍", "subtitle": "零门槛，站在这就能拍",
-      "style": "风格名", "style_promise": "效果语言翻译",
-      "reason": "推荐理由（80-120字）", "how": "一句话操作概述",
-      "fit_rationale": "", "light_annotation": "🟢/🟡/🔴",
-      "device_annotation": "🟢直接拍/🟡微调/🟠替代方案",
-      "source_type": "community/tutorial/portfolio/inference",
-      "name_source": "discovered/translated/generated",
+      "style": "风格名（中文）",
+      "style_promise": "1句话说出拍出来什么效果",
+      "reason": "为什么这个风格适合现在这张照片（60-100字）",
+      "fit_rationale": "风格-场景适配逻辑（1-2句）",
+      "light_annotation": "🟢/🟡/🔴", "device_annotation": "🟢直接拍/🟡微调/🟠替代方案",
+      "style_brief": {{"essence":"","color":"","composition":"","light":"","mood":""}},
       "plans": []
     }},
-    {{"id":"best","emoji":"🔥","label":"最出片","subtitle":"发出去会被赞的那种","style":"","style_promise":"","reason":"","how":"","fit_rationale":"","light_annotation":"","device_annotation":"","source_type":"","name_source":"","plans":[]}},
-    {{"id":"creative","emoji":"✨","label":"脑洞大开","subtitle":"不像游客照的视角","style":"","style_promise":"","reason":"","how":"","fit_rationale":"","light_annotation":"","device_annotation":"","source_type":"","name_source":"","plans":[]}}
+    {{"id":"best","emoji":"🔥","label":"最出片","subtitle":"发出去会被赞的那种","style":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]}},
+    {{"id":"creative","emoji":"✨","label":"脑洞大开","subtitle":"不像游客照的视角","style":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]}}
   ],
-  "search_quality": {{"overall": "🟢/🟡/🔴", "honest_note": ""}},
-  "discovered_styles": [{{"name":"","source_type":"","fit_rationale":"","light_annotation":"","device_annotation":""}}],
-  "techniques_used": [{{"name":"","source_type":"","description":""}}]
+  "fold_details": {{ "now": "▼ 为什么选这个\\n\\n...", "best": "...", "creative": "..." }}
 }}
 
-🔥和✨无实质内容时除id/emoji/label/subtitle外全null。至少一个方向有实质内容。
+🟢必有实质内容。🔥尽量有内容，与🟢互补。✨无灵感时全部null，fold_details.creative空字符串。
 directions 必须是数组 []，不是对象 {{}}！"""
 
 
 # ============================================================
 # 方案生成 Prompt（按需调用，用户选完方向后）
 # ============================================================
-PLANS_PROMPT = """你是摄影指导——输出"怎么拍"的拍摄指令。❌不是旅行规划师/活动策划/游记作者。每一句话都必须是拍摄指令。
+PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可执行的拍摄方案。❌不是旅行规划师/活动策划/游记作者。
+
+## 🚨 核心原则：素材绑定（最高优先级）
+
+每条方案的 subject/shooter/gear/enhance 都必须引用「素材清单」中的 ≥1 个具体元素。
+❌ 禁止通用空话——"换个角度""注意光线""调整构图"放任何照片都能用的=废案。
+✅ 必须具体——"站粗浮木右侧，利用枯木当前景框，让球衣红色从蓝天中跳出来"
 
 ## 场景信息
 {vision_json}
 
-## 🌐 社区搜索参考
-{search_context}
+## 📦 素材清单（每条方案必须引用 ≥1 个）
+{material_inventory}
 
-## 📚 历史验证技法
-{db_techniques}
+## 🎯 目标方向
+{emoji} {label} — 风格：{style}
+效果承诺：{style_promise}
+推荐理由：{reason}
+
+### 风格视觉特征（方案设计必须遵循）
+{style_brief}
+
+### 这个风格为什么适合这张照片
+{direction_detail}
 
 ## 设备信息
 {device_context}
 
-## 风格知识
+## 风格知识（参考）
 {style_knowledge}
 
 ## 设备适配
 {device_knowledge}
 
-## 已选方向
-{emoji} {label} — 风格：{style}
-效果承诺：{style_promise} | 推荐理由：{reason} | 操作概述：{how}
+{forbidden_constraints}
 
 ## 场景等级：{scene_tier}
 ## 方案数量约束：{tier_constraint}
 
-## 🚨 场景锚定（最高优先级）
-- subject/shooter 的位置必须引用 space.anchors 的具体物体——"站网球网右侧""蹲在门口盆栽旁"
-- 运动场地→融入典型动作和场地构图。特定场所→利用场所设计元素
-- 至少1个方案有"只有这个场景才有的专属元素"
-- 社区搜索中有真实技法→至少引用1个
-
-## 🚨 设备约束（最高优先级）
+## 🚨 设备约束
 {device_constraints}
 {env_context}
-- 无长焦→不写压缩空间/拉近；无超广角→不写超广角仰拍；定焦→靠走位
-- 发挥设备优势，规避限制——这才可执行
+
+## 技巧设计维度（每条方案覆盖 4-6 个维度做变化）
+
+在选定风格下，用素材清单里的原材料设计可执行方案。
+维度选择要均匀分布——不能 3 套方案全改景别。
+
+① 🎯 景别变化：远景/全景/中景/近景/特写 → 当前什么景别，改到什么景别
+② 📐 角度变化：平视/仰拍/俯拍/侧面/背面 → 从什么角度，利用哪个锚点
+③ 🕺 姿势变化：当前姿势→新姿势，引用锚点（站/坐/靠/躺/走/回头/蹲/倚）
+④ 😊 表情/眼神：看镜头/看远方/不看镜头/闭眼/歪头/微笑/大笑/安静
+⑤ 🔍 景深/对焦：虚化什么、清晰什么 → 引用前景/背景素材
+⑥ 🧥 物品调整：摘/戴/卷起/反戴/脱掉/披上 → 引用服饰道具清单
+⑦ 📍 位置调整：移到哪个锚点 → 引用场景锚点（躲硬光/换背景/找画框）
+⑧ 💡 光线利用/避让：当前光线的什么特点可用，什么问题要躲 → 引用光线条件
 
 ## 每套方案字段
-① name: 能记住的方案名
+① name: 能记住的方案名（最好含素材元素，如"枯木画框里的回眸"）
 ② prep: 准备什么（≤50字）
-③ subject: 被拍摄者——给"做一件事"的指令（引用anchors，不说"摆造型"），2-3句
-④ shooter: 摄影师——站哪/多远/什么高度/角度（考虑设备限制），2-3句
-⑤ gear: 设备调试——焦段/对焦/曝光/人像模式（不需要就写全自动），1-2句
-⑥ enhance: 增色技巧（可选）——打光/道具/服装/AI处理，1-3句
-⑦ result: 拍出来——画面视觉预览（❌社交验证话术），2-3句
-⑧ why: 为什么好看——摄影原理，2-3句
+③ subject: 被拍摄者——给"做一件事"的自然指令。引用锚点，不写"摆造型"。2-3句。
+   ✅ "侧身倚靠粗浮木，右手搭膝上，头转向海面，像在等船来"
+   ❌ "摆一个自然的姿势，眼神放松看远方"
+④ shooter: 摄影师——站哪/多远/高度/角度。引用锚点。考虑设备限制。2-3句。
+   ✅ "蹲在长条枯木后方，手机举到与眼睛齐平，透过枯木缝隙拍"
+   ❌ "找个好角度拍"
+⑤ gear: 设备调试——焦段/对焦/曝光。不需要就写"全自动"。1-2句。
+⑥ enhance: 拍摄时现场增色技巧——打光/道具/服装调整。只写拍摄现场能操作的，不混入后期。
+   例："侧硬光让人物右肩锐利阴影落在浮木上；斑驳树影碎光斑对准球衣队徽位置"
+⑦ result: 拍出来——画面视觉预览。❌社交验证话术。2-3句。
+   ✅ "侧光在球衣褶皱上切出利落阴影，海面在背景化成淡蓝色块"
+   ❌ "发朋友圈肯定被赞爆"
+⑧ why: 为什么好看——摄影原理。2-3句。
 ⑨ annotations: 视觉标注（最多3个）
    - subject: {{"type":"subject","x":0.35,"y":0.72,"label":"站这","color":"#4ade80"}}
    - shooter: {{"type":"shooter","from":{{"x":0.05,"y":0.85}},"to":{{"x":0.4,"y":0.5}},"angle":"蹲下·45°仰拍","color":"#4ade80"}}
    - frame/crop 可选。color: #4ade80(绿)/#f59e0b(金)/#a78bfa(紫)
-⑩ perspective: 换个思路（可选）
+⑩ perspective: 换个思路（可选）——同风格不同维度的替代方案
 ⑪ shot_size: 景别（远景/全景/中景/近景/特写）
 ⑫ angle: 角度（平视/俯拍/仰拍/侧面/背面）
-⑬ post_process: 增色效果（1-3项）——拍摄现场无法实现的效果：补光模拟、后期调色、特效、AI修复等
-   每项：{{"cat":"light|color|fx|ai","label":"补光|调色|特效|AI修复","text":"具体描述"}}
-⑭ img_gen_prompt: 图生图提示词（≤300汉字）——豆包Seedream自然语言格式！
-   ❌禁止用列表/符号/拍摄术语（"机位""焦段""光圈"）
-   ✅用一段流畅中文描述画面变化。公式：变化动作（修改/调整/改为）+变化对象+变化后视觉特征
-   
-   参考上传的照片，保持人物面部特征和场景环境不变。修改如下：
-   · 人物动作表情：[subject的动作姿态+表情+眼神方向+身体朝向，写视觉结果]
-     例："侧身倚靠栏杆回头微笑，眼神自然看向镜头，身体略微前倾"
-   · 景别与镜头：[shot_size的画面范围+angle的视觉效果，用"镜头从…""画面中人物在…"]
-     例："中景画面，低角度仰拍使人物挺拔，人物在画面左侧三分线上"
-   · 光线氛围：[enhance的光质+方向+特效，写可见的光影画面效果]
-     例："暖金色侧光从左侧斜照，发丝边缘泛起轮廓金光，面部呈现柔和立体过渡"
-   · 增色调色：[逐一融入post_process每项的text，写视觉调色结果]
-     例："电影感青橙调色，阴影偏冷青灰，高光带暖橙色，叠加轻胶片颗粒"
-   画面整体[风格名]氛围，自然肤质，真实摄影感，无文字水印。
+⑬ quick_edit: 手机修图傻瓜引导——用户不会修图，打开 app 照着点就行。
+    格式：{{"app":"醒图","goal":"一句话说清楚修完什么效果","steps":["第1步（括号写为什么）","第2步","第3步"]}}
+    原则：只写用户能点到的位置，不写参数原理。每步括号里写效果让人知道为什么要做。3-5步。
+⑭ img_gen_prompt: 图生图提示词（≤250汉字）——豆包Seedream图生图格式
+
+    结构：
+    - 开头固定：「参考上传的照片，保持人物面部特征和场景环境不变。修改如下：」
+    - 第一段：人物动作表情变化（基于 subject 字段，写最终视觉结果）
+    - 第二段：光线氛围变化（基于 enhance，只写跟原片不同的光影变化）
+    - 第三段：色调质感变化（基于 quick_edit 效果，用自然语言描述调色结果）
+    - 结尾固定：「自然肤质，真实摄影感，无文字水印。」
+
+    ❌ 禁止重新描述整个场景——原片已经提供了
+    ❌ 禁止用列表/符号/拍摄参数
+    ✅ 只写跟原片不同的部分，一段流畅中文
+
+⑮ ai_tips: AI 可单独优化的小建议（2-3条简短字符串数组）
+    例：["面部光影重塑——让侧光过渡更柔和","天空色调微调——灰蓝更干净通透"]
+⑯ combo_label: "🧪实验性"（所有方案统一标记）
+
+## 方案质量自检（生成后逐条检查）
+☐ 引用了素材清单中的 ≥1 个具体元素？
+☐ subject 给了"做一件事"的自然指令？
+☐ shooter 指名了具体站位+锚点？
+☐ 触犯了禁止型约束中的任何一条？（触犯→重写）
+☐ result 描述了具体画面而非社交话术？
+☐ img_gen_prompt 是图生图格式（参考上传照片...）而非文生图？
+☐ quick_edit 步骤是用户能照着点的，没有专业参数？
 
 ## 约束
-- 口吻：朋友分享观察 ✅"你"视角 ❌摄影术语 ❌"我"
-- result ✅"整个人被暖光包住，头发丝是金色的，背景化成奶油色模糊"
+- 口吻：朋友分享 ✅"你"视角 ❌摄影术语 ❌"我"
+- result ✅"侧光从左侧打来，半张脸在光里半张在暗里，球衣红色刚好在亮面"
 - 长度：prep≤50字 subject/shooter 2-3句 gear 1-2句 result/why 2-3句
-- 方案间用不同变化手段（姿态/景别/角度/构图/光线），不强凑
+- 方案间维度变化均匀分布——不能全改景别，不能全改姿势
 
 ## 输出格式
 
@@ -798,7 +646,11 @@ PLANS_PROMPT = """你是摄影指导——输出"怎么拍"的拍摄指令。❌
     {{
       "name": "", "prep": "", "subject": "", "shooter": "", "gear": "",
       "enhance": "", "result": "", "why": "", "annotations": [], "perspective": "",
-      "shot_size": "", "angle": "", "post_process": [], "img_gen_prompt": ""
+      "shot_size": "", "angle": "",
+      "quick_edit": {{"app":"","goal":"","steps":["","",""]}},
+      "img_gen_prompt": "",
+      "ai_tips": ["",""],
+      "combo_label": "🧪实验性"
     }}
   ]
 }}"""
@@ -1165,7 +1017,7 @@ def get_location_weather(exif_result):
 # Session 管理
 # ============================================================
 
-def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", search_context="", scene_category="", session_id=None):
+def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", fold_details=None, scene_category="", session_id=None):
     """创建分析会话"""
     if session_id is None:
         session_id = uuid.uuid4().hex[:12]
@@ -1180,7 +1032,7 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
         'created_at': time.time(),
         'client_ip': client_ip,
         'env_context': env_context,
-        'search_context': search_context,
+        'fold_details': fold_details or {},
         'scene_category': scene_category
     }
     _cleanup_old_sessions()
@@ -1346,6 +1198,7 @@ def normalize_creative_output(data):
             d.setdefault('device_annotation', '')
             d.setdefault('source_type', '')
             d.setdefault('name_source', '')
+            d.setdefault('style_brief', {})
             for p in d.get('plans', []):
                 if isinstance(p, dict):
                     p.setdefault('subject', '')
@@ -1450,6 +1303,10 @@ def repair_json(text):
 
     # 1. 移除 trailing commas
     text = re.sub(r',(\s*[}\]])', r'\1', text)
+
+    # 1.5 修复缺失的字符串开头引号：`"key": 中文内容"` → `"key": "中文内容"`
+    # 模式：冒号后空格跟中文，但缺少开头引号，结尾有引号
+    text = re.sub(r'":\s+([^"{}\[\],\s][^"]*?)"(\s*[,}\]])', r'": "\1"\2', text)
 
     # 2. 修复字符串中未转义的控制字符
     result = []
@@ -1599,8 +1456,128 @@ def get_tier_constraint(scene_tier):
     return f"当前场景等级 {scene_tier}：必须生成 {range_n} 套方案。上限 {max_n} 套——不准超过。场景给不出那么多就诚实少给（最少 {min_n} 套）。"
 
 
+def build_material_inventory(vision_json):
+    """从 Vision 分析结果构建素材清单——所有可用于技巧设计的视觉原材料。
+
+    Stage 2 的技巧设计必须引用这些素材，确保每条建议与这张照片强绑定，不模板化。
+    """
+    if not isinstance(vision_json, dict):
+        return "（视觉分析数据不可用）"
+
+    lines = ["## 📦 素材清单（每条方案必须引用 ≥1 个素材，禁止通用空话）\n"]
+
+    # ── 人物素材 ──
+    people = vision_json.get('people', '')
+    if people and '无' not in str(people):
+        lines.append(f"### 🧑 人物状态\n{people}\n")
+
+    # ── 服饰素材（从 distinctive_traits 提取可用于物品调整的）──
+    traits = vision_json.get('distinctive_traits', '')
+    if traits and '无' not in str(traits):
+        traits_clean = traits.replace('，', ',').replace(',', '、')
+        lines.append(f"### 👗 服饰道具\n{traits_clean}")
+        lines.append("> 可调整：摘/戴/卷起/反戴/脱掉/披上——每个物品都是设计变量\n")
+
+    # ── 空间锚点 ──
+    space = vision_json.get('space', {})
+    if isinstance(space, dict):
+        anchors = space.get('anchors', '')
+        if anchors:
+            lines.append(f"### 📍 场景锚点（用于空间化指令）\n{anchors}")
+            lines.append("> 站位/坐位/靠位必须指名具体锚点：'站粗浮木右侧''坐长条枯木上'\n")
+        depth = space.get('depth', '')
+        foreground = space.get('foreground', '')
+        midground = space.get('midground', '')
+        background = space.get('background', '')
+        if any([foreground, midground, background]):
+            lines.append(f"### 📐 空间层次（用于景深/对焦决策）")
+            if depth:
+                lines.append(f"- 纵深：{depth}")
+            if foreground:
+                lines.append(f"- 前景：{foreground}")
+            if midground:
+                lines.append(f"- 中景：{midground}")
+            if background:
+                lines.append(f"- 背景：{background}")
+            lines.append("")
+
+    # ── 光线 ──
+    light = vision_json.get('light', {})
+    if isinstance(light, dict):
+        lines.append("### 💡 光线条件（用于光线利用/避让决策）")
+        for key in ['direction', 'quality', 'color_temp', 'special', 'level']:
+            val = light.get(key, '')
+            if val:
+                labels = {'direction': '方向', 'quality': '质感', 'color_temp': '色温',
+                          'special': '特殊光', 'level': '亮度'}
+                lines.append(f"- {labels.get(key, key)}：{val}")
+        lines.append("")
+
+    # ── 色彩 ──
+    color = vision_json.get('color', {})
+    if isinstance(color, dict):
+        lines.append("### 🎨 色彩信息（用于配色/调色决策）")
+        for key in ['primary', 'secondary', 'accent']:
+            val = color.get(key, '')
+            if val:
+                labels = {'primary': '主色', 'secondary': '次要色', 'accent': '强调色'}
+                lines.append(f"- {labels.get(key, key)}：{val}")
+        lines.append("")
+
+    # ── 构图 ──
+    composition = vision_json.get('composition', '')
+    if composition:
+        lines.append(f"### 🖼️ 构图元素\n{composition}\n")
+
+    return "\n".join(lines)
+
+
+def build_forbidden_constraints(device_key, lens_key=None):
+    """生成禁止型约束——直接排除不可实现的建议"""
+    lines = ["## 🚫 禁止型约束（以下建议一律不可出现）\n"]
+
+    # ── 设备相关禁止 ──
+    ctx = DEVICE_CONTEXTS.get(device_key, DEVICE_CONTEXTS.get("unknown", {}))
+    if ctx:
+        device_name = ctx.get('name', '此设备')
+        if '手机' in device_name or 'iPhone' in device_name or 'android' in device_key:
+            lines.append("### 设备限制")
+            lines.append("- ❌ 禁止提'打反光板''离机闪''布灯'——用户没有专业灯光设备")
+            lines.append("- ❌ 禁止提具体光圈值（f/1.4/f/2.8等）——手机光圈不可调")
+            lines.append("- ❌ 禁止提'70-200mm''超广角镜头'——可提'人像模式''2×变焦''0.5×超广角'")
+            lines.append("- ❌ 禁止提'RAW后期''Lightroom精修'——可提'相册编辑''醒图''VSCO'")
+        elif '相机' in device_name or '富士' in device_name or '理光' in device_name or 'Canon' in device_name or 'Sony' in device_name:
+            lines.append("### 设备限制（相机）")
+            lines.append("- ❌ 禁止提'计算摄影''AI人像模式''夜景模式'——相机没有这些")
+            lines.append("- ✅ 可提具体光圈/快门/ISO/焦段——相机用户能操作这些")
+            if lens_key and 'prime' in LENSES.get(lens_key, {}).get('type', ''):
+                lines.append("- ⚠️ 定焦镜头——所有方案用同一焦段，靠走位代替变焦")
+
+    # ── 安全相关禁止 ──
+    lines.append("\n### 安全限制")
+    lines.append("- ❌ 禁止提'跳起抓拍''连续跳跃'——普通人拍10次9次废，且可能受伤")
+    lines.append("- ❌ 禁止提'躺水边让浪花打湿'——不卫生且有安全风险")
+    lines.append("- ❌ 禁止提'爬树''攀岩''站礁石尖端''坐悬崖边缘'——安全风险")
+
+    # ── 社交/操作限制 ──
+    lines.append("\n### 操作限制")
+    lines.append("- ❌ 禁止提'让路人帮忙''找摄影师''约模特'——用户只有手机/相机+同行人")
+    lines.append("- ❌ 禁止提'等一小时后的光线''明天再来'——除非用户真的在场景里")
+    lines.append("- ❌ 禁止提'去私人领地/酒店''进收费区'——不可控")
+
+    # ── 通用审美禁忌 ──
+    lines.append("\n### 审美禁忌（来自小红书/摄影社区踩坑帖）")
+    lines.append("- ❌ 顶光+平视正脸 → 眼窝/鼻下/下巴三重阴影")
+    lines.append("- ❌ 全身照+俯拍 → 头大身小Q版比例")
+    lines.append("- ❌ 绿草地+正红衣服（未褪色处理）→ 红绿补色直接碰撞=土")
+    lines.append("- ❌ 闪光灯直打+油性皮肤 → 面部油光反光=灾难")
+    lines.append("- ❌ 逆光+深色背景+无补光 → 主体全黑剪影（除非这是目的）")
+
+    return "\n".join(lines) + "\n"
+
+
 # ============================================================
-# 流式分析生成器（v3.5：渐进式——EXIF→场景→方向，方案按需）
+# 流式分析生成器（：渐进式——EXIF→场景→方向，方案按需）
 # ============================================================
 
 def analyze_photo_stream(image_path, device_override=None, lens_key=None, client_ip=None):
@@ -1814,9 +1791,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         scene_type = vision_json.get('scene_type', '')
         location_clues = vision_json.get('location_clues', '')
         scene_category = extract_scene_category(scene_type, location_clues)
-        style_context = query_scene_context(scene_type, category=scene_category)
 
-        # ── EXIF 交叉验证（v4.0）──
+        # ── EXIF 交叉验证 ──
         exif_cross_check = ""
         if isinstance(exif_result, dict) and 'error' not in exif_result:
             sp = exif_result.get('shooting_params', {})
@@ -1854,90 +1830,19 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             if checks:
                 exif_cross_check = "## 🚨 EXIF 交叉验证\n" + "\n".join(checks) + "\n"
 
-        # ── 知识库注入（v4.0 统一知识源）──
+        # ── 知识库注入（作为参考，不限制 LLM 创作）──
+        people_info = vision_json.get('people', '') if isinstance(vision_json, dict) else ''
+        light_data = vision_json.get('light', {}) if isinstance(vision_json, dict) else {}
+
         knowledge_context = get_all_knowledge_for_prompt(
             scene_type=scene_type,
             device_key=final_device_key,
-            light_condition=json.dumps(vision_json.get('light', {}), ensure_ascii=False)
+            light_condition=json.dumps(light_data, ensure_ascii=False),
+            fallback_level="medium"  # 固定权重——AI自由创作，KB作为参考
         )
         print(f"[SSE] Knowledge context: {len(knowledge_context)} chars", file=sys.stderr, flush=True)
 
-        # ── 🌐 Web 搜索（并行：风格 + 位置，v4.6）──
-        search_context = ""
-        search_quality_web = "🔴"
-        people_info = vision_json.get('people', '')
-        loc_clues = vision_json.get('location_clues', '') if isinstance(vision_json, dict) else ''
-
-        # 确定位置搜索词
-        search_place = None
-        if loc_clues and loc_clues != '无法识别' and len(loc_clues) >= 3:
-            search_place = loc_clues
-        elif location_weather and location_weather.get('place'):
-            search_place = location_weather['place']
-
-        # 并行跑风格搜索 + 位置搜索
-        from concurrent.futures import ThreadPoolExecutor as _SearchExecutor
-        search_futures = {}
-        with _SearchExecutor(max_workers=2) as _search_ex:
-            # 风格搜索
-            search_futures['style'] = _search_ex.submit(
-                search_style_inspiration, scene_type, people_info,
-                vision_json.get('primary_subject', '')
-            )
-            # 位置搜索
-            if search_place:
-                search_futures['location'] = _search_ex.submit(
-                    search_location_intel, search_place, scene_type
-                )
-
-        # 收集风格搜索结果
-        try:
-            t_search = time.time()
-            search_text, search_quality_web, search_meta = search_futures['style'].result()
-            search_duration = int((time.time() - t_search) * 1000)
-            if search_text:
-                search_context = search_text
-                print(f"[Search] Style search: {len(search_text)} chars, quality={search_quality_web}", file=sys.stderr, flush=True)
-            try:
-                source_types_str = ','.join(f"{k}:{v}" for k, v in search_meta.get('sources', {}).items())
-                log_search(trace_id, 'style', scene_type[:200],
-                          search_meta.get('total_results', 0) if isinstance(search_meta, dict) else 0,
-                          search_quality_web, source_types_str, search_duration,
-                          results_summary=search_text[:500] if search_text else None,
-                          keywords_used=','.join(search_meta.get('keywords', [])) if isinstance(search_meta, dict) else '',
-                          useful_data=search_meta.get('useful_data', '') if isinstance(search_meta, dict) else '',
-                          authenticity=search_meta.get('authenticity', 'unknown') if isinstance(search_meta, dict) else 'unknown')
-            except Exception:
-                pass
-        except Exception as e:
-            print(f"[Search] Style search failed: {e}", file=sys.stderr, flush=True)
-            try:
-                log_search(trace_id, 'style', scene_type[:200], 0, '🔴', '', 0)
-            except Exception:
-                pass
-
-        # 收集位置搜索结果
-        if 'location' in search_futures:
-            try:
-                loc_text, loc_quality = search_futures['location'].result()
-                if loc_text:
-                    search_context += "\n" + loc_text
-                    print(f"[Search] Location search: {len(loc_text)} chars, quality={loc_quality}, place={search_place[:60]}", file=sys.stderr, flush=True)
-                try:
-                    log_search(trace_id, 'location', search_place[:200],
-                              len(loc_text.split('\n')) if loc_text else 0,
-                              loc_quality, '', 0,
-                              results_summary=loc_text[:500] if loc_text else None)
-                except Exception:
-                    pass
-            except Exception as e:
-                print(f"[Search] Location search failed: {e}", file=sys.stderr, flush=True)
-                try:
-                    log_search(trace_id, 'location', search_place[:200], 0, '🔴', '', 0)
-                except Exception:
-                    pass
-
-        # ── 快速路径判断（v4.0）──
+        # ── 快速路径判断 ──
         fast_path_note = ""
         if not location_weather:
             fast_path_note += "- 无GPS数据 → 跳过了位置/天气/光照时段分析\n"
@@ -1949,26 +1854,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         if fast_path_note:
             fast_path_note = "## ⚡ 快速路径（本次跳过的分析）\n" + fast_path_note + "\n"
 
-        if not search_context:
-            search_context = "（本次未触发社区搜索——场景匹配主要基于专业知识库推理。）\n"
-
-        # ── 🚨 安全网：过滤搜索上下文中的旅游攻略污染（v4.4）──
-        _travel_pollution_kw = [
-            "日游", "天游", "行程安排", "旅游攻略", "旅行计划", "住宿推荐",
-            "美食推荐", "必吃", "必去景点", "交通指南", "包车", "导游",
-            "跟团", "自由行", "周边游", "一日游", "两日游", "三日游",
-            "度假村", "温泉酒店", "民宿推荐", "购物指南", "休闲游",
-        ]
-        _cleaned = search_context
-        for _kw in _travel_pollution_kw:
-            if _kw in _cleaned:
-                _cleaned = "\n".join(
-                    line for line in _cleaned.split("\n")
-                    if _kw not in line
-                )
-        if _cleaned != search_context:
-            print(f"[Sanitize] Stripped travel pollution from search_context", file=sys.stderr, flush=True)
-            search_context = _cleaned
+        # 不再触发搜索——风格由 AI 从视觉数据自由创作，KB 作为参考验证
 
         # ── 🌤 环境上下文（注入方向+方案 prompt，让推荐更智能）──
         env_context = ""
@@ -2024,9 +1910,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             exif_summary=exif_summary,
             exif_cross_check=exif_cross_check,
             device_context=device_text,
-            style_context=style_context,
             knowledge_context=knowledge_context,
-            search_context=search_context,
             fast_path_note=fast_path_note,
             env_context=env_context
         )
@@ -2057,9 +1941,32 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         insight = directions_json.get('insight', '')
         scene_tier = directions_json.get('scene_tier', '🥈')
         directions = directions_json.get('directions', [])
-        discovered_styles = directions_json.get('discovered_styles', [])
-        techniques_used = directions_json.get('techniques_used', [])
-        search_quality = directions_json.get('search_quality', {})
+        fold_details = directions_json.get('fold_details', {})
+
+        # ── KB 查证：风格来源标注 ──
+        source_tags = {}
+        for d in directions:
+            style_name = d.get('style', '')
+            if not style_name:
+                source_tags[d['id']] = '🤖 AI 探索'
+                continue
+            try:
+                kb_detail = get_style_detail(style_name)
+                if kb_detail and '来源：知识库' in kb_detail:
+                    source_tags[d['id']] = '📚 有据可查'
+                    print(f"[KB] ✅ {style_name} → KB 原生风格，有验证技法",
+                          file=sys.stderr, flush=True)
+                elif kb_detail and '跨媒介' in kb_detail:
+                    source_tags[d['id']] = '📚 跨媒介参考'
+                    print(f"[KB] 🔗 {style_name} → 跨媒介映射风格",
+                          file=sys.stderr, flush=True)
+                else:
+                    source_tags[d['id']] = '🤖 AI 探索'
+                    print(f"[KB] 🤖 {style_name} → 新风格，AI 自由创作",
+                          file=sys.stderr, flush=True)
+            except Exception as e:
+                source_tags[d['id']] = '🤖 AI 探索'
+                print(f"[KB] 查证异常 {style_name}: {e}", file=sys.stderr, flush=True)
 
         # ── 创建 session（后续方案生成使用）──
         session_id = create_session(
@@ -2072,7 +1979,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             scene_tier=scene_tier,
             client_ip=client_ip,
             env_context=env_context,
-            search_context=search_context,
+            fold_details=fold_details,
             scene_category=scene_category
         )
 
@@ -2090,11 +1997,11 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         except Exception as e:
             print(f"[Stats] Save usage session error: {e}", file=sys.stderr, flush=True)
 
-        # ── 风格积累（v4.3: 传入搜索真实性，社区验证来源自动加分）──
+        # ── 风格积累 ──
         try:
-            accumulate(scene_type, discovered_styles, techniques_used,
+            accumulate(scene_type, [], [],
                       scene_category=scene_category,
-                      authenticity=search_meta.get('authenticity', 'unknown') if search_meta else 'unknown')
+                      authenticity='ai_generated')
         except Exception as e:
             print(f"[StyleCache] Accumulate error: {e}", file=sys.stderr, flush=True)
 
@@ -2103,9 +2010,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             "insight": insight,
             "scene_tier": scene_tier,
             "directions": directions,
-            "search_quality": search_quality,
-            "discovered_styles": discovered_styles,
-            "techniques_used": techniques_used,
+            "fold_details": fold_details,
+            "source_tags": source_tags,
             "session_id": session_id
         })
 
@@ -2115,9 +2021,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             sess['img_b64'] = img_b64
             sess['exif_data'] = exif_display
             sess['insight'] = insight
-            sess['discovered_styles'] = discovered_styles
-            sess['techniques_used'] = techniques_used
-            sess['search_quality'] = search_quality
+            sess['fold_details'] = fold_details
 
         # ── 完成 ──
         total_time = round(time.time() - t0, 1)
@@ -2232,19 +2136,37 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     style_knowledge = get_style_detail(direction.get('style', '')) or ""
     device_knowledge = get_device_adaptation(device_key) or ""
 
-    # ── v4.2: 查询数据库历史验证技法，注入方案生成 ──
+    # ── 查询数据库历史验证技法，注入方案生成 ──
     scene_type = session.get('vision_json', {}).get('scene_type', '')
     scene_category = session.get('scene_category', '')
     db_techniques = query_scene_techniques_for_plans(scene_type, category=scene_category)
     if db_techniques:
         print(f"[Plans] DB techniques: {len(db_techniques)} chars for cat={scene_category}", file=sys.stderr, flush=True)
+
+    # 🆕 Stage 2 输入
+    material_inventory = build_material_inventory(session.get('vision_json', {}))
+    forbidden_constraints = build_forbidden_constraints(device_key, lens_key)
+
+    # 从 fold_details 获取方向详情
+    fold_details = session.get('fold_details', {})
+    direction_detail = fold_details.get(direction_id, '')
+
+    # 构建 style_brief 文本
+    sb = direction.get('style_brief', {}) or {}
+    if sb and isinstance(sb, dict):
+        style_brief_lines = []
+        if sb.get('essence'): style_brief_lines.append(f"核心：{sb['essence']}")
+        if sb.get('color'): style_brief_lines.append(f"色彩：{sb['color']}")
+        if sb.get('composition'): style_brief_lines.append(f"构图：{sb['composition']}")
+        if sb.get('light'): style_brief_lines.append(f"光线：{sb['light']}")
+        if sb.get('mood'): style_brief_lines.append(f"情绪：{sb['mood']}")
+        style_brief_text = '\n'.join(style_brief_lines) if style_brief_lines else '（无特殊视觉约束，基于场景数据自由发挥）'
     else:
-        db_techniques = "（同类场景暂无历史验证技法——方案将主要基于知识库推理和社区搜索。）\n"
+        style_brief_text = '（无特殊视觉约束，基于场景数据自由发挥）'
 
     plans_prompt = PLANS_PROMPT.format(
         vision_json=json.dumps(session['vision_json'], ensure_ascii=False, indent=2),
-        search_context=session.get('search_context', '（无社区搜索数据）'),
-        db_techniques=db_techniques,
+        material_inventory=material_inventory,
         device_context=device_text,
         style_knowledge=style_knowledge,
         device_knowledge=device_knowledge,
@@ -2252,12 +2174,14 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         label=direction.get('label', ''),
         style=direction.get('style', ''),
         style_promise=direction.get('style_promise', ''),
+        style_brief=style_brief_text,
         reason=direction.get('reason', ''),
-        how=direction.get('how', ''),
+        direction_detail=direction_detail if direction_detail else direction.get('reason', ''),
         scene_tier=session['scene_tier'],
         tier_constraint=tier_constraint,
         device_constraints=device_constraints,
-        env_context=session.get('env_context', '')
+        env_context=session.get('env_context', ''),
+        forbidden_constraints=forbidden_constraints,
     )
 
     print(f"[Plans] Prompt: {len(plans_prompt)} chars, direction={direction_id}, device={device_key}", file=sys.stderr, flush=True)
@@ -2265,11 +2189,11 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     try:
         plans_content, plans_usage = call_doubao([
             {"role": "user", "content": plans_prompt}
-        ], max_tokens=3000, call_type='plans', session_id=session_id, model=DOUBAO_FAST_MODEL)  # 快速模型——结构化方案不需要最强推理
+        ], max_tokens=8000, call_type='plans', session_id=session_id)  # 方案输出较长，需要充足 token
 
         plans_json, plans_error = parse_json_safe(
             plans_content,
-            retry_prompt="你上次的输出不是有效JSON。请重新输出，只输出包含 plans 数组的纯JSON对象。"
+            retry_prompt="你上次输出的拍摄方案JSON格式有误。请重新输出，只输出包含 plans 数组的纯JSON对象。注意：这是摄影拍摄方案，不是旅行攻略。每条方案包含 name/prep/subject/shooter/gear/enhance/result/why/shot_size/angle/quick_edit/img_gen_prompt/ai_tips/combo_label 字段。"
         )
 
         if plans_error or not isinstance(plans_json, dict):
@@ -2291,14 +2215,12 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
                 p.setdefault('shot_size', '')
                 p.setdefault('angle', '')
                 p.setdefault('img_gen_prompt', '')
-                p.setdefault('post_process', [])
+                p.setdefault('quick_edit', {})
+                p.setdefault('ai_tips', [])
 
-        # 缓存
+        # 缓存（内存 + 磁盘持久化）
         session['plan_cache'][cache_key] = plans
-        print(f"[Plans] Generated {len(plans)} plans, cached as {cache_key}", file=sys.stderr, flush=True)
-
-        # ── v5: 增强图改为前端 Canvas 标注（统一渲染路径，不再服务端生图）──
-        # plan_image 不设置，前端自动走 Canvas 标注渲染
+        _save_session(session_id)
 
         # ── 更新使用统计 ──
         try:
@@ -2338,7 +2260,7 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """流式分析上传的照片（SSE）—— v3.5: 渐进式 EXIF→场景→方向"""
+    """流式分析上传的照片（SSE）—— 渐进式 EXIF→场景→方向"""
     global _processing
 
     if not DOUBAO_API_KEY:
@@ -2467,10 +2389,11 @@ def analyze_plans():
     prewarm = data.get('prewarm', False)
     if prewarm:
         global_key = f"{session_id}:{cache_key}"
+        # 检查是否已有生成在进行中（generate_plans_for_direction 会自行管理锁）
         with _plan_generating_lock:
-            if global_key in _plan_generating:
-                return jsonify({"success": True, "prewarm": "already_running"})
-            _plan_generating[global_key] = time.time()
+            already_running = global_key in _plan_generating
+        if already_running:
+            return jsonify({"success": True, "prewarm": "already_running"})
 
         def _prewarm():
             try:
@@ -2576,7 +2499,7 @@ def health():
     })
 
 
-# ── v3.5: 处理中状态查询（前端排队轮询）──
+# ── 处理中状态查询（前端排队轮询）──
 @app.route('/processing-status')
 def processing_status():
     """查询是否正在处理中"""
@@ -2592,7 +2515,7 @@ def processing_status():
     })
 
 
-# ── v3.5: 方案反馈 ──
+# ── 方案反馈 ──
 @app.route('/feedback', methods=['POST'])
 def submit_feedback():
     """记录方案反馈（like/dislike）"""
@@ -2632,7 +2555,7 @@ def submit_feedback():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# ── v3.5: 配额申请 ──
+# ── 配额申请 ──
 @app.route('/request-quota', methods=['POST'])
 def request_quota():
     """申请更多使用次数"""
@@ -2641,7 +2564,7 @@ def request_quota():
     return jsonify({"success": ok, "message": msg})
 
 
-# ── v3.5: 管理面板（v3.6: 密码保护）──
+# ── 管理面板（密码保护）──
 
 def login_required(f):
     """装饰器：要求管理员登录。页面路由重定向到登录页，API 路由返回 401"""
@@ -2717,15 +2640,12 @@ def admin_stats():
     except Exception:
         db_stats = {}
         feedback_stats = {}
-    # ── v3.6 新增监控数据 ──
+    # ── 新增监控数据 ──
     try:
         api_stats = get_api_call_stats()
     except Exception:
         api_stats = {}
-    try:
-        search_stats = get_search_stats()
-    except Exception:
-        search_stats = {}
+    search_stats = {}  # 搜索已移除，保留空字典兼容前端
     try:
         style_panel = get_style_technique_panel()
     except Exception:
@@ -2750,131 +2670,29 @@ def admin_stats():
     })
 
 
-# ── v4.3: 搜索发现审核 ──
+# ── 搜索发现审核 ──
 @app.route('/admin/discoveries')
 @login_required
 def admin_discoveries():
-    """获取待审核的搜索发现列表"""
-    try:
-        discoveries = get_pending_discoveries()
-        return jsonify({"discoveries": discoveries})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    """获取待审核的搜索发现列表（搜索已移除，返回空）"""
+    return jsonify({"discoveries": []})
 
 
 @app.route('/admin/promote-discovery', methods=['POST'])
 @login_required
 def admin_promote_discovery():
-    """审批通过一个搜索发现，提升为正式技法。支持 auto 模式——从搜索数据自动提取名称和描述。"""
-    try:
-        data = request.get_json() or {}
-        search_log_id = data.get('search_log_id')
-        technique_name = data.get('technique_name', '').strip()
-        description = data.get('description', '').strip()
-        scene_category = data.get('scene_category', '')
-        auto_mode = data.get('auto', False)
-
-        if not search_log_id:
-            return jsonify({"error": "缺少 search_log_id"}), 400
-
-        # Auto 模式：从搜索数据中自动提取技法和场景分类
-        if auto_mode:
-            import sqlite3
-            db = sqlite3.connect(DB_PATH)
-            row = db.execute(
-                "SELECT query_text, keywords_used, results_summary, useful_data FROM search_log WHERE id=?",
-                (search_log_id,)
-            ).fetchone()
-            db.close()
-            if not row:
-                return jsonify({"error": "搜索记录不存在"}), 404
-
-            query_text = row[0] or ''
-            keywords = row[1] or ''
-            summary = row[2] or ''
-            useful = row[3] or ''
-
-            # 自动提取技法名称：从 keywords 中取第一个有意义的词
-            if not technique_name:
-                kw_list = [k.strip() for k in keywords.split(',') if k.strip()]
-                for kw in kw_list:
-                    # 跳过场景描述词，取拍摄相关词
-                    if any(w in kw for w in ['拍照', '摄影', '技巧', '构图', '姿势', 'pose', '风格']):
-                        # 提取主语部分
-                        name = kw.replace('拍照','').replace('摄影','').replace('技巧','').replace('构图','').replace('姿势','').strip()
-                        if len(name) >= 2 and len(name) <= 30:
-                            technique_name = name
-                            break
-                if not technique_name:
-                    # Fallback: 从 query_text 提取
-                    technique_name = query_text[:30].split(' ')[0] if query_text else '未命名技法'
-
-            # 自动提取描述：从 summary 取前 120 字
-            if not description and summary:
-                # 取第一个有意义的结果
-                for line in summary.split('\n'):
-                    line = line.strip()
-                    if line.startswith('- **') or line.startswith('1. **'):
-                        # 去掉 markdown 标记
-                        desc = line.lstrip('- 0123456789.*# ').strip()
-                        if len(desc) >= 10:
-                            description = desc[:200]
-                            break
-                if not description:
-                    description = summary[:200]
-
-            # 自动推断场景分类
-            if not scene_category:
-                q = (query_text + ' ' + keywords).lower()
-                mapping = [
-                    ('park_nature', ['公园','花园','植物','树','花','草','森林','湖','河','海','山','自然','户外','野外','天空','日落','日出','阳光','风景']),
-                    ('urban_street', ['街','路','城市','建筑','楼','广场','桥','巷','弄','市区','马路','交通','车']),
-                    ('cultural_site', ['博物馆','美术馆','展览','寺庙','教堂','历史','文化','遗址','古城','古镇','园林','宫殿','塔','钟楼']),
-                    ('f_and_b', ['餐厅','咖啡','美食','酒吧','食物','饮料','餐桌','吃饭','奶茶','甜品','饭店','食堂']),
-                    ('commercial', ['商场','购物','商店','超市','店铺','零售','品牌','室内','工作室']),
-                    ('indoor_home', ['家','客厅','卧室','房间','室内','窗边','阳台','家居','家具','公寓','宿舍']),
-                    ('night', ['夜景','夜晚','灯光','霓虹','夜晚','晚上','暗光','夜景']),
-                    ('portrait', ['人像','人物','自拍','合影','闺蜜','情侣','朋友','小孩','宠物','猫','狗','动物']),
-                ]
-                for cat, kws in mapping:
-                    if any(kw in q for kw in kws):
-                        scene_category = cat
-                        break
-                if not scene_category:
-                    scene_category = 'urban_street'
-
-        if not technique_name:
-            return jsonify({"error": "无法自动提取技法名称，请手动输入"}), 400
-
-        ok = promote_search_to_technique(
-            search_log_id, technique_name, description,
-            source_type='community', scene_category=scene_category, verify_count=3
-        )
-        return jsonify({"success": ok, "name": technique_name, "category": scene_category})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    """搜索已移除——此端点保留兼容性"""
+    return jsonify({"error": "搜索功能已移除，请使用知识库管理"}), 410
 
 
 @app.route('/admin/delete-discovery', methods=['POST'])
 @login_required
 def admin_delete_discovery():
-    """删除一条搜索发现（不需要的不入库）"""
-    try:
-        data = request.get_json() or {}
-        search_log_id = data.get('search_log_id')
-        if not search_log_id:
-            return jsonify({"error": "缺少 search_log_id"}), 400
-        import sqlite3
-        db = sqlite3.connect(DB_PATH)
-        db.execute("DELETE FROM search_log WHERE id=?", (search_log_id,))
-        db.commit()
-        db.close()
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    """搜索已移除——此端点保留兼容性"""
+    return jsonify({"error": "搜索功能已移除"}), 410
 
 
-# ── v3.6: 数据导入（本地 → 生产同步）──
+# ── 数据导入（本地 → 生产同步）──
 @app.route('/admin/import-data', methods=['POST'])
 @login_required
 def admin_import_data():
@@ -2937,7 +2755,7 @@ def admin_export_data():
         return jsonify({"error": str(e)}), 500
 
 
-# ── v3.5: 配额状态查询 ──
+# ── 配额状态查询 ──
 @app.route('/quota-status')
 def quota_status():
     """查询当前 IP 的用量和申请状态"""
@@ -2959,6 +2777,24 @@ def restore_session(session_id):
     sess = get_session(session_id)
     if not sess:
         return jsonify({"ok": False, "error": "会话已过期"}), 404
+    # 重新计算 source_tags（KB 查证）
+    source_tags = {}
+    for d in sess.get('directions', []):
+        style_name = d.get('style', '')
+        if style_name:
+            try:
+                kb_detail = get_style_detail(style_name)
+                if kb_detail and '来源：知识库' in kb_detail:
+                    source_tags[d['id']] = '📚 有据可查'
+                elif kb_detail and '跨媒介' in kb_detail:
+                    source_tags[d['id']] = '📚 跨媒介参考'
+                else:
+                    source_tags[d['id']] = '🤖 AI 探索'
+            except Exception:
+                source_tags[d['id']] = '🤖 AI 探索'
+        else:
+            source_tags[d.get('id', '')] = '🤖 AI 探索'
+
     return jsonify({"ok": True, "data": {
         "img_b64": sess.get('img_b64', ''),
         "exif_data": sess.get('exif_data', {}),
@@ -2966,7 +2802,8 @@ def restore_session(session_id):
         "insight": sess.get('insight', ''),
         "scene_tier": sess.get('scene_tier', '🥈'),
         "directions": sess.get('directions', []),
-        "discovered_styles": sess.get('discovered_styles', []),
+        "fold_details": sess.get('fold_details', {}),
+        "source_tags": source_tags,
         "techniques_used": sess.get('techniques_used', []),
         "search_quality": sess.get('search_quality'),
         "device_key": sess.get('device_key', ''),
@@ -2987,15 +2824,15 @@ if __name__ == '__main__':
         applied = apply_pending_sync()
         if applied:
             print(f"[Init] Applied {applied} pending sync items from Claude", file=sys.stderr, flush=True)
-        # v3.8: 知识库种子数据（首次启动写入 styles/techniques 表）
+        # 知识库种子数据（首次启动写入 styles/techniques 表）
         seeded = seed_from_knowledge_base()
         if seeded:
             print(f"[Init] Seeded {seeded} styles/techniques from knowledge_base", file=sys.stderr, flush=True)
-        # v4.2: 实战技法种子（社交媒体验证的高频场景技法）
+        # 实战技法种子（社交媒体验证的高频场景技法）
         practical_seeded = seed_practical_techniques()
         if practical_seeded:
             print(f"[Init] Seeded {practical_seeded} practical techniques from social media patterns", file=sys.stderr, flush=True)
-        # v4.3: 拍照姿势技法种子（Valenzuela/Barnbaum 教材）
+        # 拍照姿势技法种子（Valenzuela/Barnbaum 教材）
         posing_seeded = seed_posing_techniques()
         if posing_seeded:
             print(f"[Init] Seeded {posing_seeded} posing techniques from textbooks", file=sys.stderr, flush=True)
@@ -3010,7 +2847,7 @@ if __name__ == '__main__':
 
     print(f"""
 ╔══════════════════════════════════════════╗
-║       带拍 · 移动端测试工具 v3.6      ║
+║       带拍 · 移动端测试工具 ║
 ║                                          ║
 ║  手机浏览器访问:                          ║
 ║  → http://{local_ip}:8888          ║
@@ -3018,7 +2855,7 @@ if __name__ == '__main__':
 ║  确保手机和电脑在同一 WiFi 网络            ║
 ║  按 Ctrl+C 停止服务器                     ║
 ║                                          ║
-║  v3.6: 方案重构 + 图生图 + 环境感知 + 监控 ║
+║  方案重构 + 图生图 + 环境感知 + 监控 ║
 ╚══════════════════════════════════════════╝
     """)
 

@@ -1,6 +1,5 @@
 """
-带拍 · 数据库模块 v1.0
-SQLite 替代 style_cache.json——支持结构化存储、语义去重、双向同步。
+带拍 · 数据库模块 SQLite 替代 style_cache.json——支持结构化存储、语义去重、双向同步。
 
 表结构：
 - styles: 风格发现记录（场景→风格匹配）
@@ -91,7 +90,7 @@ def _init_tables(conn):
     CREATE INDEX IF NOT EXISTS idx_techniques_source ON techniques(source_type);
     CREATE INDEX IF NOT EXISTS idx_knowledge_sync_status ON knowledge_sync(status);
 
-    -- v3.5: 使用统计与反馈
+    -- 使用统计与反馈
     CREATE TABLE IF NOT EXISTS daily_usage (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         ip_address TEXT NOT NULL,
@@ -150,7 +149,7 @@ def _init_tables(conn):
     CREATE INDEX IF NOT EXISTS idx_usage_sessions_time ON usage_sessions(timestamp);
     CREATE INDEX IF NOT EXISTS idx_plan_feedback_created ON plan_feedback(created_at);
 
-    -- v3.6: AI API 调用日志
+    -- AI API 调用日志
     CREATE TABLE IF NOT EXISTS api_call_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT,
@@ -164,7 +163,7 @@ def _init_tables(conn):
         created_at TEXT DEFAULT (datetime('now'))
     );
 
-    -- v3.6: Web 搜索执行日志
+    -- Web 搜索执行日志
     CREATE TABLE IF NOT EXISTS search_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT,
@@ -185,7 +184,7 @@ def _init_tables(conn):
     """)
     conn.commit()
 
-    # v3.7: 迁移——search_log 加 results_summary 列（已有列则跳过）
+    # 迁移——search_log 加 results_summary 列（已有列则跳过）
     try:
         conn.execute("ALTER TABLE search_log ADD COLUMN results_summary TEXT")
         conn.commit()
@@ -193,7 +192,7 @@ def _init_tables(conn):
     except Exception:
         pass  # 列已存在
 
-    # v3.8: 迁移——scene_matches 加 scene_category 列
+    # 迁移——scene_matches 加 scene_category 列
     try:
         conn.execute("ALTER TABLE scene_matches ADD COLUMN scene_category TEXT DEFAULT ''")
         conn.commit()
@@ -201,7 +200,7 @@ def _init_tables(conn):
     except Exception:
         pass
 
-    # v3.8: 迁移——search_log 加搜索监控列
+    # 迁移——search_log 加搜索监控列
     try:
         conn.execute("ALTER TABLE search_log ADD COLUMN keywords_used TEXT DEFAULT ''")
         conn.commit()
@@ -219,7 +218,15 @@ def _init_tables(conn):
     except Exception:
         pass
 
-    # v4.3: 迁移——补建性能索引（已有则跳过）
+    # 迁移——search_log 加 discovery_hint 列
+    try:
+        conn.execute("ALTER TABLE search_log ADD COLUMN discovery_hint TEXT DEFAULT ''")
+        conn.commit()
+        print("[DB] Migration: added discovery_hint to search_log", file=sys.stderr, flush=True)
+    except Exception:
+        pass
+
+    # 迁移——补建性能索引（已有则跳过）
     try:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_scene_matches_category ON scene_matches(scene_category)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_scene_matches_tech ON scene_matches(technique_id)")
@@ -233,7 +240,7 @@ def _init_tables(conn):
 
 
 # ============================================================
-# 场景分类体系（v3.8——替代 LIKE 模糊匹配）
+# 场景分类体系（——替代 LIKE 模糊匹配）
 # ============================================================
 
 SCENE_CATEGORY_RULES = [
@@ -295,8 +302,8 @@ def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''
     """
     积累发现的风格和技法到数据库。
     自动去重：同名风格追加 verify_count。
-    v3.8: 新增 scene_category 参数——按场景类别分组积累
-    v4.3: 新增 authenticity 参数——real_community 来源额外 +1 verify_count
+    新增 scene_category 参数——按场景类别分组积累
+    新增 authenticity 参数——real_community 来源额外 +1 verify_count
     """
     if not scene_type:
         return
@@ -307,7 +314,7 @@ def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''
 
     conn = get_db()
     try:
-        # v4.3: 社区验证来源 → 更高初始 verify_count
+        # 社区验证来源 → 更高初始 verify_count
         community_boost = 2 if authenticity == 'real_community' else 1
 
         for s in (discovered_styles or []):
@@ -317,7 +324,7 @@ def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''
             source_type = s.get('source_type', 'inference')
             fit_rationale = s.get('fit_rationale', '')[:500]
 
-            # upsert style + RETURNING id (v4.3: community_boost + N+1 消除)
+            # upsert style + RETURNING id (vcommunity_boost + N+1 消除)
             row = conn.execute("""
                 INSERT INTO styles (name, source_type, fit_rationale, verify_count)
                 VALUES (?, ?, ?, ?)
@@ -373,7 +380,7 @@ def accumulate(scene_type, discovered_styles, techniques_used, scene_category=''
 
 def query_scene_context(scene_type, category=''):
     """
-    查询同类型场景的历史积累（v3.8: 按场景类别精确匹配）。
+    查询同类型场景的历史积累（按场景类别精确匹配）。
 
     优先按 scene_category 精确匹配（如 'sports_venue'），
     同类场景共享风格/技法经验，不同类别不交叉污染。
@@ -391,7 +398,7 @@ def query_scene_context(scene_type, category=''):
         params = []
 
         if category:
-            # ── v3.8: 场景类别精确匹配 ──
+            # ── 场景类别精确匹配 ──
             where_clause = "sm.scene_category = ?"
             params = [category]
 
@@ -661,7 +668,7 @@ def apply_pending_sync():
 
 
 def get_db_stats():
-    """获取数据库统计信息（v4.3: 合并为单次查询）"""
+    """获取数据库统计信息（合并为单次查询）"""
     conn = get_db()
     try:
         row = conn.execute("""
@@ -690,7 +697,7 @@ def get_db_stats():
 
 
 # ============================================================
-# v3.6: AI API 调用日志
+# AI API 调用日志
 # ============================================================
 
 def log_api_call(session_id, call_type, model='', prompt_tokens=0,
@@ -715,21 +722,22 @@ def log_api_call(session_id, call_type, model='', prompt_tokens=0,
 def log_search(session_id, search_type, query_text='', result_count=0,
                result_quality='🔴', source_types=None, duration_ms=0,
                results_summary=None, keywords_used=None, useful_data=None,
-               authenticity='unknown'):
-    """记录一次 Web 搜索执行（v3.8: 新增搜索关键词/有用数据/真实性监控）"""
+               authenticity='unknown', discovery_hint=''):
+    """记录一次 Web 搜索执行（+discovery_hint）"""
     conn = get_db()
     try:
         conn.execute("""
             INSERT INTO search_log (session_id, search_type, query_text, result_count,
                                     result_quality, source_types, duration_ms, results_summary,
-                                    keywords_used, useful_data, authenticity)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    keywords_used, useful_data, authenticity, discovery_hint)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (session_id, search_type, query_text[:300], result_count,
               result_quality, source_types or '', duration_ms,
               (results_summary or '')[:500],
               (keywords_used or '')[:500],
               (useful_data or '')[:200],
-              authenticity or 'unknown'))
+              authenticity or 'unknown',
+              (discovery_hint or '')[:200]))
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -739,7 +747,7 @@ def log_search(session_id, search_type, query_text='', result_count=0,
 
 
 def get_api_call_stats():
-    """获取 AI API 调用统计数据（v4.3: 用范围查询替代 date() 包裹）"""
+    """获取 AI API 调用统计数据（用范围查询替代 date() 包裹）"""
     conn = get_db()
     try:
         now = datetime.utcnow()
@@ -791,7 +799,7 @@ def get_api_call_stats():
 
 
 def get_search_stats():
-    """获取 Web 搜索执行统计数据（v4.3: 用范围查询替代 date() 包裹）"""
+    """获取 Web 搜索执行统计数据（用范围查询替代 date() 包裹）"""
     conn = get_db()
     try:
         now = datetime.utcnow()
@@ -833,14 +841,14 @@ def get_search_stats():
             GROUP BY day ORDER BY day
         """, (seven_days_ago,)).fetchall()]
 
-        # v3.8: 真实性分布
+        # 真实性分布
         auth_dist = [dict(r) for r in conn.execute("""
             SELECT authenticity, COUNT(*) as cnt
             FROM search_log WHERE authenticity != 'unknown'
             GROUP BY authenticity ORDER BY cnt DESC
         """).fetchall()]
 
-        # v3.8: 有用数据命中率
+        # 有用数据命中率
         useful_total = conn.execute(
             "SELECT COUNT(*) FROM search_log WHERE useful_data != ''"
         ).fetchone()[0]
@@ -907,15 +915,14 @@ def get_style_technique_panel():
 
 def get_pending_discoveries():
     """
-    v4.3: 获取待审核的搜索发现——高真实性但尚未入库的搜索结果。
-    返回 search_log 行列表，每条附带是否已有对应技法/风格。
+    获取待审核的搜索发现——优先展示 discovery_hint。
     """
     conn = get_db()
     try:
         rows = [dict(r) for r in conn.execute("""
             SELECT id, session_id, query_text, result_count, result_quality,
                    source_types, keywords_used, useful_data, authenticity,
-                   results_summary, created_at
+                   results_summary, discovery_hint, created_at
             FROM search_log
             WHERE authenticity IN ('real_community', 'mixed')
               AND useful_data != ''
@@ -926,11 +933,12 @@ def get_pending_discoveries():
 
         results = []
         for row in rows:
-            useful = (row.get('results_summary') or '')[:200]
+            # 优先用 discovery_hint，回退到 results_summary 截断
+            hint = (row.get('discovery_hint') or row.get('results_summary') or '')[:200]
             results.append({
                 **row,
                 'has_techniques': False,
-                'extracted_hint': useful,
+                'extracted_hint': hint,
             })
 
         return results
@@ -941,7 +949,7 @@ def get_pending_discoveries():
 def promote_search_to_technique(search_log_id, technique_name, description, source_type='community',
                                 scene_category='', verify_count=3):
     """
-    v4.3: 将搜索发现提升为正式技法（管理面板审批通过）。
+    将搜索发现提升为正式技法（管理面板审批通过）。
     写入 techniques 表 + scene_matches 表。
     """
     conn = get_db()
@@ -983,7 +991,7 @@ def promote_search_to_technique(search_log_id, technique_name, description, sour
 
 
 # ============================================================
-# v3.8: 知识库种子数据——用 verified/real_world 内容初始化风格技法表
+# 知识库种子数据——用 verified/real_world 内容初始化风格技法表
 # ============================================================
 
 def seed_from_knowledge_base():
@@ -1062,7 +1070,7 @@ def seed_from_knowledge_base():
 
 
 # ============================================================
-# v4.2: 实战技法种子——来自社交媒体验证的高频场景技法
+# 实战技法种子——来自社交媒体验证的高频场景技法
 # ============================================================
 
 PRACTICAL_TECHNIQUES = [
@@ -1212,7 +1220,7 @@ PRACTICAL_TECHNIQUES = [
 
 def seed_practical_techniques():
     """
-    v4.2: 写入社交媒体验证的高频场景技法。
+    写入社交媒体验证的高频场景技法。
     门控：检测已有 social_media 来源的记录后跳过。
     返回写入数量。
     """
@@ -1230,7 +1238,7 @@ def seed_practical_techniques():
         count_matches = 0
 
         for tech in PRACTICAL_TECHNIQUES:
-            # upsert technique + RETURNING id (v4.3: 消除 N+1 查询)
+            # upsert technique + RETURNING id (v消除 N+1 查询)
             row = conn.execute("""
                 INSERT INTO techniques (name, source_type, description, verify_count)
                 VALUES (?, ?, ?, 5)
@@ -1268,7 +1276,7 @@ def seed_practical_techniques():
 
 
 # ============================================================
-# v4.3: 拍照姿势技法——来自 Valenzuela/Barnbaum 教材
+# 拍照姿势技法——来自 Valenzuela/Barnbaum 教材
 # ============================================================
 
 POSING_TECHNIQUES = [
@@ -1335,7 +1343,7 @@ POSING_TECHNIQUES = [
 
 def seed_posing_techniques():
     """
-    v4.3: 写入教材验证的拍照姿势技法（Valenzuela/Barnbaum）。
+    写入教材验证的拍照姿势技法（Valenzuela/Barnbaum）。
     门控：检测已有 verified 来源的姿势技法后跳过。
     """
     conn = get_db()
@@ -1388,7 +1396,7 @@ def seed_posing_techniques():
 
 
 # ============================================================
-# v3.5: 每日使用限制
+# 每日使用限制
 # ============================================================
 
 def check_and_increment_usage(ip_address, daily_limit=10):
@@ -1448,7 +1456,7 @@ def get_daily_usage(ip_address):
 
 
 # ============================================================
-# v3.5: 配额申请
+# 配额申请
 # ============================================================
 
 def submit_quota_request(ip_address):
@@ -1544,7 +1552,7 @@ def approve_quota_request(request_id, action, amount=5):
 
 
 # ============================================================
-# v3.5: 使用会话统计
+# 使用会话统计
 # ============================================================
 
 def save_usage_session(session_id, ip_address, device_key, device_name,
@@ -1591,7 +1599,7 @@ def update_usage_session(session_id, direction_id=None, direction_label=None,
 
 
 # ============================================================
-# v3.5: 方案反馈
+# 方案反馈
 # ============================================================
 
 DISLIKE_REASONS = {

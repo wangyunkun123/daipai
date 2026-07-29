@@ -738,9 +738,8 @@ let currentDeviceLenses = '';   // 镜头描述
 let currentLightInfo = null;    // Vision 光线分析
 let currentColorInfo = null;    // Vision 色彩分析
 let currentLightPeriod = null;  // 天气光照时段
-let discoveredStyles = [];
-let techniquesUsed = [];
-let searchQuality = null;
+let foldDetails = {};
+let sourceTags = {};
 let currentPlans = [];  // 当前方案列表，用于切换时判断标注
 
 // ============================================================
@@ -854,7 +853,7 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
     sessionId = null; allDirs = []; activeDirIdx = 0; activePlanIdx = 0;
     planCache = {}; currentDeviceKey = null; currentDeviceName = ''; currentDeviceLenses = '';
     currentLightInfo = null; currentColorInfo = null; currentLightPeriod = null;
-    discoveredStyles = []; techniquesUsed = []; searchQuality = null; currentPlans = [];
+    foldDetails = {}; currentPlans = []; sourceTags = {};
     clearSessionId(); $('#restoreBar').classList.remove('show');
     $('#planCarouselTrack').innerHTML = '';
     $('#planCarouselDots').innerHTML = '';
@@ -1244,9 +1243,8 @@ let activeDirIdx = 0;
 
 function showDirectionsResult(data) {
   sessionId = data.session_id;
-  discoveredStyles = data.discovered_styles || [];
-  techniquesUsed = data.techniques_used || [];
-  searchQuality = data.search_quality || null;
+  foldDetails = data.fold_details || {};
+  sourceTags = data.source_tags || {};
 
   const tier = data.scene_tier || '🥈';
   $('#insightBlock').innerHTML = data.insight
@@ -1258,27 +1256,30 @@ function showDirectionsResult(data) {
 
   activeDirIdx = 0;
   renderDirectionCarousel();
+  renderDataSections();  // 显示三条方向的折叠详情（含 Wiki 验证）
   $('#resultArea').classList.add('active');
   $('#reshootBtn').style.display = 'block';
   $('#resultArea').scrollIntoView({ behavior:'smooth' });
   saveSessionId();
 
-  // ── 后台预生成：用户看方向时提前生成最可能被选的方案 ──
-  const prewarmDir = allDirs.find(d => d.id === 'best') || allDirs[0];
-  if (prewarmDir && sessionId) {
-    const deviceKey = currentDeviceKey || 'unknown';
-    const lensKey = (document.getElementById('lensSelect')?.value) || '';
-    fetch('/analyze/plans', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: sessionId,
-        direction_id: prewarmDir.id,
-        device: deviceKey !== 'unknown' ? deviceKey : null,
-        lens: lensKey || null,
-        prewarm: true
-      })
-    }).catch(() => {}); // 静默失败，不影响主流程
-  }
+  // ── 后台预生成：提前预热 best + creative，用户看方向时方案已在生成了 ──
+  const deviceKey = currentDeviceKey || 'unknown';
+  const lensKey = (document.getElementById('lensSelect')?.value) || '';
+  ['best', 'creative'].forEach(dirId => {
+    const dir = allDirs.find(d => d.id === dirId);
+    if (dir && sessionId && dir.style) {  // 有实质内容才预热
+      fetch('/analyze/plans', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          direction_id: dirId,
+          device: deviceKey !== 'unknown' ? deviceKey : null,
+          lens: lensKey || null,
+          prewarm: true
+        })
+      }).catch(() => {});
+    }
+  });
 }
 
 function renderDirectionCarousel() {
@@ -1293,6 +1294,7 @@ function renderDirectionCarousel() {
     if (d.fit_rationale) meta += `<span class="meta-fit">${esc(d.fit_rationale)}</span>`;
     if (d.light_annotation) meta += `<span class="meta-light">光线 ${esc(d.light_annotation)}</span>`;
     if (d.device_annotation) meta += `<span class="meta-device">设备 ${esc(d.device_annotation)}</span>`;
+    if (sourceTags[d.id]) meta += `<span class="meta-source">${esc(sourceTags[d.id])}</span>`;
     // 只在 name_source 也是 AI 生成时标注——避免真实风格被误标
     if (d.source_type === 'inference' && d.name_source && d.name_source !== 'discovered') meta += `<span class="meta-source">🤖 AI推理</span>`;
     cardsHtml += `
@@ -1496,14 +1498,9 @@ function renderPlans(plans, direction) {
     });
   });
 
-  // 滚动监听——切换方案时同步更新原图预览显隐
+  // 滚动监听——切换方案时同步更新标注
   const track = $('#planCarouselTrack');
-  track.onscroll = () => updateCarouselActive('planCarouselTrack', 'planCarouselDots', idx => { activePlanIdx = idx; togglePreviewForPlan(idx); });
-
-  // Canvas 标注 + 事件绑定
-  plans.forEach((p,i)=>{
-	    if (p.annotations && p.annotations.length>0 && photoDataUrl) renderAnnotations(`ac${i}`, p.annotations);
-  });
+  track.onscroll = () => updateCarouselActive('planCarouselTrack', 'planCarouselDots', idx => { activePlanIdx = idx; });
 
   plans.forEach((p,i)=>{
     if (p.why) {
@@ -1598,7 +1595,6 @@ function renderPlans(plans, direction) {
   });
 
   // renderDataSections();  // v3.6: 底部三栏（搜索质量/发现风格/使用技法）移至管理面板
-  togglePreviewForPlan(0);
   $('#plansArea').classList.add('active');
   $('#reshootBtn').style.display = 'block';
   $('#plansArea').scrollIntoView({ behavior:'smooth' });
@@ -1648,15 +1644,7 @@ function renderPlanCard(p, i, direction) {
   const cb = direction.id==='now'?'rgba(74,222,128,0.08)':direction.id==='best'?'rgba(245,158,11,0.08)':'rgba(167,139,250,0.08)';
   const accent = direction.id==='now'?'var(--green)':direction.id==='best'?'var(--fire)':'var(--purple)';
 
-  // v5: 增强图 + 行动标签 + 结构化卡片行
   let c = `<div class="plan-card-v5">`;
-
-  // ── 增强图（Canvas 标注直接画在照片上，不依赖服务端生图）──
-  if (p.annotations && p.annotations.length>0) {
-    c += `<div class="plan-img-wrap"><canvas id="ac${i}"></canvas></div>`;
-  } else if (p.plan_image) {
-    c += `<div class="plan-img-wrap"><img src="${esc(p.plan_image)}" alt="${esc(p.name||'方案'+(i+1))}" loading="lazy"></div>`;
-  }
 
   // ── 1. 效果预期 ──
   if (p.result) {
@@ -1698,18 +1686,19 @@ function renderPlanCard(p, i, direction) {
       if (p.why) detailItems.push({i:'③ 原理',t:p.why});
       if (p.perspective) detailItems.push({i:'④ 视角',t:p.perspective});
   if (detailItems.length) {
-    c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 构图详解</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
+    c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 高级技巧</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
       detailItems.forEach(d => { c += `<div class="v5-post-item"><span class="v5-pcat comp">${d.i}</span><span class="v5-post-text">${esc(d.t)}</span></div>`; });
     c += `</div></div></div>`;
   }
 
-  // ── 5. 后期（折叠面板）──
-  const post = p.post_process || [];
-  if (post.length) {
-    c += `<div class="v5-post-wrap" id="v5post${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>✨ 增色效果</span><span class="ar">▼</span></div><div class="v5-post-body"><div class="v5-post-grid">`;
-    post.forEach(x => {
-      const cat = x.cat||'color'; const label = x.label||'增色'; const text = x.text||'';
-      c += `<div class="v5-post-item"><span class="v5-pcat ${cat}">${esc(label)}</span><span class="v5-post-text">${esc(text)}</span></div>`;
+  // ── 5. 一键修图（折叠面板）──
+  const qe = p.quick_edit;
+  if (qe && qe.steps && qe.steps.length) {
+    c += `<div class="v5-post-wrap" id="v5post${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>✨ 一键修图</span><span class="ar">▼</span></div><div class="v5-post-body"><div class="v5-post-grid">`;
+    if (qe.app) c += `<div class="v5-post-item"><span class="v5-pcat fx">📱 App</span><span class="v5-post-text">${esc(qe.app)}</span></div>`;
+    if (qe.goal) c += `<div class="v5-post-item"><span class="v5-pcat color">🎯 效果</span><span class="v5-post-text">${esc(qe.goal)}</span></div>`;
+    qe.steps.forEach((s, si) => {
+      c += `<div class="v5-post-item"><span class="v5-pcat light">${si+1}</span><span class="v5-post-text">${esc(s)}</span></div>`;
     });
     c += `</div></div></div>`;
   }
@@ -1719,7 +1708,17 @@ function renderPlanCard(p, i, direction) {
   if (imgPromptText) {
     c += `<div class="v5-gen"><div class="v5-lb" style="font-size:10px;color:var(--dimmer);letter-spacing:0.5px;margin-bottom:6px">🖼️ AI 生图提示词 <span style="color:var(--cyan);font-weight:400">（豆包 · 图生图模式）</span></div>`;
     c += `<div class="v5-pbox" id="pt${i}">${esc(imgPromptText)}</div>`;
-    c += `<div class="v5-pact"><button class="v5-btn copy" onclick="copyPromptV5(${i})">📋 复制提示词</button><button class="v5-btn gen" onclick="genPromptV5(${i})">🖼️ 生图</button></div></div>`;
+    c += `<div class="v5-pact"><button class="v5-btn copy" onclick="copyPromptV5(${i})">📋 复制提示词</button><button class="v5-btn gen" onclick="genPromptV5(${i})">🖼️ 生图</button></div>`;
+
+    // AI 单独优化提示
+    const aiTips = p.ai_tips || [];
+    if (aiTips.length) {
+      c += `<div style="margin-top:8px;font-size:11px;color:var(--dimmer);line-height:1.6">`;
+      c += `💡 AI 也可单独优化：`;
+      aiTips.forEach(t => { c += `<span style="display:inline-block;margin:2px 4px;padding:2px 8px;background:rgba(6,182,212,0.08);border-radius:10px;color:var(--cyan)">${esc(t)}</span>`; });
+      c += `</div>`;
+    }
+    c += `</div>`;
   }
 
   // ── 反馈 ──
@@ -1981,97 +1980,22 @@ function showDirections() {
 }
 
 // ============================================================
-// Canvas Annotations
-// ============================================================
-// 切换原图预览：有标注图（引导图）时隐藏原图，标注图已在方案卡片内渲染
-// 无标注图时才展示原图作为参考
-function togglePreviewForPlan(idx) {
-  const plan = currentPlans[idx];
-  if (plan && plan.annotations && plan.annotations.length > 0) {
-    $('#previewThumb').classList.remove('show');
-  } else {
-    $('#previewThumb').classList.add('show');
-  }
-}
-
-function renderAnnotations(cid, annotations) {
-  const canvas = document.getElementById(cid);
-  if (!canvas) return;
-  const container = canvas.parentElement;
-  const img = new Image();
-  img.onload = ()=>{
-    const cw = container.clientWidth, scale = cw/img.width;
-    canvas.width = cw; canvas.height = img.height*scale;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img,0,0,canvas.width,canvas.height);
-    annotations.forEach(a=>drawAnno(ctx,a,canvas.width,canvas.height));
-  };
-  img.src = photoDataUrl;
-}
-
-function drawAnno(ctx, a, cw, ch) {
-  const color = a.color||'#4ade80';
-  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(1.5,cw*0.004);
-  ctx.font=`bold ${Math.max(11,cw*0.032)}px -apple-system, "PingFang SC", sans-serif`; ctx.textBaseline='bottom';
-
-  switch(a.type){
-    case 'subject': case 'position': {
-      const cx=a.x*cw, cy=a.y*ch, r=Math.max(8,cw*0.025);
-      ctx.beginPath(); ctx.arc(cx,cy,r+4,0,Math.PI*2); ctx.fillStyle=color+'26'; ctx.fill();
-      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=color+'99'; ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); ctx.lineWidth=Math.max(1.5,cw*0.004);
-      if(a.label){ctx.fillStyle='#fff'; ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3; ctx.strokeText(a.label,cx+r+6,cy+5); ctx.fillText(a.label,cx+r+6,cy+5);}
-      break;
-    }
-    case 'shooter': {
-      const fx=(a.from?.x??0.05)*cw, fy=(a.from?.y??0.85)*ch, tx=(a.to?.x??0.4)*cw, ty=(a.to?.y??0.5)*ch;
-      ctx.beginPath(); ctx.strokeStyle=color+'88'; ctx.lineWidth=Math.max(2,cw*0.005); ctx.setLineDash([6,4]);
-      const mx=(fx+tx)/2, my=Math.min(fy,ty)-Math.abs(tx-fx)*0.25;
-      ctx.moveTo(fx,fy); ctx.quadraticCurveTo(mx,my,tx,ty); ctx.stroke(); ctx.setLineDash([]);
-      const tip=Math.atan2(ty-my,tx-mx), al=Math.max(8,cw*0.025);
-      ctx.beginPath(); ctx.fillStyle=color+'99';
-      ctx.moveTo(tx,ty); ctx.lineTo(tx-al*Math.cos(tip-0.6),ty-al*Math.sin(tip-0.6));
-      ctx.lineTo(tx-al*Math.cos(tip+0.6),ty-al*Math.sin(tip+0.6)); ctx.closePath(); ctx.fill();
-      ctx.font=`${Math.max(18,cw*0.06)}px -apple-system, "PingFang SC", sans-serif`;
-      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('📷',fx,fy);
-      if(a.angle){ctx.font=`bold ${Math.max(11,cw*0.032)}px -apple-system, "PingFang SC", sans-serif`; ctx.textAlign='left'; ctx.textBaseline='bottom'; ctx.fillStyle='#fff'; ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3; ctx.strokeText(a.angle,fx+(fx<cw/2?20:-80),fy-12); ctx.fillText(a.angle,fx+(fx<cw/2?20:-80),fy-12);}
-      break;
-    }
-    case 'frame': {
-      const x=a.x*cw, y=a.y*ch, w=(a.w||0.5)*cw, h=(a.h||0.5)*ch;
-      ctx.setLineDash([8,4]); ctx.strokeStyle=color+'99'; ctx.lineWidth=Math.max(2,cw*0.005); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
-      if(a.label){ctx.fillStyle=color+'99'; ctx.fillText(a.label,x+6,y-6);}
-      break;
-    }
-    case 'crop': {
-      const x=(a.x||0)*cw, y=(a.y||0)*ch, w=(a.w||1)*cw, h=(a.h||1)*ch;
-      ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(0,0,cw,y); ctx.fillRect(0,y+h,cw,ch-y-h); ctx.fillRect(0,y,x,h); ctx.fillRect(x+w,y,cw-x-w,h);
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
-      if(a.label){ctx.fillStyle='#fff'; ctx.fillText(a.label,x+6,y-8);}
-      break;
-    }
-  }
-  ctx.restore();
-}
-
 // ============================================================
 // Data Sections
 // ============================================================
 function renderDataSections() {
   let h = '';
-  if (searchQuality) {
-    const sq=searchQuality, qc=sq.overall==='🟢'?'quality-green':sq.overall==='🟡'?'quality-yellow':'quality-red';
-    h+=`<div class="fold-section"><div class="fold-header" onclick="tf(this)">🔍 搜索质量 <span class="quality-badge ${qc}">${esc(sq.overall)}</span><span class="arrow">▶</span></div><div class="fold-body">${esc(sq.honest_note||'')}</div></div>`;
-  }
-  if (discoveredStyles.length>0) {
-    h+=`<div class="fold-section"><div class="fold-header" onclick="tf(this)">🎨 发现的风格 <span style="font-size:11px;color:var(--dimmer)">${discoveredStyles.length}个</span><span class="arrow">▶</span></div><div class="fold-body">`;
-    discoveredStyles.forEach(s=>{ if(!s)return; h+=`<div class="item"><div><div class="item-name">${esc(s.name||'')}</div><div style="font-size:11px;color:var(--dim)">${esc(s.fit_rationale||'')}</div></div><div class="item-meta"><div>${esc(s.light_annotation||'')}</div><div>${esc(s.device_annotation||'')}</div><div>${esc(sourceLabel(s.source_type))}</div></div></div>`; });
-    h+='</div></div>';
-  }
-  if (techniquesUsed.length>0) {
-    h+=`<div class="fold-section"><div class="fold-header" onclick="tf(this)">🔧 使用的技法 <span style="font-size:11px;color:var(--dimmer)">${techniquesUsed.length}个</span><span class="arrow">▶</span></div><div class="fold-body">`;
-    techniquesUsed.forEach(t=>{ if(!t)return; h+=`<div class="item"><div><div class="item-name">${esc(t.name||'')}</div><div style="font-size:11px;color:var(--dim)">${esc(t.description||'')}</div></div><div class="item-meta">${esc(sourceLabel(t.source_type))}</div></div>`; });
-    h+='</div></div>';
+  // 显示每条方向的折叠详情
+  if (foldDetails && Object.keys(foldDetails).length > 0) {
+    const dirKeys = ['now', 'best', 'creative'];
+    const labels = {'now':'🟢 现在就拍','best':'🔥 最出片','creative':'✨ 脑洞大开'};
+    dirKeys.forEach(key => {
+      const detail = foldDetails[key];
+      if (detail && detail.trim()) {
+        h += `<div class="fold-section"><div class="fold-header" onclick="tf(this)">${labels[key]||key}<span class="arrow">▶</span></div>`;
+        h += `<div class="fold-body" style="font-size:13px;color:var(--dim);line-height:1.8;white-space:pre-wrap">${esc(detail)}</div></div>`;
+      }
+    });
   }
   $('#dataSections').innerHTML = h;
 }
@@ -2084,7 +2008,7 @@ function resetAll() {
   sessionId=null; allDirs=[]; activeDirIdx=0; activePlanIdx=0; photoDataUrl=null;
   planCache={}; currentDeviceKey=null; currentDeviceName=''; currentDeviceLenses='';
   currentLightInfo=null; currentColorInfo=null; currentLightPeriod=null;
-  discoveredStyles=[]; techniquesUsed=[]; searchQuality=null; currentPlans=[];
+  foldDetails={}; currentPlans=[];
   $('#errorMsg').classList.remove('show');
   $('#previewThumb').classList.remove('show');
   $('#uploadZone').classList.remove('hidden');
@@ -2189,8 +2113,8 @@ $('#restoreGo').onclick = async () => {
     }
     if (d.vision_json && Object.keys(d.vision_json).length>0) showSceneInfo(d.vision_json);
     sessionId = lastSessionId;
-    allDirs = d.directions||[]; discoveredStyles = d.discovered_styles||[]; techniquesUsed = d.techniques_used||[]; searchQuality = d.search_quality||null;
-    if (allDirs.length>0) showDirectionsResult({ session_id:lastSessionId, insight:d.insight||'', scene_tier:d.scene_tier||'🥈', directions:allDirs, discovered_styles:discoveredStyles, techniques_used:techniquesUsed, search_quality:searchQuality });
+    allDirs = d.directions||[]; foldDetails = d.fold_details||{}; sourceTags = d.source_tags||{};
+    if (allDirs.length>0) showDirectionsResult({ session_id:lastSessionId, insight:d.insight||'', scene_tier:d.scene_tier||'🥈', directions:allDirs, fold_details:foldDetails });
     planCache = d.plan_cache||{};
     $('#processing').classList.remove('active'); finishLoading();
     clearSessionId();

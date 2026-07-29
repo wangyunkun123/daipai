@@ -1,6 +1,5 @@
 """
-带拍 · 知识库模块 v1.0
-统一知识源——Claude 端和服务器端调用同一套知识。
+带拍 · 知识库模块 统一知识源——Claude 端和服务器端调用同一套知识。
 启动时加载压缩知识核心 + 风格配方索引 + 设备适配参考。
 """
 
@@ -164,6 +163,190 @@ USER_CAPABILITY = """
 ❌ 不可行：改变日光方向/改变光质硬→软(除非等阴天或拉窗帘)/精确光圈控制(手机)
 """
 
+# ── 已验证拍摄组合（社交媒体高赞验证）──
+# 数据源: 小红书/抖音/ins 高赞摄影内容 + 摄影教程验证
+# 用途: Stage 2 技巧设计中 LLM 参考 + 校验（不在已验证组合中的建议标记为 🧪实验性）
+VERIFIED_COMBOS = {
+    # ── 光线 × 姿势 ──
+    "light_pose": [
+        {
+            "light": "侧光+硬光",
+            "pose": "坐姿+半侧脸",
+            "effect": "半明半暗——亮面勾勒轮廓、暗面藏入阴影，面部立体感最强",
+            "principle": "侧光产生的光比在脸上形成天然光影过渡，比正面平光有层次",
+            "verified": True,
+            "source": "小红书侧光人像教程（2.3w赞）",
+            "avoid": "正脸迎光→两半脸光比1:1显扁平、侧脸全入阴影",
+        },
+        {
+            "light": "逆光+日落前30分钟",
+            "pose": "站姿+回眸/侧头",
+            "effect": "发丝镶金边+轮廓光，面部用环境反光自然补光",
+            "principle": "低角度暖光穿透发丝产生透光效果，面部曝光靠环境漫反射",
+            "verified": True,
+            "source": "小红书日落人像（多个万赞帖子）",
+            "avoid": "正午逆光→光比过大面部全黑、无环境反光物（深色建筑/密林）时面部曝光不足",
+        },
+        {
+            "light": "斑驳树影/投影",
+            "pose": "面部置于光斑中+身体在阴影里",
+            "effect": "光影投射如天然纹理，画面有层次不单调",
+            "principle": "树影=天然遮光板+纹理投射器，光斑落在面部=天然高光点",
+            "verified": True,
+            "source": "摄影教程：树影人像（1.7w赞）",
+            "avoid": "光斑落在眼睛上→红眼/眯眼、光斑碎片过多→画面乱",
+        },
+        {
+            "light": "顶光+硬光（正午）",
+            "pose": "低头+帽檐遮脸/仰头闭眼",
+            "effect": "帽檐制造面部阴影区，或仰头让光均匀铺满全脸",
+            "principle": "正午顶光最不适合人像——要么遮，要么仰头让它变顺光",
+            "verified": True,
+            "source": "摄影教程：正午拍摄技巧",
+            "avoid": "正午平视正脸→眼窝+鼻下+下巴三重阴影（熊猫眼+胡子影）",
+        },
+        {
+            "light": "漫射光/阴天",
+            "pose": "任意姿势均可",
+            "effect": "面部无阴影、肤色均匀——天然柔光箱",
+            "principle": "云层=巨型柔光罩，所有方向光线均匀",
+            "verified": True,
+            "source": "摄影基础：阴天人像优势",
+            "avoid": "阴天逆光→天空过曝死白、阴天背景包含大片天空→灰蒙蒙",
+        },
+    ],
+
+    # ── 色彩 × 场景 ──
+    "color_scene": [
+        {
+            "colors": "红色强调色+蓝色主色（补色对比）",
+            "scene": "海天蓝色背景+红色衣服/道具",
+            "effect": "冷暖补色碰撞——红色在蓝色背景中自动成为视觉焦点",
+            "principle": "红-蓝=色相环180°补色，天生吸引眼球。适合有力量感的风格",
+            "verified": True,
+            "source": "色彩理论+小红书穿搭摄影",
+            "suits": "杂志时尚/运动风/街头潮牌",
+            "avoid_for": "日系清新/梦幻柔美（需要同色系柔和过渡，补色对比太强）",
+        },
+        {
+            "colors": "白衣+蓝天+米白沙滩（同色系+低饱和）",
+            "scene": "海边/草地/任何自然场景",
+            "effect": "画面干净统一，人融入环境而非跳脱——和谐感",
+            "principle": "同色系+低饱和=高级感，适合极简/日系/安静风格",
+            "verified": True,
+            "source": "小红书极简风穿搭摄影",
+            "suits": "日系清新/极简高级/安静真实/法式慵懒",
+            "avoid_for": "杂志时尚/纪实粗粝（需要对比和非和谐元素）",
+        },
+        {
+            "colors": "绿+棕+米（自然大地色系）",
+            "scene": "森林/公园/草地",
+            "effect": "森系/田园——人在自然中不突兀",
+            "principle": "大地色系天然和谐，适合表达放松/自然/不刻意的感觉",
+            "verified": True,
+            "source": "森系摄影风格指南",
+            "suits": "森系/梦幻柔美/日系清新/田园生活",
+            "avoid_for": "赛博朋克/Grunge/杂志时尚",
+        },
+        {
+            "colors": "黑+金/深绿+深棕（暗调高级）",
+            "scene": "室内/咖啡厅/图书馆/夜景",
+            "effect": "深沉有质感，像旧油画——光线只照亮局部",
+            "principle": "暗调+局部高光=伦勃朗光效，画面有重量感和质感",
+            "verified": True,
+            "source": "暗调摄影教程（多个万赞帖子）",
+            "suits": "暗调学院/伦勃朗光/电影感/极简高级",
+            "avoid_for": "日系清新/梦幻柔美（需要高调明亮）",
+        },
+    ],
+
+    # ── 构图 × 锚点 ──
+    "composition_anchor": [
+        {
+            "composition": "三分法+天然画框",
+            "anchor_use": "树枝/门框/窗框/拱门→包裹主体形成画框",
+            "effect": "强制聚焦——观众视线被画框引导到主体",
+            "principle": "画框构图=视觉强制引导+空间层次感",
+            "verified": True,
+            "source": "构图基础教程",
+            "avoid": "画框元素占比>1/3→喧宾夺主、多个画框嵌套→混乱",
+        },
+        {
+            "composition": "引导线+深纵深",
+            "anchor_use": "枯木/栏杆/道路/海岸线→指向人物",
+            "effect": "视线顺着引导线滑到人物——动态构图",
+            "principle": "人眼天生被线条引导，引导线终点=视觉重心",
+            "verified": True,
+            "source": "构图基础教程+小红书构图技巧",
+            "avoid": "引导线指向画面外→视线被导出、多条引导线方向不一致→混乱",
+        },
+        {
+            "composition": "前景虚化+中景主体",
+            "anchor_use": "花草/树叶/栏杆→作为虚化前景",
+            "effect": "偷窥视角/层次感——像有人在旁边偷看",
+            "principle": "前景=空间深度指示器+氛围制造机",
+            "verified": True,
+            "source": "小红书前景构图技巧（1.5w赞）",
+            "avoid": "前景占比>1/2→主体被压、前景颜色太跳→抢视线",
+        },
+        {
+            "composition": "留白+人物偏置",
+            "anchor_use": "大片天空/水面/墙面→作为留白区域",
+            "effect": "极简高级——人物小但因为有留白所以不被吞没",
+            "principle": "负空间越大，主体越珍贵。留白=高级感的捷径",
+            "verified": True,
+            "source": "极简摄影构图原则",
+            "suits": "极简高级/安静真实/新中式",
+            "avoid": "留白区域纹理杂乱→破坏极简感",
+        },
+    ],
+
+    # ── 禁忌组合（社交媒体验证"容易翻车"的组合）──
+    "forbidden_combos": [
+        {"combo": "顶光+平视正脸", "why": "眼窝/鼻下/下巴三重阴影，俗称'熊猫眼'，小红书踩坑帖万赞"},
+        {"combo": "绿草地+红色衣服（未做褪色处理）", "why": "红绿补色直接碰撞='土'，除非走胶片褪色/港风霓虹路线"},
+        {"combo": "手机+弱光+手持慢快门", "why": "没有防抖的手机弱光=糊片率>80%"},
+        {"combo": "全身照+俯拍", "why": "头大身小变Q版——除非故意做可爱风"},
+        {"combo": "闪光灯直打+油性皮肤", "why": "面部油光反光=灾难。用纸巾压一下或调角度"},
+        {"combo": "逆光+深色背景+无补光", "why": "主体全黑剪影——除非这是你要的效果"},
+    ],
+}
+
+
+def get_verified_combos():
+    """返回已验证组合的格式化文本，供 Stage 2 PLANS_PROMPT 注入"""
+    lines = ["## ✅ 已验证拍摄组合（社交媒体高赞验证）\n"]
+
+    lines.append("### 光线 × 姿势\n")
+    for c in VERIFIED_COMBOS["light_pose"]:
+        verified_tag = "✅" if c["verified"] else "🧪"
+        lines.append(f"- {verified_tag} {c['light']} + {c['pose']} → {c['effect']}")
+        lines.append(f"  原理：{c['principle']} | 来源：{c['source']}")
+        if c.get("avoid"):
+            lines.append(f"  ⚠️ 避坑：{c['avoid']}")
+
+    lines.append("\n### 色彩 × 场景\n")
+    for c in VERIFIED_COMBOS["color_scene"]:
+        lines.append(f"- {c['colors']} @ {c['scene']} → {c['effect']}")
+        lines.append(f"  原理：{c['principle']} | 适合：{c['suits']}")
+        if c.get("avoid_for"):
+            lines.append(f"  ⚠️ 不适合：{c['avoid_for']}")
+
+    lines.append("\n### 构图 × 锚点\n")
+    for c in VERIFIED_COMBOS["composition_anchor"]:
+        lines.append(f"- {c['composition']} + {c['anchor_use']} → {c['effect']}")
+        lines.append(f"  原理：{c['principle']} | 来源：{c['source']}")
+        if c.get("avoid"):
+            lines.append(f"  ⚠️ 避坑：{c['avoid']}")
+        if c.get("suits"):
+            lines.append(f"  适合：{c['suits']}")
+
+    lines.append("\n### 🚫 禁忌组合（不遵守必翻车）\n")
+    for c in VERIFIED_COMBOS["forbidden_combos"]:
+        lines.append(f"- ❌ {c['combo']} —— {c['why']}")
+
+    return "\n".join(lines)
+
 
 _social_patterns_cache = None
 _posing_router_cache = None
@@ -294,177 +477,315 @@ def load_knowledge_core():
     return None
 
 
-def _match_scene_styles(scene_type):
-    """从场景类型中提取关键词，匹配场景→风格矩阵，返回相关风格名集合。"""
-    if not scene_type:
-        return set(_all_styles().keys())
+# ── 场景→风格匹配（同义词扩展 + 评分制）──
+# 每个条目: {"styles": [...], "aliases": [...]}
+# 主关键词命中 +3 分，同义词命中 +1 分
+_SCENE_STYLE_ENTRIES = [
+    {"styles": ["日系清新", "极简高级", "梦幻柔美", "电影感", "浮世绘"],
+     "aliases": ["海边", "海滩", "海岸", "海滨", "沙滩", "beach", "coast", "海景", "滨海", "湾"]},
+    {"styles": ["电影感", "纪实粗粝", "胶片复古", "杂志时尚", "Lofi直闪", "王家卫电影"],
+     "aliases": ["街拍", "街边", "街上", "马路", "路边", "街头", "街道", "巷", "弄堂"]},
+    {"styles": ["县城记忆", "纪实粗粝", "电影感", "胶片复古", "港风复古", "中式梦核"],
+     "aliases": ["老城", "旧城", "老区", "拆迁", "城中村"]},
+    {"styles": ["胶片复古", "日系清新", "电影感", "极简高级", "Lofi直闪", "法式慵懒", "暗调学院", "霍普式孤独", "奶油风", "韦斯安德森"],
+     "aliases": ["室内", "咖啡", "咖啡馆", "咖啡厅", "咖啡店", "餐厅", "饮品店", "茶馆", "奶茶店", "水吧", "cafe", "café", "cafeteria", "食堂", "饭店", "小酒馆", "酒吧", "bar", "bistro"]},
+    {"styles": ["日系清新", "梦幻柔美", "胶片复古", "极简高级", "莫奈印象派", "宫崎骏吉卜力", "田园生活", "张艺谋色彩", "韦斯安德森"],
+     "aliases": ["公园", "自然", "户外", "花园", "植物园", "草地", "草坪", "野外", "田园", "郊外"]},
+    {"styles": ["电影感", "纪实粗粝", "胶片复古", "Lofi直闪", "赛博朋克", "王家卫电影", "蒸汽波"],
+     "aliases": ["夜景", "夜间", "晚上", "夜晚", "天黑", "暗光"]},
+    {"styles": ["便利店美学", "电影感", "Lofi直闪", "胶片复古"],
+     "aliases": ["便利店", "超市", "商店", "杂货店"]},
+    {"styles": ["森系", "日系清新", "梦幻柔美", "胶片复古", "极简高级", "宫崎骏吉卜力"],
+     "aliases": ["森林", "树林", "林间", "树", "林", "丛林", "密林"]},
+    {"styles": ["极简高级", "电影感", "日系清新", "纪实粗粝", "宋画山水", "中国水墨"],
+     "aliases": ["山", "山景", "山峦", "山峰", "山区", "山脉", "登山", "徒步"]},
+    {"styles": ["梦幻柔美", "森系", "日系清新", "法式慵懒", "莫奈印象派", "田园生活"],
+     "aliases": ["花", "花海", "花丛", "花卉", "花园", "樱花", "花田", "花树", "油菜花"]},
+    {"styles": ["新中式", "极简高级", "中国水墨"],
+     "aliases": ["园林", "中式", "庭院", "寺庙", "祠堂", "古建筑", "古风", "国风", "汉服"]},
+    {"styles": ["法式慵懒", "胶片复古", "日系清新", "电影感", "极简高级", "安静真实", "霍普式孤独", "伦勃朗光"],
+     "aliases": ["窗边", "窗", "窗台", "窗旁", "靠窗", "窗户"]},
+    {"styles": ["法式慵懒", "日系清新", "电影感", "极简高级", "新海诚天空"],
+     "aliases": ["阳台", "露台", "天台", "屋顶", "楼顶"]},
+    {"styles": ["港风复古", "电影感", "纪实粗粝", "Lofi直闪", "便利店美学", "赛博朋克", "蒸汽波", "王家卫电影"],
+     "aliases": ["霓虹", "霓虹灯", "灯牌", "招牌", "夜市"]},
+    {"styles": ["县城记忆", "纪实粗粝", "胶片复古", "电影感"],
+     "aliases": ["废墟", "废弃", "工厂", "厂房", "工业", "仓库"]},
+    {"styles": ["纪实粗粝", "杂志时尚", "安静真实", "电影感", "Lofi直闪", "蜘蛛侠漫风"],
+     "aliases": ["运动", "体育", "球场", "跑道", "健身房", "瑜伽", "舞蹈"]},
+    {"styles": ["安静真实", "微观微距", "极简高级", "胶片复古", "日系清新", "莫兰迪色系", "奶油风"],
+     "aliases": ["静物", "日常", "食物", "美食", "家居", "物件", "摆件"]},
+    {"styles": ["安静真实", "日系清新", "胶片复古", "电影感", "梦幻柔美", "法式慵懒", "杂志时尚", "伦勃朗光", "老钱静奢"],
+     "aliases": ["人像", "人物", "拍照", "照片"]},
+    {"styles": ["安静真实", "日系清新", "法式慵懒", "胶片复古"],
+     "aliases": ["自拍", "自拍照"]},
+    {"styles": ["安静真实", "日系清新", "胶片复古", "Lofi直闪"],
+     "aliases": ["合影", "合照", "集体照"]},
+    {"styles": ["日系清新", "极简高级", "梦幻柔美", "电影感", "胶片复古", "新海诚天空", "宫崎骏吉卜力"],
+     "aliases": ["晴天", "阳光", "大太阳", "蓝天", "白云"]},
+    {"styles": ["安静真实", "极简高级", "电影感", "纪实粗粝", "莫兰迪色系"],
+     "aliases": ["阴天", "多云", "阴沉", "灰蒙蒙"]},
+    {"styles": ["电影感", "梦幻柔美", "港风复古", "胶片复古"],
+     "aliases": ["傍晚", "黄昏", "日落", "夕阳", "落日", "晚霞", "余晖"]},
+    {"styles": ["日系清新", "梦幻柔美", "电影感", "极简高级", "新海诚天空"],
+     "aliases": ["日出", "清晨", "晨光", "黎明", "晨曦"]},
+    {"styles": ["港风复古", "电影感", "纪实粗粝", "Lofi直闪", "赛博朋克", "王家卫电影"],
+     "aliases": ["雨", "雨天", "雨夜", "下雨", "雨景", "倒影", "湿"]},
+    {"styles": ["极简高级", "安静真实", "日系清新", "电影感"],
+     "aliases": ["雪", "雪天", "雪景", "下雪", "积雪", "白雪"]},
+    {"styles": ["电影感", "梦幻柔美", "极简高级", "安静真实", "中国水墨"],
+     "aliases": ["雾", "雾天", "雾气", "雾蒙蒙", "朦胧"]},
+    {"styles": ["纪实粗粝", "极简高级", "电影感", "Lofi直闪", "赛博朋克", "阈限空间"],
+     "aliases": ["地下", "停车场", "车库", "隧道", "地铁", "通道"]},
+]
 
-    # 场景关键词 → 相关风格（直接从 SCENE_STYLE_MATRIX 硬编码提取，避免字符串解析）
-    SCENE_STYLE_MAP = {
-        "海边": ["日系清新", "极简高级", "梦幻柔美", "电影感"],
-        "海滩": ["日系清新", "极简高级", "梦幻柔美", "电影感"],
-        "街拍": ["电影感", "纪实粗粝", "胶片复古", "杂志时尚", "Lofi直闪"],
-        "街边": ["电影感", "纪实粗粝", "胶片复古", "杂志时尚", "Lofi直闪"],
-        "街上": ["电影感", "纪实粗粝", "胶片复古", "杂志时尚", "Lofi直闪"],
-        "马路": ["电影感", "纪实粗粝", "胶片复古", "杂志时尚", "Lofi直闪"],
-        "路边": ["电影感", "纪实粗粝", "胶片复古", "杂志时尚", "Lofi直闪"],
-        "巷": ["县城记忆", "纪实粗粝", "电影感", "胶片复古", "港风复古"],
-        "室内": ["胶片复古", "日系清新", "电影感", "极简高级", "Lofi直闪"],
-        "咖啡": ["胶片复古", "日系清新", "电影感", "极简高级", "Lofi直闪", "法式慵懒"],
-        "餐厅": ["胶片复古", "日系清新", "电影感", "极简高级", "Lofi直闪"],
-        "公园": ["日系清新", "梦幻柔美", "胶片复古", "极简高级"],
-        "自然": ["日系清新", "梦幻柔美", "胶片复古", "极简高级"],
-        "夜景": ["电影感", "纪实粗粝", "胶片复古", "Lofi直闪"],
-        "夜间": ["电影感", "纪实粗粝", "胶片复古", "Lofi直闪"],
-        "晚上": ["电影感", "纪实粗粝", "胶片复古", "Lofi直闪"],
-        "便利店": ["便利店美学", "电影感", "Lofi直闪", "胶片复古"],
-        "超市": ["便利店美学", "电影感", "Lofi直闪", "胶片复古"],
-        "商店": ["便利店美学", "电影感", "Lofi直闪", "胶片复古"],
-        "森林": ["森系", "日系清新", "梦幻柔美", "胶片复古", "极简高级"],
-        "草地": ["森系", "日系清新", "梦幻柔美", "胶片复古", "极简高级"],
-        "树": ["森系", "日系清新", "梦幻柔美", "胶片复古", "极简高级"],
-        "林": ["森系", "日系清新", "梦幻柔美", "胶片复古", "极简高级"],
-        "山": ["极简高级", "电影感", "日系清新", "纪实粗粝"],
-        "花": ["梦幻柔美", "森系", "日系清新", "法式慵懒"],
-        "园林": ["新中式", "极简高级"],
-        "中式": ["新中式", "极简高级"],
-        "寺庙": ["新中式", "极简高级"],
-        "古建筑": ["新中式", "极简高级", "纪实粗粝"],
-        "庭院": ["新中式", "极简高级", "日系清新"],
-        "窗边": ["法式慵懒", "胶片复古", "日系清新", "电影感", "极简高级"],
-        "窗": ["法式慵懒", "胶片复古", "日系清新", "电影感", "极简高级", "安静真实"],
-        "阳台": ["法式慵懒", "日系清新", "电影感", "极简高级"],
-        "露台": ["法式慵懒", "日系清新", "电影感", "极简高级"],
-        "霓虹": ["港风复古", "电影感", "纪实粗粝", "Lofi直闪", "便利店美学"],
-        "灯": ["港风复古", "电影感", "Lofi直闪"],
-        "老街": ["县城记忆", "纪实粗粝", "胶片复古", "电影感"],
-        "旧": ["县城记忆", "纪实粗粝", "胶片复古", "电影感"],
-        "老城": ["县城记忆", "纪实粗粝", "胶片复古", "电影感"],
-        "废墟": ["县城记忆", "纪实粗粝", "Lofi直闪", "极简高级"],
-        "工厂": ["县城记忆", "纪实粗粝", "Lofi直闪", "极简高级"],
-        "运动": ["纪实粗粝", "杂志时尚", "安静真实", "电影感", "Lofi直闪"],
-        "静物": ["安静真实", "微观微距", "极简高级", "胶片复古", "日系清新"],
-        "日常": ["安静真实", "微观微距", "极简高级", "胶片复古", "日系清新"],
-        "食物": ["安静真实", "微观微距", "极简高级", "胶片复古", "日系清新"],
-        "家居": ["安静真实", "极简高级", "日系清新", "胶片复古"],
-        "人像": ["安静真实", "日系清新", "胶片复古", "电影感", "梦幻柔美", "法式慵懒", "杂志时尚"],
-        "自拍": ["安静真实", "日系清新", "法式慵懒", "胶片复古"],
-        "合影": ["安静真实", "日系清新", "胶片复古", "Lofi直闪"],
-        "晴天": ["日系清新", "极简高级", "梦幻柔美", "电影感", "胶片复古"],
-        "阴天": ["安静真实", "极简高级", "电影感", "纪实粗粝"],
-        "傍晚": ["电影感", "梦幻柔美", "港风复古", "胶片复古"],
-        "黄昏": ["电影感", "梦幻柔美", "港风复古", "胶片复古"],
-        "日出": ["日系清新", "梦幻柔美", "电影感", "极简高级"],
-        "日落": ["电影感", "梦幻柔美", "港风复古", "胶片复古"],
+# 始终兜底的通用风格
+_ALWAYS_INCLUDE_STYLES = {"安静真实", "日系清新", "胶片复古"}
+
+
+def _match_scene_styles(scene_type):
+    """同义词扩展 + 评分匹配。
+    返回 (matched_styles_set, scores_dict)。
+    主关键词命中 +3 分，同义词命中 +1 分。
+    取 Top-N 高分风格，而非全量。
+    """
+    if not scene_type:
+        return set(_all_styles().keys()), {}
+
+    scene_lower = scene_type.lower()
+    scores = {}
+
+    for entry in _SCENE_STYLE_ENTRIES:
+        styles = entry["styles"]
+        aliases = entry["aliases"]
+        # 主关键词（aliases[0]）权重 3，其余 aliases 权重 1
+        for i, alias in enumerate(aliases):
+            weight = 3 if i == 0 else 1
+            if alias.lower() in scene_lower:
+                for s in styles:
+                    if s in _all_styles():
+                        scores[s] = scores.get(s, 0) + weight
+
+    if not scores:
+        # 完全没有匹配 → 返回全量（后续会由搜索优先策略决定是否使用）
+        return set(_all_styles().keys()), {}
+
+    # 取 Top-N（至少 5，最多 12）
+    sorted_styles = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    threshold = max(1, sorted_styles[min(11, len(sorted_styles)-1)][1]) if len(sorted_styles) > 12 else 1
+    matched = {s for s, score in scores.items() if score >= threshold}
+
+    # 始终包含通用兜底风格
+    matched |= _ALWAYS_INCLUDE_STYLES
+
+    # 限制上限
+    if len(matched) > 15:
+        matched = set(list(matched)[:15])
+
+    return matched, scores
+
+
+def validate_search_results(search_text, scene_type=""):
+    """用知识库检验搜索结果质量。
+    返回 {
+        "verified_styles": [...],     # 搜索中出现的、知识库认可的风格名
+        "suspicious_styles": [...],   # 搜索中出现的、知识库不认识的可疑风格
+        "has_social_proof": bool,     # 搜索结果是否显示高赞/高收藏信号
+        "social_signals": [...],      # 检测到的高赞信号文本
+        "conflicts_with_kb": [...],   # 与知识库冲突但高赞的内容
+        "overall_quality": "high"|"medium"|"low",
+    }
+    """
+    all_styles = _all_styles()
+    known_style_names = set(all_styles.keys())
+    # 也加上跨媒介风格名
+    known_style_names |= set(CROSS_MEDIA_STYLE_ONE_LINERS.keys())
+    # 加上常用技法名
+    known_technique_names = {t["name"] for t in VERIFIED_TECHNIQUES}
+
+    # 高赞信号检测
+    SOCIAL_PROOF_PATTERNS = [
+        "万赞", "万收藏", "万点赞", "万播放", "万浏览",
+        "爆款", "热门", "火了", "刷屏", "刷爆",
+        "10万+", "100万", "千万", "百万",
+        "收藏", "点赞", "赞", "likes", "saves",
+    ]
+    social_signals = []
+    for pat in SOCIAL_PROOF_PATTERNS:
+        if pat in search_text:
+            social_signals.append(pat)
+    has_social_proof = len(social_signals) >= 2
+
+    # 从搜索文本中提取可能的风格名
+    verified_styles = []
+    suspicious_styles = []
+    conflicts_with_kb = []
+
+    # 检查知识库中每个风格名是否出现在搜索结果中
+    for style_name in known_style_names:
+        if style_name in search_text:
+            verified_styles.append(style_name)
+
+    # 检测搜索中出现的陌生风格名（不在知识库中的中文2-6字术语）
+    import re as _re
+    # 匹配搜索结果中"XX风""XX感""XX系"等模式
+    style_patterns = _re.findall(r'[一-鿿]{2,4}(?:风|感|系|美学|风格|色调|调色)', search_text)
+    for pat in style_patterns:
+        if pat not in known_style_names and pat not in suspicious_styles:
+            if has_social_proof:
+                # 高赞 → 即使不在知识库中也值得关注
+                suspicious_styles.append({"name": pat, "note": "高赞新风格，知识库未收录"})
+            else:
+                # 低赞且不在知识库 → 标记为可疑
+                suspicious_styles.append({"name": pat, "note": "低质量来源，知识库未验证"})
+
+    # 搜索中推荐了知识库明确不适合当前场景的风格 → 检查冲突
+    if scene_type:
+        matched, _ = _match_scene_styles(scene_type)
+        for style_name in verified_styles:
+            if style_name not in matched and style_name in known_style_names:
+                note = "搜索推荐该风格但知识库认为不适合此场景"
+                if has_social_proof:
+                    note += "（高赞信号 → 可采纳）"
+                    conflicts_with_kb.append({"name": style_name, "action": "adopt", "note": note})
+                else:
+                    note += "（低赞 → 过滤）"
+                    conflicts_with_kb.append({"name": style_name, "action": "filter", "note": note})
+
+    # 综合质量评估
+    if len(verified_styles) >= 3 and not conflicts_with_kb:
+        overall = "high"
+    elif len(verified_styles) >= 1 or has_social_proof:
+        overall = "medium"
+    else:
+        overall = "low"
+
+    return {
+        "verified_styles": verified_styles,
+        "suspicious_styles": suspicious_styles,
+        "has_social_proof": has_social_proof,
+        "social_signals": social_signals,
+        "conflicts_with_kb": conflicts_with_kb,
+        "overall_quality": overall,
     }
 
-    matched_styles = set()
-    for keyword, styles in SCENE_STYLE_MAP.items():
-        if keyword in scene_type:
-            for s in styles:
-                if s in STYLE_ONE_LINERS:
-                    matched_styles.add(s)
 
-    # 没匹配到 → 返回全部
-    if not matched_styles:
-        return set(_all_styles().keys())
-
-    # 始终包含几个通用风格作为兜底
-    matched_styles |= {"安静真实", "日系清新", "胶片复古"}
-    return matched_styles
-
-
-def get_knowledge_context(scene_type="", device_key="", light_condition=""):
+def get_knowledge_context(scene_type="", device_key="", light_condition="", fallback_level="medium"):
     """
     返回注入 DIRECTIONS_PROMPT 的知识上下文。
-    根据场景类型过滤 one_liner，减少 LLM 输入量。
+    根据搜索质量三档输出——
+      - "low":    搜索空，知识库当主力 → 完整输出
+      - "medium": 搜索一般，知识库补充 → 精简输出（one_liner + 矩阵 + 设备）
+      - "high":   搜索丰富，知识库检验 → 仅风格名列表 + 设备 + 能力边界
     """
     parts = []
 
-    # ── 1. 风格 one_liner 参考（按场景过滤，v4.1 性能优化）──
-    relevant_styles = _match_scene_styles(scene_type)
-    parts.append("## 📚 风格参考（带拍知识库 · 本场景相关）\n")
-    parts.append("### 风格 one_liner（全局唯一标识）")
-    all_styles = _all_styles()
-    for name, one_liner in all_styles.items():
-        if name in relevant_styles:
-            parts.append(f"- **{name}**：{one_liner}")
-    # 不相关的风格只列名字，不列 one_liner（省 token）
-    other_styles = [n for n in all_styles if n not in relevant_styles]
-    if other_styles:
-        parts.append(f"\n> 其他可用风格（按需引用，无需展开）：{' / '.join(other_styles)}")
-    parts.append("")
+    # ── 1. 风格 one_liner 参考 ──
+    if fallback_level == "high":
+        # 搜索丰富 → 知识库只提供风格名列表供校验
+        parts.append("## 📚 知识库风格名索引（仅用于校验搜索结果的风格名，非推荐）\n")
+        all_styles = _all_styles()
+        parts.append(f"> 可用风格名：{' / '.join(all_styles.keys())}\n")
+        parts.append("> ⚠️ 搜索中出现的风格名若不在上述列表中，需谨慎评估其质量。\n")
+        parts.append("> ⚠️ 若搜索结果有高赞信号（万赞/万收藏/刷屏），即使与知识库冲突也可采纳。\n")
+    elif fallback_level == "medium":
+        # 搜索一般 → 精简输出
+        relevant_styles, _ = _match_scene_styles(scene_type)
+        parts.append("## 📚 知识库参考（补充搜索未覆盖的部分）\n")
+        parts.append("### 本场景相关风格 one_liner\n")
+        all_styles = _all_styles()
+        for name, one_liner in all_styles.items():
+            if name in relevant_styles:
+                parts.append(f"- **{name}**：{one_liner}")
+        # 不相关风格只列名字
+        other_styles = [n for n in all_styles if n not in relevant_styles]
+        if other_styles:
+            parts.append(f"\n> 其他可用风格：{' / '.join(other_styles)}")
+        parts.append("")
+    else:
+        # 搜索空 → 完整输出（知识库当主力）
+        relevant_styles, _ = _match_scene_styles(scene_type)
+        parts.append("## 📚 专业知识库（本次搜索无结果，以下内容为主要参考源）\n")
+        parts.append("### 风格 one_liner（全局唯一标识）\n")
+        all_styles = _all_styles()
+        for name, one_liner in all_styles.items():
+            if name in relevant_styles:
+                parts.append(f"- **{name}**：{one_liner}")
+        other_styles = [n for n in all_styles if n not in relevant_styles]
+        if other_styles:
+            parts.append(f"\n> 其他可用风格（按需引用，无需展开）：{' / '.join(other_styles)}")
+        parts.append("")
 
-    # ── 2. 场景→风格匹配 ──
-    parts.append("### 场景→风格匹配矩阵")
-    parts.append(SCENE_STYLE_MATRIX.strip())
-    parts.append("")
+    # ── 后续章节仅在 not high 时输出 ──
+    if fallback_level != "high":
+        # ── 2. 场景→风格匹配 ──
+        parts.append("### 场景→风格匹配矩阵")
+        parts.append(SCENE_STYLE_MATRIX.strip())
+        parts.append("")
 
-    # ── 3. 光线→风格匹配 ──
-    parts.append("### 光线→风格匹配 + 诚实标注")
-    parts.append(LIGHT_STYLE_MATRIX.strip())
-    parts.append("")
+        # ── 3. 光线→风格匹配 ──
+        parts.append("### 光线→风格匹配 + 诚实标注")
+        parts.append(LIGHT_STYLE_MATRIX.strip())
+        parts.append("")
 
-    # ── 4. 题材优先级 ──
-    parts.append("### 题材审美优先级")
-    parts.append(GENRE_PRIORITY.strip())
-    parts.append("")
+        # ── 4. 题材优先级 ──
+        parts.append("### 题材审美优先级")
+        parts.append(GENRE_PRIORITY.strip())
+        parts.append("")
 
-    # ── 5. 情绪→风格 ──
-    parts.append("### 情绪→风格翻译")
-    parts.append(MOOD_STYLE_MAP.strip())
-    parts.append("")
+        # ── 5. 情绪→风格 ──
+        parts.append("### 情绪→风格翻译")
+        parts.append(MOOD_STYLE_MAP.strip())
+        parts.append("")
 
-    # ── 6. 设备优势 ──
+    # ── 6. 设备优势（始终输出）──
     parts.append("### 设备独有优势")
     parts.append(DEVICE_ADVANTAGES.strip())
     parts.append("")
 
-    # ── 7. 用户能力边界 ──
+    # ── 7. 用户能力边界（始终输出）──
     parts.append("### 用户能力边界")
     parts.append(USER_CAPABILITY.strip())
     parts.append("")
 
-    # ── 8. 如果知识核心文件存在，追加精华部分 ──
-    core = load_knowledge_core()
-    if core:
-        # 只取关键段落：光线矩阵 + 风格匹配 + 题材决策
-        sections = []
-        for section_name in ["## 一、题材决策表", "## 二、光线 → 风格", "## 三、风格匹配逻辑"]:
-            start = core.find(section_name)
-            if start >= 0:
-                end = core.find("\n## ", start + len(section_name))
-                if end < 0:
-                    end = len(core)
-                sections.append(core[start:end].strip())
-        if sections:
-            parts.append("### 📖 知识核心补充")
-            parts.append("\n\n".join(sections))
+    if fallback_level != "high":
+        # ── 8. 知识核心补充 ──
+        core = load_knowledge_core()
+        if core:
+            sections = []
+            for section_name in ["## 一、题材决策表", "## 二、光线 → 风格", "## 三、风格匹配逻辑"]:
+                start = core.find(section_name)
+                if start >= 0:
+                    end = core.find("\n## ", start + len(section_name))
+                    if end < 0:
+                        end = len(core)
+                    sections.append(core[start:end].strip())
+            if sections:
+                parts.append("### 📖 知识核心补充")
+                parts.append("\n\n".join(sections))
+                parts.append("")
+
+        # ── 9. 实战拍摄技法 ──
+        patterns = load_social_patterns()
+        if patterns:
+            parts.append("## 📱 实战拍摄技法（社交媒体验证 · 普通用户可直接操作）\n")
+            for scene_key, techniques in patterns.get("scene_techniques", {}).items():
+                parts.append(f"### {scene_key}")
+                for t in techniques[:3]:
+                    parts.append(f"- **{t['name']}**：{t['desc']}")
+                parts.append("")
+            parts.append("### 🎨 氛围增色（适用所有场景）\n")
+            for a in patterns.get("atmosphere_hacks", [])[:5]:
+                parts.append(f"- **{a['name']}**：{a['desc']}")
             parts.append("")
 
-    # ── 9. 实战拍摄技法（来自社交媒体验证，v4.2）──
-    patterns = load_social_patterns()
-    if patterns:
-        parts.append("## 📱 实战拍摄技法（社交媒体验证 · 普通用户可直接操作）\n")
-        # 按场景匹配注入相关技法
-        for scene_key, techniques in patterns.get("scene_techniques", {}).items():
-            parts.append(f"### {scene_key}")
-            for t in techniques[:3]:  # 每个场景最多3条
-                parts.append(f"- **{t['name']}**：{t['desc']}")
+        # ── 10. 姿势引导 ──
+        posing = load_posing_router()
+        if posing:
+            parts.append("## 🧍 姿势引导（场景匹配 · 可直接转化为拍摄指令）\n")
+            for p in posing[:6]:
+                parts.append(f"- **{p['scene']}**：{p['strategy']}（✅ {p['do']} / ❌ {p['avoid']}）")
             parts.append("")
-        # 通用增色技法
-        parts.append("### 🎨 氛围增色（适用所有场景）\n")
-        for a in patterns.get("atmosphere_hacks", [])[:5]:
-            parts.append(f"- **{a['name']}**：{a['desc']}")
-        parts.append("")
-
-    # ── 10. 姿势引导（v4.2）──
-    posing = load_posing_router()
-    if posing:
-        parts.append("## 🧍 姿势引导（场景匹配 · 可直接转化为拍摄指令）\n")
-        for p in posing[:6]:
-            parts.append(f"- **{p['scene']}**：{p['strategy']}（✅ {p['do']} / ❌ {p['avoid']}）")
-        parts.append("")
 
     # ── 11. 使用说明 ──
     parts.append("""
@@ -485,24 +806,85 @@ def get_knowledge_context(scene_type="", device_key="", light_condition=""):
 
 
 def get_style_detail(style_name):
-    """获取指定风格的详细信息（用于方案生成 prompt）"""
-    # 尝试匹配 one_liner（先搜 style-recipes，再搜 cross-media）
+    """获取指定风格的详细信息（用于方案生成 prompt）。
+
+    三层策略：
+    - KB原生风格 → 直接返回可执行摄影参数（已有）
+    - 跨媒介风格 → 美学描述 + 摄影翻译任务 + 落地约束
+    - 社区发现新风格 → 纯翻译任务 + 严格落地约束
+    """
     style_name_clean = style_name.strip()
-    all_styles = _all_styles()
-    for name, one_liner in all_styles.items():
+
+    # ── 精确匹配 KB 原生风格 ──
+    for name, one_liner in STYLE_ONE_LINERS.items():
         if name in style_name_clean or style_name_clean in name:
-            return f"**{name}**：{one_liner}"
+            return f"**{name}**：{one_liner}\n（来源：知识库——已含可执行摄影参数，直接用于方案）"
 
-    # 模糊匹配
-    for name, one_liner in all_styles.items():
-        # 检查关键词重叠
-        name_chars = set(name)
-        input_chars = set(style_name_clean)
-        overlap = len(name_chars & input_chars)
-        if overlap >= 2:
-            return f"**{name}**（最接近匹配）：{one_liner}"
+    # ── 精确匹配跨媒介风格 ──
+    for name, one_liner in CROSS_MEDIA_STYLE_ONE_LINERS.items():
+        if name in style_name_clean or style_name_clean in name:
+            # 找到最接近的 KB 原生风格作为技法锚点
+            related_kb = _find_related_kb_style(name)
+            return f"""**{name}**（跨媒介视觉风格）
+美学描述：{one_liner}
 
-    return None
+🚨 摄影翻译任务——你必须把上述美学描述翻译成具体的、可执行的摄影方案：
+1. 光线：该风格需要什么光质和方向？对照场景视觉分析中的光线条件判断可行性
+2. 色彩：推导色调偏移方向和饱和度范围
+3. 构图：推导景别偏好和空间策略
+4. 器材：对照设备约束判断可行性——手机做不到的写替代方案
+5. 后期：必须的后期调整方向
+
+📎 知识库锚点（用于技法落地）：{related_kb}
+> 以上锚点风格的知识库技法可作为摄影参照——用它们的技法路径来实现本风格的美学目标。
+
+⚠️ 落地约束：
+- 每个方案字段（subject/shooter/gear/enhance）必须能在「社区搜索参考」或「历史验证技法」或「知识库锚点」中找到支撑
+- 无真实摄影参照的技法 → 不写。宁缺毋滥。
+- 手机拍不出来的（如精确光圈控制/移轴/大画幅）→ 写替代方案或不写
+- 优先引用社区搜索中的真实姿势/机位/技法"""
+
+    # ── 社区发现的新风格（完全不在 KB 中）──
+    return f"""**{style_name_clean}**（社区发现的新风格）
+🚨 这是一个新风格——基于你的视觉文化知识，翻译成可执行的摄影方案：
+1. 推断该风格的光线/色彩/构图偏好
+2. 对照设备约束判断哪些能做、哪些需要替代方案
+3. 必须能从「社区搜索参考」中找到至少1条支撑——没有真实参照的技法不写
+
+⚠️ 落地约束（比常规风格更严格）：
+- 每个技法必须有来源标注（社区搜索/知识库类比/摄影原理）
+- 社区搜索无支撑 → 用知识库最接近的风格技法类比，标注"类比自（某某风格）"
+- 两者都无支撑 → 只写已验证的通用摄影原理，不创造新技法"""
+
+
+def _find_related_kb_style(cross_media_name):
+    """为跨媒介风格找到最接近的 KB 原生风格作为技法锚点"""
+    # 手动映射——每个跨媒介风格对应 1-2 个 KB 原生风格的技法路径
+    mapping = {
+        "宫崎骏吉卜力": "日系清新 + 梦幻柔美（高调+柔光+蓝天比例）",
+        "王家卫电影": "电影感 + 港风复古（霓虹色偏移+低快门拖影+绿色阴影）",
+        "韦斯安德森": "极简高级（绝对对称+马卡龙色彩+中心构图）",
+        "新海诚天空": "日系清新（高饱和蓝天+大光晕+细节锐利）",
+        "张艺谋色彩": "杂志时尚（大块纯色+高饱和+色彩作为主体）",
+        "莫奈印象派": "梦幻柔美（柔焦+色彩分区+刻意虚化前景背景）",
+        "莫兰迪色系": "极简高级 + 安静真实（低饱和灰调+柔和光+几何秩序）",
+        "霍普式孤独": "电影感（窗边单一光源+长阴影+暖光与暗部对比）",
+        "赛博朋克": "电影感 + 港风复古（霓虹紫蓝+雨夜+湿路面反光）",
+        "蒸汽波": "梦幻柔美（粉紫蓝渐变+柔焦+复古元素拼贴）",
+        "中国水墨": "极简高级 + 新中式（大面积留白+黑白灰+远山近人）",
+        "中式梦核": "县城记忆（褪色+柔和光+轻微过曝+2000年代元素）",
+        "伦勃朗光": "电影感（单光源侧光+三角光斑+深阴影）",
+        "暗调学院": "电影感 + 极简高级（深棕金绿+台灯单一光源+暗调）",
+        "田园生活": "森系 + 法式慵懒（自然光+暖色+野花野草+松弛）",
+        "宋画山水": "新中式 + 极简高级（山占2/3+人极小+留白+水墨调）",
+        "浮世绘": "极简高级（平面化构图+清晰轮廓线+大块纯色+普鲁士蓝）",
+        "蜘蛛侠漫风": "杂志时尚（半调网点+高饱和撞色+动态模糊线+漫画感）",
+        "阈限空间": "安静真实（空荡空间+荧光灯绿+无人物+不安感）",
+        "品牌视觉": "极简高级 + 杂志时尚（克制调色+质感优先+可复制公式）",
+        "奶油风": "日系清新（米白奶咖+柔和到无阴影+高明度低对比）",
+        "老钱静奢": "极简高级 + 法式慵懒（中性大地色+天然材质纹理+松弛从容）",
+    }
+    return mapping.get(cross_media_name, "极简高级（通用锚点——克制构图+中性色彩+自然光）")
 
 
 def get_device_adaptation(device_key):
@@ -523,7 +905,7 @@ def get_device_adaptation(device_key):
 
 
 # ============================================================
-# v3.8: 知识库来源质量验证
+# 知识库来源质量验证
 # ============================================================
 
 # 可查证的真实来源（摄影教材/大师/艺术家）
@@ -736,11 +1118,15 @@ def get_knowledge_files_by_quality(quality_filter=None):
     return results
 
 
-def get_all_knowledge_for_prompt(scene_type="", device_key="", light_condition=""):
+def get_all_knowledge_for_prompt(scene_type="", device_key="", light_condition="", fallback_level="medium"):
     """
-    主入口：返回完整知识注入文本，直接拼入 LLM prompt。
+    主入口：返回知识注入文本，直接拼入 LLM prompt。
+    fallback_level 控制输出量
+      - "low":    搜索空，知识库当主力 → 完整输出
+      - "medium": 搜索一般，知识库补充 → 精简输出
+      - "high":   搜索丰富，知识库检验 → 仅风格名索引+设备
     """
-    return get_knowledge_context(scene_type, device_key, light_condition)
+    return get_knowledge_context(scene_type, device_key, light_condition, fallback_level)
 
 
 # ============================================================
