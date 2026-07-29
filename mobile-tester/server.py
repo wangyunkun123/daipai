@@ -71,6 +71,7 @@ def _save_session(session_id):
             "created_at": sess.get("created_at", 0),
             "vision_json": sess.get("vision_json"),
             "exif_summary": sess.get("exif_summary"),
+            "exif_data": sess.get("exif_data", {}),
             "device_key": sess.get("device_key"),
             "device_context": sess.get("device_context"),
             "directions": sess.get("directions"),
@@ -83,6 +84,7 @@ def _save_session(session_id):
             "client_ip": sess.get("client_ip"),
             "daily_count_key": sess.get("daily_count_key", ""),
             "plan_cache": sess.get("plan_cache", {}),
+            "img_b64": sess.get("img_b64", ""),
         }
         with open(_session_path(session_id), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -103,6 +105,7 @@ def _load_session_from_disk(session_id):
         sess = {
             "vision_json": data.get("vision_json"),
             "exif_summary": data.get("exif_summary"),
+            "exif_data": data.get("exif_data", {}),
             "device_key": data.get("device_key", ""),
             "device_context": data.get("device_context", ""),
             "directions": data.get("directions", []),
@@ -117,6 +120,7 @@ def _load_session_from_disk(session_id):
             "insight": data.get("insight", ""),
             "daily_count_key": data.get("daily_count_key", ""),
             "plan_cache": data.get("plan_cache", {}),
+            "img_b64": data.get("img_b64", ""),
         }
         if sess["photo_path"] and not os.path.exists(sess["photo_path"]):
             sess["photo_path"] = ""
@@ -2278,6 +2282,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             sess['exif_data'] = exif_display
             sess['insight'] = insight
             sess['fold_details'] = fold_details
+            _save_session(session_id)  # 立即持久化到磁盘，防止重启丢图片
 
         # ── 完成 ──
         total_time = round(time.time() - t0, 1)
