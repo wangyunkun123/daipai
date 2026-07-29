@@ -2152,6 +2152,24 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
                 source_tags[d['id']] = '🤖 AI 探索'
                 print(f"[KB] 查证异常 {style_name}: {e}", file=sys.stderr, flush=True)
 
+        # ── v4.0: 风格探索日志（记录 AI 选取的风格及理由）──
+        for d in directions:
+            style_name = (d.get('style') or '').strip()
+            if not style_name:
+                continue
+            reason = (d.get('fit_rationale') or d.get('reason') or '').strip()
+            src_tag = source_tags.get(d['id'], '🤖 AI 探索')
+            full_reason = f"{src_tag} | {reason}" if reason else src_tag
+            try:
+                log_style_exploration(
+                    session_id=trace_id,
+                    style_name=style_name,
+                    decision='selected',
+                    reason=full_reason
+                )
+            except Exception:
+                pass  # 日志失败不阻塞主流程
+
         # ── 创建 session（后续方案生成使用）──
         session_id = create_session(
             session_id=trace_id,

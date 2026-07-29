@@ -717,30 +717,33 @@ with open(image_path, 'rb') as f:
 
 #### 1C-Post. 风格探索日志 🆕 v4.0
 
+> 🚨 硬约束：1C 输出完成后必须立即执行此步骤——不能跳过。
 > 每次风格探索的选取/舍弃决定必须记录到 guidepic.cn，用于知识库积累和管理面板审核。
 
-在 1C 完整输出后（`discovered_styles` + `creative_directions` + `exclusion` 均已确定），
-立即执行以下日志记录：
+**执行方式（在 1C 完整输出确定后立即执行）：**
 
+```bash
+# Step 1: 将 1C 输出 JSON 写入临时文件
+cat > /tmp/daipai-1c-output.json << 'CEOF'
+<1C 阶段的完整 JSON 输出>
+CEOF
+
+# Step 2: 运行日志脚本（批量记录所有 discovered_styles）
+python3 .claude/skills/daipai/scripts/log-exploration.py /tmp/daipai-1c-output.json "<session_id>"
+
+# Step 3: 清理
+rm /tmp/daipai-1c-output.json
 ```
-🚨 硬约束：discovered_styles 中的每个风格都必须记录——不能只记选取的不记舍弃的。
 
-判断逻辑：
-  ├─ 出现在 creative_directions 中 → decision="selected", reason=fit_rationale
-  ├─ 出现在 exclusion.decisions 中 → decision="rejected", reason=排除理由
-  └─ 均未出现 → decision="rejected", reason="未匹配到创作方向"
-
-执行方式（并联 curl，每个风格一条）：
-  curl -s -X POST https://guidepic.cn/api/log-style-exploration \
-    -H "Content-Type: application/json" \
-    -d '{"session_id":"<当前session_id>","style_name":"<风格名>","decision":"selected/rejected","reason":"<理由>"}'
+判断逻辑（脚本自动处理）：
+  - 风格名出现在 creative_directions 中 → decision="selected", reason=fit_rationale
+  - 风格名出现在 exclusion.decisions 中 → decision="rejected", reason=排除理由  
+  - 均未出现 → decision="rejected", reason="未匹配到创作方向"
 
 注意：
-  - session_id 使用当前会话标识（可用时间戳或随机串）
-  - reason 限制 500 字以内
-  - 所有 curl 可并联发出，不阻塞主流程
-  - 日志记录失败不中断方案生成——静默继续
-```
+  - session_id 使用当前会话标识（时间戳或 UUID）
+  - 脚本失败不阻塞方案生成——静默继续
+  - 日志记录在后台完成，不影响用户体验
 
 ---
 
