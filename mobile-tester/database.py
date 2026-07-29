@@ -929,10 +929,14 @@ def get_style_exploration_stats():
             (today_start, today_end)
         ).fetchone()[0]
 
-        # 最近 50 条
+        # 最近 50 条（排除测试数据，标注是否已在知识库）
         recent = [dict(r) for r in conn.execute("""
-            SELECT id, session_id, style_name, decision, reason, promoted, created_at
-            FROM style_exploration_log ORDER BY id DESC LIMIT 50
+            SELECT e.id, e.session_id, e.style_name, e.decision, e.reason, e.promoted, e.created_at,
+                   CASE WHEN s.name IS NOT NULL THEN 1 ELSE 0 END as in_kb
+            FROM style_exploration_log e
+            LEFT JOIN styles s ON s.name = e.style_name
+            WHERE e.session_id != 'test-debug'
+            ORDER BY e.id DESC LIMIT 50
         """).fetchall()]
 
         # 高频选取的风格 Top

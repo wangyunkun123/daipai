@@ -141,7 +141,7 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 	<div class="stats-grid" id="explorationStatsGrid"></div>
 	<div style="overflow-x:auto;margin-top:8px">
 	<table class="fb-table">
-	<thead><tr><th>时间</th><th>风格名</th><th>决策</th><th>理由</th><th>操作</th><th>Session</th></tr></thead>
+	<thead><tr><th>时间</th><th>风格名</th><th>决策</th><th>理由</th><th>操作</th></tr></thead>
 	<tbody id="explorationLog"></tbody>
 	</table>
 	</div>
@@ -396,7 +396,7 @@ function render(d) {
 function renderStyleExploration(se) {
   if (!se || !se.total) {
     document.getElementById('explorationStatsGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">暂无探索记录（AI 生成方案时自动积累）</div>';
-    document.getElementById('explorationLog').innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+    document.getElementById('explorationLog').innerHTML = '<tr><td colspan="5" class="empty">暂无数据</td></tr>';
     document.getElementById('topSelectedStyles').innerHTML = '<tr><td colspan="2" class="empty">暂无数据</td></tr>';
     document.getElementById('topRejectedStyles').innerHTML = '<tr><td colspan="2" class="empty">暂无数据</td></tr>';
     return;
@@ -413,30 +413,29 @@ function renderStyleExploration(se) {
   const recent = se.recent || [];
   const elog = document.getElementById('explorationLog');
   if (recent.length === 0) {
-    elog.innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+    elog.innerHTML = '<tr><td colspan="5" class="empty">暂无数据</td></tr>';
   } else {
     const renderRow = (r, hidden) => {
-      const time = toLocal(r.created_at).time;
+      const localDt = toLocal(r.created_at);
+      const time = localDt.datetime || localDt.time;
       const decisionIcon = r.decision === 'selected' ? '✅ 选取' : '❌ 舍弃';
       const decisionColor = r.decision === 'selected' ? 'var(--green)' : 'var(--red)';
-      const sid = (r.session_id||'').slice(0,8);
 
       // 操作按钮
       let actionHtml;
-      if (r.promoted) {
-        actionHtml = '<span style="font-size:10px;color:var(--green)">✅ 已入库</span>';
+      if (r.promoted || r.in_kb) {
+        actionHtml = '<span style="font-size:10px;color:var(--green);white-space:nowrap">📚 已在库</span>';
       } else {
         actionHtml = `<button onclick="promoteExploration(${r.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:var(--green);color:#000;border:none;border-radius:4px;white-space:nowrap">📥 入库</button>
           <button onclick="deleteExploration(${r.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);border-radius:4px;margin-left:4px;white-space:nowrap">🗑 删除</button>`;
       }
 
       return `<tr class="${hidden?'hidden-row':''}">
-        <td>${time}</td>
+        <td style="white-space:nowrap;font-size:11px">${time}</td>
         <td style="font-weight:600">${esc(r.style_name)}</td>
-        <td style="color:${decisionColor}">${decisionIcon}</td>
-        <td style="font-size:11px;color:var(--dim);max-width:200px;word-break:break-all">${esc(r.reason||'-')}</td>
+        <td style="color:${decisionColor};white-space:nowrap">${decisionIcon}</td>
+        <td style="font-size:11px;color:var(--dim);max-width:320px;white-space:normal;word-break:break-word;line-height:1.5">${esc(r.reason||'-')}</td>
         <td style="white-space:nowrap">${actionHtml}</td>
-        <td style="font-size:10px;color:var(--dimmer)">${sid}</td>
       </tr>`;
     };
 
@@ -444,7 +443,7 @@ function renderStyleExploration(se) {
     let html = recent.slice(0, DEFAULT_SHOW).map(r => renderRow(r, false)).join('');
     if (recent.length > DEFAULT_SHOW) {
       html += recent.slice(DEFAULT_SHOW).map(r => renderRow(r, true)).join('');
-      html += `<tr class="collapse-btn-row"><td colspan="6">
+      html += `<tr class="collapse-btn-row"><td colspan="5">
         <button class="collapse-btn" data-expand-text="展开全部 (${recent.length}条) ▼" onclick="toggleCollapse(this)">展开全部 (${recent.length}条) ▼</button>
       </td></tr>`;
     }
