@@ -179,6 +179,47 @@ def generate_plan_image(photo_path, plan, plan_index, output_key):
         bd.text((bx0+bpad//2,by0+5), btext, fill=(*bclr,255), font=font_sm)
         bx0 += btw+8
 
+    # ── Camera position diagram (when angle suggests position change) ──
+    angle_l = Image.new("RGBA", (W, H), (0,0,0,0))
+    ad = ImageDraw.Draw(angle_l)
+    has_angle_change = angle and any(kw in angle for kw in ['仰','俯','侧','低','高','蹲','移','绕','转','背'])
+    if has_angle_change:
+        box_w, box_h = 160, 100
+        bx = W - box_w - 20
+        by = H - bar_h - box_h - 16
+        ad.rounded_rectangle([bx, by, bx+box_w, by+box_h], radius=10, fill=(8,8,12,200))
+        title = "📷 机位移动"
+        try:
+            tb = ad.textbbox((0,0), title, font=font_sm)
+            tw_l = tb[2]-tb[0]
+        except: tw_l = len(title)*12
+        ad.text((bx + (box_w-tw_l)//2, by+6), title, fill=(200,200,200,255), font=font_sm)
+        # Current position (left)
+        cur_cx, cur_cy = bx+30, by+55
+        ad.ellipse([cur_cx-12, cur_cy-12, cur_cx+12, cur_cy+12], fill=(100,100,110,200))
+        ad.text((cur_cx-6, cur_cy-8), "📷", fill=(180,180,180,255), font=font_sm)
+        cur_label = "现在"
+        try:
+            cb2 = ad.textbbox((0,0), cur_label, font=font_sm)
+            cw = cb2[2]-cb2[0]
+        except: cw = len(cur_label)*12
+        ad.text((cur_cx-cw//2, cur_cy+16), cur_label, fill=(120,120,130,255), font=font_sm)
+        # Target position (right)
+        tgt_cx, tgt_cy = bx+130, by+55
+        ad.ellipse([tgt_cx-14, tgt_cy-14, tgt_cx+14, tgt_cy+14], fill=(*color,180))
+        ad.text((tgt_cx-6, tgt_cy-8), "📷", fill=(255,255,255,255), font=font_sm)
+        tgt_label = angle[:6] if len(angle)>6 else angle
+        try:
+            tb3 = ad.textbbox((0,0), tgt_label, font=font_sm)
+            tw3 = tb3[2]-tb3[0]
+        except: tw3 = len(tgt_label)*12
+        ad.text((tgt_cx-tw3//2, tgt_cy+16), tgt_label, fill=(*color,255), font=font_sm)
+        # Arrow
+        arrow_y = cur_cy
+        ad.line([(cur_cx+14, arrow_y), (tgt_cx-16, arrow_y)], fill=(*color,150), width=2)
+        ax_h = tgt_cx-16
+        ad.polygon([(ax_h, arrow_y), (ax_h-8, arrow_y-5), (ax_h-8, arrow_y+5)], fill=(*color,150))
+
     # ── Bottom bar ──
     y0 = H - bar_h
     bad.rectangle([(0,y0),(W,H)], fill=(0,0,0,140))
@@ -189,7 +230,7 @@ def generate_plan_image(photo_path, plan, plan_index, output_key):
 
     # ── Composite ──
     result = base
-    for layer in [light_l, grid_l, subj_l, vign_l, frame_l, badge_l, bar_l]:
+    for layer in [light_l, grid_l, subj_l, vign_l, frame_l, badge_l, angle_l, bar_l]:
         result = Image.alpha_composite(result, layer)
     result = result.convert("RGB")
 
@@ -213,7 +254,7 @@ STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")  
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "10"))  # 每人每天免费次数
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
-PLAN_IMG_VERSION = 2   # v2: 750px宽度 + 更新字体布局（旧版1290px缓存全部失效）
+PLAN_IMG_VERSION = 3   # v3: 修复示意图版本不匹配——强制重新生成所有增强图
 VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
 REQUEST_TIMEOUT = 300  # 含大图上传时间
 SESSION_TTL = 86400  # 24小时——与前端 localStorage 恢复窗口一致
@@ -638,16 +679,17 @@ PLANS_PROMPT = """你是摄影指导——输出"怎么拍"的拍摄指令。❌
 ⑩ perspective: 换个思路（可选）
 ⑪ shot_size: 景别（远景/全景/中景/近景/特写）
 ⑫ angle: 角度（平视/俯拍/仰拍/侧面/背面）
-⑬ img_gen_prompt: 图生图提示词（≤300汉字）
+⑬ post_process: 后期建议（1-3项）——先决定后期再写生图提示词！
+   每项：{{"cat":"color|fx|ai","label":"调色|特效|AI处理","text":"具体描述"}}
+⑭ img_gen_prompt: 图生图提示词（≤300汉字）——必须融入⑬的每一项post_process！
    模板：参考上传的照片，保持[人物特征]和[场景环境]不变。做以下调整：
    - 人物：[subject内容]
    - 机位：[shooter内容，用视觉语言]
    - 光线：[方向+光质+特效，融入enhance打光建议]
-   画面风格：[风格名]——[调色方向+特效，融入post_process后期效果]
+   - 后期调色：[逐一写出post_process的text内容，用摄影/调色术语改写]
+   画面风格：[风格名]——[综合调色方向+后期效果]
    景别与空间：[用视觉语言描述距离感，不写焦段数字]
    无文字、无水印、无签名、自然肤质、真实摄影感
-⑭ post_process: 后期建议（1-3项）
-   每项：{{"cat":"color|fx|ai","label":"调色|特效|AI处理","text":"具体描述"}}
 
 ## 约束
 - 口吻：朋友分享观察 ✅"你"视角 ❌摄影术语 ❌"我"
@@ -664,7 +706,7 @@ PLANS_PROMPT = """你是摄影指导——输出"怎么拍"的拍摄指令。❌
     {{
       "name": "", "prep": "", "subject": "", "shooter": "", "gear": "",
       "enhance": "", "result": "", "why": "", "annotations": [], "perspective": "",
-      "shot_size": "", "angle": "", "img_gen_prompt": "", "post_process": []
+      "shot_size": "", "angle": "", "post_process": [], "img_gen_prompt": ""
     }}
   ]
 }}"""

@@ -1527,9 +1527,12 @@ function renderPlans(plans, direction) {
       }
     };
     const cb = document.getElementById(`cp${i}`), te = document.getElementById(`pt${i}`);
-    if (cb&&te) cb.addEventListener('click', ()=>{ doCopy(te.textContent, cb); });
-    // 点击提示词文本也复制
-    if (te) { te.style.cursor = 'pointer'; te.title = '点击复制'; te.addEventListener('click', ()=>{ doCopy(te.textContent, cb||te); }); }
+    if (cb&&te) {
+      cb.addEventListener('click', ()=>{ doCopy(te.textContent, cb); });
+      // 旧版卡片：点击提示词文本也可复制（cb 存在时才绑定，v5 用 copyPromptV5 专用按钮）
+      te.style.cursor = 'pointer'; te.title = '点击复制';
+      te.addEventListener('click', ()=>{ doCopy(te.textContent, cb); });
+    }
 
     // v3.5: 反馈按钮
     const fbLike = document.getElementById(`fb${i}`)?.querySelector('.fb-like');
