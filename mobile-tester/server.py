@@ -269,6 +269,93 @@ _plan_generating_lock = threading.Lock()
 
 # Session 存储
 _sessions: dict[str, dict] = {}
+_SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "sessions")
+
+def _session_path(session_id):
+    return os.path.join(_SESSIONS_DIR, f"{session_id}.json")
+
+def _save_session(session_id):
+    sess = _sessions.get(session_id)
+    if not sess:
+        return
+    try:
+        os.makedirs(_SESSIONS_DIR, exist_ok=True)
+        data = {
+            "session_id": session_id,
+            "created_at": sess.get("created_at", 0),
+            "vision_json": sess.get("vision_json"),
+            "exif_summary": sess.get("exif_summary"),
+            "device_key": sess.get("device_key"),
+            "device_context": sess.get("device_context"),
+            "directions": sess.get("directions"),
+            "scene_tier": sess.get("scene_tier"),
+            "env_context": sess.get("env_context", ""),
+            "search_context": sess.get("search_context", ""),
+            "scene_category": sess.get("scene_category", ""),
+            "photo_path": sess.get("photo_path", ""),
+            "insight": sess.get("insight", ""),
+            "client_ip": sess.get("client_ip"),
+            "daily_count_key": sess.get("daily_count_key", ""),
+        }
+        with open(_session_path(session_id), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[Session] Save failed {session_id}: {e}", file=sys.stderr, flush=True)
+
+def _load_session_from_disk(session_id):
+    try:
+        path = _session_path(session_id)
+        if not os.path.exists(path):
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if time.time() - data.get("created_at", 0) > SESSION_TTL:
+            try: os.remove(path)
+            except: pass
+            return None
+        sess = {
+            "vision_json": data.get("vision_json"),
+            "exif_summary": data.get("exif_summary"),
+            "device_key": data.get("device_key", ""),
+            "device_context": data.get("device_context", ""),
+            "directions": data.get("directions", []),
+            "scene_tier": data.get("scene_tier", "🟈"),
+            "plan_cache": {},
+            "created_at": data.get("created_at", time.time()),
+            "client_ip": data.get("client_ip"),
+            "env_context": data.get("env_context", ""),
+            "search_context": data.get("search_context", ""),
+            "scene_category": data.get("scene_category", ""),
+            "photo_path": data.get("photo_path", ""),
+            "insight": data.get("insight", ""),
+            "daily_count_key": data.get("daily_count_key", ""),
+        }
+        if sess["photo_path"] and not os.path.exists(sess["photo_path"]):
+            sess["photo_path"] = ""
+        _sessions[session_id] = sess
+        _cleanup_old_sessions()
+        print(f"[Session] Restored from disk: {session_id}", file=sys.stderr, flush=True)
+        return sess
+    except Exception as e:
+        print(f"[Session] Load failed {session_id}: {e}", file=sys.stderr, flush=True)
+        return None
+
+def _load_all_sessions():
+    try:
+        if not os.path.isdir(_SESSIONS_DIR):
+            return
+        count = 0
+        for fn in os.listdir(_SESSIONS_DIR):
+            if fn.endswith(".json"):
+                sid = fn[:-5]
+                if _load_session_from_disk(sid):
+                    count += 1
+        if count:
+            print(f"[Session] Startup: restored {count} sessions from disk", file=sys.stderr, flush=True)
+    except Exception as e:
+        print(f"[Session] Startup load error: {e}", file=sys.stderr, flush=True)
+
+_load_all_sessions()
 
 # 设备档案（精简版）
 DEVICE_CONTEXTS = {
@@ -1097,16 +1184,22 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
         'scene_category': scene_category
     }
     _cleanup_old_sessions()
+    _save_session(session_id)
     return session_id
 
 
 def get_session(session_id):
-    """获取会话，自动清理过期"""
+    """获取会话，自动清理过期，内存缺失时尝试从磁盘恢复"""
     sess = _sessions.get(session_id)
     if not sess:
-        return None
+        # 部署重启后内存清空，尝试从磁盘恢复
+        sess = _load_session_from_disk(session_id)
+        if not sess:
+            return None
     if time.time() - sess['created_at'] > SESSION_TTL:
         del _sessions[session_id]
+        try: os.remove(_session_path(session_id))
+        except: pass
         return None
     return sess
 
