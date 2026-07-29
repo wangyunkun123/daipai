@@ -679,8 +679,8 @@ PLANS_PROMPT = """你是摄影指导——输出"怎么拍"的拍摄指令。❌
 ⑩ perspective: 换个思路（可选）
 ⑪ shot_size: 景别（远景/全景/中景/近景/特写）
 ⑫ angle: 角度（平视/俯拍/仰拍/侧面/背面）
-⑬ post_process: 后期建议（1-3项）——先决定后期再写生图提示词！
-   每项：{{"cat":"color|fx|ai","label":"调色|特效|AI处理","text":"具体描述"}}
+⑬ post_process: 增色效果（1-3项）——拍摄现场无法实现的效果：补光模拟、后期调色、特效、AI修复等
+   每项：{{"cat":"light|color|fx|ai","label":"补光|调色|特效|AI修复","text":"具体描述"}}
 ⑭ img_gen_prompt: 图生图提示词（≤300汉字）——豆包Seedream自然语言格式！
    ❌禁止用列表/符号/拍摄术语（"机位""焦段""光圈"）
    ✅用一段流畅中文描述画面变化。公式：变化动作（修改/调整/改为）+变化对象+变化后视觉特征
@@ -692,7 +692,7 @@ PLANS_PROMPT = """你是摄影指导——输出"怎么拍"的拍摄指令。❌
      例："中景画面，低角度仰拍使人物挺拔，人物在画面左侧三分线上"
    · 光线氛围：[enhance的光质+方向+特效，写可见的光影画面效果]
      例："暖金色侧光从左侧斜照，发丝边缘泛起轮廓金光，面部呈现柔和立体过渡"
-   · 色调后期：[逐一融入post_process每项的text，写视觉调色结果]
+   · 增色调色：[逐一融入post_process每项的text，写视觉调色结果]
      例："电影感青橙调色，阴影偏冷青灰，高光带暖橙色，叠加轻胶片颗粒"
    画面整体[风格名]氛围，自然肤质，真实摄影感，无文字水印。
 
@@ -2083,17 +2083,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     if cache_key in session['plan_cache']:
         print(f"[Plans] Cache hit: {cache_key}", file=sys.stderr, flush=True)
         plans = session['plan_cache'][cache_key]
-        # v5: 补生成缺失的增强图
-        photo_path = session.get('photo_path', '')
-        if photo_path and os.path.exists(photo_path):
-            for i, p in enumerate(plans):
-                if isinstance(p, dict) and p.get('annotations'):
-                    cur_img = p.get('plan_image', '')
-                    if not cur_img or f'_v{PLAN_IMG_VERSION}_' not in cur_img:
-                        img_key = f"{cache_key}_v{PLAN_IMG_VERSION}_{i}"
-                        img_url = generate_plan_image(photo_path, p, i, img_key)
-                        if img_url:
-                            p['plan_image'] = img_url
+        # v5: 增强图由前端 Canvas 标注渲染（不再服务端生图）
         return plans, None
 
     # ── 防止重复 LLM 调用（retry/poll 并发时同一 key 只生成一次）──
@@ -2214,18 +2204,8 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         session['plan_cache'][cache_key] = plans
         print(f"[Plans] Generated {len(plans)} plans, cached as {cache_key}", file=sys.stderr, flush=True)
 
-        # ── v5: 生成增强方案图 ──
-        photo_path = session.get('photo_path', '')
-        if photo_path and os.path.exists(photo_path):
-            for i, p in enumerate(plans):
-                if isinstance(p, dict) and p.get('annotations'):
-                    cur_img = p.get('plan_image', '')
-                    if not cur_img or f'_v{PLAN_IMG_VERSION}_' not in cur_img:
-                        img_key = f"{cache_key}_v{PLAN_IMG_VERSION}_{i}"
-                        img_url = generate_plan_image(photo_path, p, i, img_key)
-                        if img_url:
-                            p['plan_image'] = img_url
-                        print(f"[Plans] Image generated: {img_url}", file=sys.stderr, flush=True)
+        # ── v5: 增强图改为前端 Canvas 标注（统一渲染路径，不再服务端生图）──
+        # plan_image 不设置，前端自动走 Canvas 标注渲染
 
         # ── 更新使用统计 ──
         try:

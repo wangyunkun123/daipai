@@ -343,6 +343,7 @@
   /* Tag pills（后期 & 构图详解用） */
   .v5-pcat { display: inline-block; width: fit-content; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 600; white-space: nowrap; text-align: center; line-height: 1.6; }
   .v5-pcat.comp  { background: rgba(138,138,138,0.10); color: var(--dim); }
+  .v5-pcat.light { background: rgba(250,204,21,0.12); color: #facc15; }
   .v5-pcat.color { background: rgba(245,158,11,0.12); color: var(--fire); }
   .v5-pcat.fx    { background: rgba(244,114,182,0.12); color: #f472b6; }
   .v5-pcat.ai    { background: rgba(167,139,250,0.12); color: var(--purple); }
@@ -1501,7 +1502,7 @@ function renderPlans(plans, direction) {
 
   // Canvas 标注 + 事件绑定
   plans.forEach((p,i)=>{
-	    if (p.annotations && p.annotations.length>0 && photoDataUrl) renderAnnotations(`ac${i}`, p.annotations, !!p.plan_image);
+	    if (p.annotations && p.annotations.length>0 && photoDataUrl) renderAnnotations(`ac${i}`, p.annotations);
   });
 
   plans.forEach((p,i)=>{
@@ -1650,16 +1651,11 @@ function renderPlanCard(p, i, direction) {
   // v5: 增强图 + 行动标签 + 结构化卡片行
   let c = `<div class="plan-card-v5">`;
 
-  // ── 增强图（plan_image 做底 + Canvas 标注叠加层）──
-  if (p.plan_image || (p.annotations && p.annotations.length>0)) {
-    c += `<div class="plan-img-wrap">`;
-    if (p.plan_image) {
-      c += `<img src="${esc(p.plan_image)}" alt="${esc(p.name||'方案'+(i+1))}" loading="lazy">`;
-    }
-    if (p.annotations && p.annotations.length>0) {
-      c += `<canvas id="ac${i}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas>`;
-    }
-    c += `</div>`;
+  // ── 增强图（Canvas 标注直接画在照片上，不依赖服务端生图）──
+  if (p.annotations && p.annotations.length>0) {
+    c += `<div class="plan-img-wrap"><canvas id="ac${i}"></canvas></div>`;
+  } else if (p.plan_image) {
+    c += `<div class="plan-img-wrap"><img src="${esc(p.plan_image)}" alt="${esc(p.name||'方案'+(i+1))}" loading="lazy"></div>`;
   }
 
   // ── 1. 效果预期 ──
@@ -1710,9 +1706,9 @@ function renderPlanCard(p, i, direction) {
   // ── 5. 后期（折叠面板）──
   const post = p.post_process || [];
   if (post.length) {
-    c += `<div class="v5-post-wrap" id="v5post${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>🎨 后期</span><span class="ar">▼</span></div><div class="v5-post-body"><div class="v5-post-grid">`;
+    c += `<div class="v5-post-wrap" id="v5post${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>✨ 增色效果</span><span class="ar">▼</span></div><div class="v5-post-body"><div class="v5-post-grid">`;
     post.forEach(x => {
-      const cat = x.cat||'color'; const label = x.label||'调色'; const text = x.text||'';
+      const cat = x.cat||'color'; const label = x.label||'增色'; const text = x.text||'';
       c += `<div class="v5-post-item"><span class="v5-pcat ${cat}">${esc(label)}</span><span class="v5-post-text">${esc(text)}</span></div>`;
     });
     c += `</div></div></div>`;
@@ -1998,35 +1994,10 @@ function togglePreviewForPlan(idx) {
   }
 }
 
-function renderAnnotations(cid, annotations, overlay=false) {
+function renderAnnotations(cid, annotations) {
   const canvas = document.getElementById(cid);
   if (!canvas) return;
   const container = canvas.parentElement;
-
-  if (overlay) {
-    // 叠加模式：Canvas 透明底覆盖在 plan_image 上方，只画标注不画照片
-    const imgEl = container.querySelector('img');
-    if (!imgEl) return;
-    const sizeCanvas = () => {
-      const cw = container.clientWidth;
-      const ch = imgEl.clientHeight || (cw * (imgEl.naturalHeight / imgEl.naturalWidth));
-      canvas.width = cw;
-      canvas.height = ch;
-      canvas.style.width = cw + 'px';
-      canvas.style.height = ch + 'px';
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, cw, ch);
-      annotations.forEach(a => drawAnno(ctx, a, cw, ch));
-    };
-    if (imgEl.complete && imgEl.naturalWidth > 0) {
-      sizeCanvas();
-    } else {
-      imgEl.addEventListener('load', sizeCanvas, { once: true });
-    }
-    return;
-  }
-
-  // 独立模式：Canvas 自己画照片 + 标注（无 plan_image 时的 fallback）
   const img = new Image();
   img.onload = ()=>{
     const cw = container.clientWidth, scale = cw/img.width;
