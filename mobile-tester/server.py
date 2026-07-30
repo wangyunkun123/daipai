@@ -529,6 +529,27 @@ DIRECTIONS_PROMPT = """你是摄影美学专家。你的知识覆盖摄影史、
 🔥 → 社媒流行风格，引用该风格在摄影社区中的典型视觉特征
 ✨ → 跨媒介/小众风格，必须精确描述视觉特征（后续方案 AI 全靠这个理解）
 
+## photo_guide——🆕新风格专属·摄影可执行翻译
+
+🚨 当 kb_status 为 🆕新发现 时，必须填写 photo_guide 字段。
+这是给后续方案生成 AI 的「摄影翻译」——把美学概念变成按快门前能做的事。
+如果 kb_status 为 📚已有记录，photo_guide 填空字符串 ""。
+
+photo_guide 格式（直接复制这个模板填写）：
+🎯 前期拍法（拍摄现场能操作的——不是后期滤镜）：
+- 光线核心：（需要什么光质和方向？现场怎么获得或模拟？）
+- 色彩控制：（色调偏移方向？饱和度范围？什么颜色该避开？）
+- 构图：（景别偏好？留白比例？空间策略？）
+- 其他前期操作：（穿搭/场景选择/道具/前景制造——只写前期能做的）
+❌ 禁止：（列出绝对不能做的事——硬阴影/特定颜色/杂乱背景等）
+📎 技法类比：（从知识库已有风格中找1-2个技法路径最接近的，如"日系清新（柔光+低饱和）"）
+📱 后期方向：（仅调色参考——鲜明度/HSL/色温/曲线——不混入前期字段）
+
+🚨 关键原则：
+- 每个要点必须回答"拍摄现场怎么做"——不是"画面应该是什么效果"
+- ✅ "找纱帘挡在窗户和主体之间柔化光线" ❌ "光线应该柔和温暖"
+- photo_guide 是未来入库知识库的草稿——写好了下次有人选这个风格就能直接用
+
 ## fold_details——折叠详情文案
 
 每条方向配套一段社媒风文案（字段名 fold_details）。
@@ -560,10 +581,11 @@ fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风文案...\\n\\n灵
       "fit_rationale": "风格-场景适配逻辑（1-2句）",
       "light_annotation": "🟢/🟡/🔴", "device_annotation": "🟢直接拍/🟡微调/🟠替代方案",
       "style_brief": {{"essence":"","color":"","composition":"","light":"","mood":""}},
+      "photo_guide": "🆕新发现时填写（格式见上文photo_guide模板）；📚已有记录填空字符串",
       "plans": []
     }},
-    {{"id":"best","emoji":"🔥","label":"最出片","subtitle":"发出去会被赞的那种","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]}},
-    {{"id":"creative","emoji":"✨","label":"脑洞大开","subtitle":"不像游客照的视角","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]}}
+    {{"id":"best","emoji":"🔥","label":"最出片","subtitle":"发出去会被赞的那种","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"photo_guide":"","plans":[]}},
+    {{"id":"creative","emoji":"✨","label":"脑洞大开","subtitle":"不像游客照的视角","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"photo_guide":"","plans":[]}}
   ],
   "fold_details": {{ "now": "▼ 为什么选这个\\n\\n...", "best": "...", "creative": "..." }}
 }}
@@ -1039,6 +1061,8 @@ PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可�
 
 ### 这个风格为什么适合这张照片
 {direction_detail}
+
+{photo_guide}
 
 ## 设备信息
 {device_context}
@@ -2887,6 +2911,14 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     fold_details = session.get('fold_details', {})
     direction_detail = fold_details.get(direction_id, '')
 
+    # ── 🆕 photo_guide：新风格专属摄影翻译（已有记录的风格为空）──
+    photo_guide_raw = direction.get('photo_guide', '') or ''
+    if photo_guide_raw.strip():
+        photo_guide = f"## 🎯 摄影翻译（🆕新风格专属——由方向阶段 AI 翻译）\n{photo_guide_raw.strip()}"
+        print(f"[Plans] photo_guide injected: {len(photo_guide)} chars for new style", file=sys.stderr, flush=True)
+    else:
+        photo_guide = ""
+
     # 构建 style_brief 文本
     sb = direction.get('style_brief', {}) or {}
     if sb and isinstance(sb, dict):
@@ -2913,6 +2945,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         style_brief=style_brief_text,
         reason=direction.get('reason', ''),
         direction_detail=direction_detail if direction_detail else direction.get('reason', ''),
+        photo_guide=photo_guide,
         scene_tier=session['scene_tier'],
         tier_constraint=tier_constraint,
         device_constraints=device_constraints,
@@ -3483,6 +3516,188 @@ def admin_promote_discovery():
 def admin_delete_discovery():
     """搜索已移除——此端点保留兼容性"""
     return jsonify({"error": "搜索功能已移除"}), 410
+
+
+# ── 🆕 新风格入库（AI 发现的风格 → 知识库）──
+@app.route('/admin/add-style-to-kb', methods=['POST'])
+@login_required
+def admin_add_style_to_kb():
+    """将 AI 新发现的风格加入知识库。
+
+    POST body: {"session_id": "...", "direction_id": "now|best|creative", "apply": false}
+    - 从 session 中提取风格的 photo_guide
+    - 在 cross-media-styles/ 下创建 .md 文件
+    - 返回 markdown 内容 + knowledge_base.py 代码片段
+    - apply=true 时自动追加到 knowledge_base.py
+    """
+    import re as _re
+    data = request.get_json() or {}
+    session_id = data.get('session_id', '').strip()
+    direction_id = data.get('direction_id', '').strip()
+    apply_kb = data.get('apply', False)
+
+    if not session_id or not direction_id:
+        return jsonify({"error": "缺少 session_id 或 direction_id"}), 400
+
+    # 加载 session
+    session = get_session(session_id)
+    if not session:
+        return jsonify({"error": f"Session 未找到: {session_id}"}), 404
+
+    # 查找方向
+    direction = None
+    for d in session.get('directions', []):
+        if d.get('id') == direction_id:
+            direction = d
+            break
+    if not direction:
+        return jsonify({"error": f"未找到方向 {direction_id}"}), 404
+
+    style_name = (direction.get('style') or '').strip()
+    kb_status = (direction.get('kb_status') or '').strip()
+    photo_guide = (direction.get('photo_guide') or '').strip()
+    style_brief = direction.get('style_brief', {}) or {}
+    style_promise = (direction.get('style_promise') or '').strip()
+
+    if not style_name:
+        return jsonify({"error": "方向中无 style 字段"}), 400
+    if '已有记录' in kb_status:
+        return jsonify({"error": f"风格「{style_name}」已标记为 {kb_status}——不需要入库"}), 400
+    if not photo_guide:
+        return jsonify({"error": f"风格「{style_name}」无 photo_guide——方向阶段 AI 未生成摄影翻译"}), 400
+
+    # 生成 slug
+    slug = _re.sub(r'[^\w\s-]', '', style_name.lower().replace(' ', '-'))
+    slug = _re.sub(r'[-\s]+', '-', slug).strip('-') or f"style-{date.today().isoformat()}"
+
+    # 构建 one_liner
+    sb_parts = []
+    if style_brief.get('essence'):
+        sb_parts.append(style_brief['essence'])
+    if style_promise:
+        sb_parts.append(style_promise)
+    one_liner = '。'.join(sb_parts) if sb_parts else style_name
+
+    # 生成 markdown
+    today = date.today().isoformat()
+    md_content = f"""---
+id: KB-CMS-AUTO-{today}
+domain: cross-media-styles
+tags: [{style_name}, AI发现, 待验证]
+level: basic
+status: ai_discovered
+source: [AI 自由探索发现, guidepic.cn session={session_id}]
+---
+
+# {style_name}
+
+## 媒介源头
+
+**AI 自由探索发现。** {style_brief.get('essence', style_promise)}
+
+## 一句话识别
+
+{one_liner}
+
+## 色彩
+
+{style_brief.get('color', '（从 photo_guide 提取）')}
+
+## 光线
+
+{style_brief.get('light', '（从 photo_guide 提取）')}
+
+## 构图
+
+{style_brief.get('composition', '（从方案实践中提取）')}
+
+## 前期可操作技法（AI 翻译——待验证）
+
+{photo_guide}
+
+## 情绪氛围
+
+{style_brief.get('mood', '（待补充）')}
+
+---
+> 采集日期：{today} | via AI 自由探索 · guidepic.cn
+> 状态：待验证——管理员审核后可提升为 mvp
+"""
+
+    # 写入文件
+    cms_dir = os.path.join(os.path.dirname(__file__), '..', '.claude', 'skills', 'daipai', 'knowledge', 'cross-media-styles')
+    cms_dir = os.path.abspath(cms_dir)
+    os.makedirs(cms_dir, exist_ok=True)
+    md_path = os.path.join(cms_dir, f"{slug}.md")
+
+    file_action = 'created'
+    if os.path.exists(md_path):
+        file_action = 'overwritten'
+
+    with open(md_path, 'w') as f:
+        f.write(md_content)
+
+    # 生成 knowledge_base.py 代码片段
+    one_liner_entry = f'    "{style_name}": "{one_liner}",'
+    pg_escaped = photo_guide.replace('"""', '\\"\\"\\"')
+    photo_params_entry = f'''    "{style_name}": """**{style_name} · 摄影可执行参数**
+{pg_escaped}
+📎 技法锚点：（人工审核后补充）""",'''
+
+    kb_snippet = f"""
+# === 添加到 CROSS_MEDIA_STYLE_ONE_LINERS（"老钱静奢" 之后）===
+{one_liner_entry}
+
+# === 添加到 CROSS_MEDIA_PHOTO_PARAMS（"奶油风" 条目之后）===
+{photo_params_entry}
+"""
+
+    # 可选：自动应用到 knowledge_base.py
+    kb_updated = False
+    if apply_kb:
+        kb_py = os.path.join(os.path.dirname(__file__), 'knowledge_base.py')
+        if os.path.exists(kb_py):
+            with open(kb_py, 'r') as f:
+                kb_content = f.read()
+
+            # 追加 one_liner
+            marker = '"老钱静奢":'
+            if marker in kb_content and style_name not in kb_content[:kb_content.find('CROSS_MEDIA_PHOTO_PARAMS')]:
+                lines = kb_content.split('\n')
+                new_lines = []
+                for line in lines:
+                    new_lines.append(line)
+                    if marker in line:
+                        new_lines.append(f'    "{style_name}": "{one_liner}",')
+                kb_content = '\n'.join(new_lines)
+
+            # 追加 PHOTO_PARAMS
+            marker2 = '📎 技法锚点：日系清新（米白奶咖+柔和到无阴影+高明度低对比）"""'
+            if marker2 in kb_content:
+                insert_pos = kb_content.find(marker2) + len(marker2) + 4  # after """,
+                kb_content = kb_content[:insert_pos] + '\n' + photo_params_entry.replace('}}', '') + kb_content[insert_pos:]
+                kb_updated = True
+
+            if kb_updated:
+                with open(kb_py, 'w') as f:
+                    f.write(kb_content)
+
+    return jsonify({
+        "success": True,
+        "style_name": style_name,
+        "slug": slug,
+        "md_path": md_path,
+        "file_action": file_action,
+        "md_content": md_content,
+        "kb_snippet": kb_snippet,
+        "kb_updated": kb_updated,
+        "next_steps": [
+            f"1. 审核 {md_path} 的内容",
+            "2. 手动补充「构图」「穿搭」等章节",
+            "3. 将 kb_snippet 中的代码添加到 knowledge_base.py（如未自动应用）",
+            "4. git commit + push 部署"
+        ]
+    })
 
 
 # ── 数据导入（本地 → 生产同步）──
