@@ -43,3 +43,7 @@ build/
 *.db
 *.db-shm
 *.db-wal
+
+# Runtime data
+mobile-tester/sessions/
+mobile-tester/recent_analyses/

@@ -56,9 +56,15 @@ _plan_generating_lock = threading.Lock()
 # Session 存储
 _sessions: dict[str, dict] = {}
 _SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "sessions")
+# 本地分析留存目录——每次分析完存一份，方便代码改动后对比
+_RECENT_DIR = os.path.join(os.path.dirname(__file__), "recent_analyses")
 
 def _session_path(session_id):
     return os.path.join(_SESSIONS_DIR, f"{session_id}.json")
+
+def _img_path(session_id):
+    """图片单独存文件——避免 600KB base64 撑爆 JSON"""
+    return os.path.join(_SESSIONS_DIR, f"{session_id}.img")
 
 def _save_session(session_id):
     sess = _sessions.get(session_id)
@@ -66,6 +72,14 @@ def _save_session(session_id):
         return
     try:
         os.makedirs(_SESSIONS_DIR, exist_ok=True)
+        # 图片单独写文件——不在 JSON 里塞 base64
+        img_b64 = sess.get("img_b64", "")
+        if img_b64:
+            try:
+                with open(_img_path(session_id), "w", encoding="utf-8") as f:
+                    f.write(img_b64)
+            except Exception as e:
+                print(f"[Session] Image save failed {session_id}: {e}", file=sys.stderr, flush=True)
         data = {
             "session_id": session_id,
             "created_at": sess.get("created_at", 0),
@@ -84,7 +98,8 @@ def _save_session(session_id):
             "client_ip": sess.get("client_ip"),
             "daily_count_key": sess.get("daily_count_key", ""),
             "plan_cache": sess.get("plan_cache", {}),
-            "img_b64": sess.get("img_b64", ""),
+            # 只存标记，不存 base64 数据
+            "has_img": bool(sess.get("img_b64", "")),
             "scene_mode": sess.get("scene_mode", ""),
         }
         with open(_session_path(session_id), "w", encoding="utf-8") as f:
@@ -102,7 +117,23 @@ def _load_session_from_disk(session_id):
         if time.time() - data.get("created_at", 0) > SESSION_TTL:
             try: os.remove(path)
             except: pass
+            # 同时清理图片文件
+            try: os.remove(_img_path(session_id))
+            except: pass
             return None
+        # 从独立文件加载图片（新版）或从 JSON 字段兼容旧数据
+        img_b64 = ""
+        if data.get("has_img"):
+            img_path = _img_path(session_id)
+            if os.path.exists(img_path):
+                try:
+                    with open(img_path, "r", encoding="utf-8") as f:
+                        img_b64 = f.read()
+                except Exception:
+                    pass
+        if not img_b64:
+            # 兼容旧格式（img_b64 直接存在 JSON 里）
+            img_b64 = data.get("img_b64", "") or ""
         sess = {
             "vision_json": data.get("vision_json"),
             "exif_summary": data.get("exif_summary"),
@@ -121,13 +152,13 @@ def _load_session_from_disk(session_id):
             "insight": data.get("insight", ""),
             "daily_count_key": data.get("daily_count_key", ""),
             "plan_cache": data.get("plan_cache", {}),
-            "img_b64": data.get("img_b64", ""),
+            "img_b64": img_b64,
             "scene_mode": data.get("scene_mode", ""),
         }
         if sess["photo_path"] and not os.path.exists(sess["photo_path"]):
             sess["photo_path"] = ""
         _sessions[session_id] = sess
-        print(f"[Session] Restored from disk: {session_id}", file=sys.stderr, flush=True)
+        print(f"[Session] Restored from disk: {session_id} (img={'yes' if img_b64 else 'no'})", file=sys.stderr, flush=True)
         return sess
     except Exception as e:
         print(f"[Session] Load failed {session_id}: {e}", file=sys.stderr, flush=True)
@@ -1615,6 +1646,8 @@ def get_session(session_id):
         del _sessions[session_id]
         try: os.remove(_session_path(session_id))
         except: pass
+        try: os.remove(_img_path(session_id))
+        except: pass
         return None
     return sess
 
@@ -1625,6 +1658,10 @@ def _cleanup_old_sessions():
     expired = [sid for sid, s in _sessions.items() if now - s['created_at'] > SESSION_TTL]
     for sid in expired:
         del _sessions[sid]
+        try: os.remove(_session_path(sid))
+        except: pass
+        try: os.remove(_img_path(sid))
+        except: pass
 
 
 # ============================================================
@@ -2772,6 +2809,58 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             sess['fold_details'] = fold_details
             sess['scene_mode'] = scene_mode  # 记住场景模式，方案生成时复用
             _save_session(session_id)  # 立即持久化到磁盘，防止重启丢图片
+
+        # ── 📋 本地分析留存：每次分析完保存视觉数据，方便代码改动后对比 ──
+        try:
+            os.makedirs(_RECENT_DIR, exist_ok=True)
+            recent = {
+                "session_id": session_id,
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "scene_category": scene_category,
+                "scene_mode": scene_mode,
+                "scene_tier": scene_tier,
+                "scene_type": scene_type,
+                "insight": insight,
+                "device_key": final_device_key,
+                "vision_json": vision_json,
+                "exif_summary": exif_summary,
+                "directions": [{
+                    "id": d.get("id"),
+                    "style": d.get("style"),
+                    "kb_status": d.get("kb_status"),
+                    "style_promise": d.get("style_promise"),
+                    "style_brief": d.get("style_brief"),
+                    "photo_guide": d.get("photo_guide"),
+                } for d in directions],
+            }
+            recent_path = os.path.join(_RECENT_DIR, f"{session_id}.json")
+            with open(recent_path, "w", encoding="utf-8") as f:
+                json.dump(recent, f, ensure_ascii=False, indent=2)
+            # 更新索引
+            index_path = os.path.join(_RECENT_DIR, "_index.json")
+            index_entries = []
+            if os.path.exists(index_path):
+                try:
+                    with open(index_path) as f:
+                        index_entries = json.load(f)
+                except:
+                    pass
+            index_entries.insert(0, {
+                "session_id": session_id,
+                "timestamp": recent["timestamp"],
+                "scene_category": scene_category,
+                "scene_mode": scene_mode,
+                "scene_tier": scene_tier,
+                "scene_type": scene_type[:80],
+                "styles": [d.get("style", "") for d in directions],
+            })
+            # 只保留最近 50 条
+            index_entries = index_entries[:50]
+            with open(index_path, "w", encoding="utf-8") as f:
+                json.dump(index_entries, f, ensure_ascii=False, indent=2)
+            print(f"[Recent] Saved analysis: {recent_path}", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"[Recent] Save failed: {e}", file=sys.stderr, flush=True)
 
         # ── 完成 ──
         total_time = round(time.time() - t0, 1)
