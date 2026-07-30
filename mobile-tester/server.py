@@ -573,7 +573,8 @@ directions 必须是数组 []，不是对象 {{}}！"""
 
 
 # ============================================================
-# 🏙️ 城市街拍——知识库 & 专用 Prompt
+# 🏙️ 场景知识注册表——注入统一流程（不创建平行路径）
+# 每增加新场景只需：定义知识 + 关键词 → 自动注入现有 Prompt
 # ============================================================
 STREET_KNOWLEDGE = """
 ## 🏙️ 城市街拍知识库
@@ -638,158 +639,363 @@ STREET_KNOWLEDGE = """
 - 曝光补偿下拉：逆光场景下拉-1EV保住高光，人脸可以后期提亮
 """
 
-STREET_DIRECTIONS_PROMPT = """你是街头摄影专家。你的知识覆盖 Cartier-Bresson、Saul Leiter、Alex Webb、Vivian Maier、Fan Ho、森山大道等大师的观看方式，以及小红书/Instagram/TikTok 上流行的街拍风格。
 
-## 🧭 工作流程
+# ============================================================
+# 🐱 宠物拍摄——知识库
+# ============================================================
+PET_KNOWLEDGE = """
+## 🐱 宠物拍摄知识库
 
-与通用模式相同——先自由联想 → 后知识库对照 → 最后设备现实检查。但你的**审美坐标系是街头摄影**。
+### 核心理念
+宠物最美的状态永远是做它自己的时候。不是"让宠物配合你"，而是"你去配合宠物"——观察它的习惯、预判它的动作、在它最放松的时刻按下快门。
 
----
-## 阶段 1：自由联想——从街头视角看这张照片
+### 光线策略
 
-{vision_json}
+**自然光优先——严禁闪光灯**
+- 最佳时段：上午9-11点或下午3-5点，光线柔和，色温4500K-5500K，最能真实呈现毛色与质感
+- 窗边逆光：早晨或傍晚的柔和光线让宠物毛发边缘发光，质感绝佳
+- 严禁闪光灯：会造成红眼效应、扁平化立体感，且对宠物眼睛有害、容易吓到它们
+- 简易反光板：白色A4纸或白色浴巾放在暗处反射光线，省钱又好用
 
-{exif_summary}
+**进阶布光**
+- 伦勃朗光：让宠物面部与窗户呈45度角，调整位置直到眼睛另一侧阴影区出现倒三角形光斑，充满戏剧张力
+- 百叶窗/树影光斑：利用百叶窗投射的平行光带，或午后阳光透过树叶形成的散点光斑，天然营造明暗节奏
+- 室内拍摄时关掉顶灯，只留自然窗光——阴影更柔和，质感自然呈现
 
-{exif_cross_check}
+### 构图法则
 
-**你已经看过这张照片的视觉数据。现在用街头摄影师的眼睛重新看：**
+**低角度平视——最重要的法则**
+- 蹲下、坐下甚至趴下，让手机镜头与宠物眼睛基本持平
+- 相比俯拍，平视构图让画面故事感立现，宠物显得更有尊严
+- 超广角低角度：手机平贴地面（离地3-5厘米），镜头略仰10-15度，开启0.5x超广角，营造"仰拍英雄感"
 
-1. **光在哪里？** 光从哪个方向来？哪些区域是亮的、哪些是暗的？光在街景中制造了什么形状？有没有光缝、反射、斑驳、剪影的机会？
+**三分法与视线留白**
+- 将宠物眼睛置于画面三分线交叉点
+- 在宠物视线方向预留1/3画幅空间，画面呼吸感明显提升
+- 加入纱帘、绿植等虚化前景，增加层次
 
-2. **几何在哪里？** 建筑线条如何分割画面？有没有天然的框架（门洞/拱廊/桥洞）？地砖/栏杆/电线/路标有没有制造引导线？阴影的边缘在哪里——它们是硬的还是柔的？
+**长焦虚化——退后两步更出片**
+- 2x或3x长焦在3-5米距离下表现最佳，压缩感强、边缘识别准
+- 背景与宠物相距2米以上，选择纯色墙面、远处树林或空旷草地
+- 避免广角近拍：主摄凑太近会产生桶状畸变，鼻子变大、耳朵后缩
+- 退后两步切长焦，成功率提升十倍
 
-3. **人会在哪里？** 如果这是有人经过的街道——大多数人走哪条路线？他们会在哪个位置被光照亮？有没有一个位置是"等人走过来就完美了"的？
+**对角线引导**
+- 手臂从镜头斜上方45°伸出零食/逗猫棒，形成天然对角线引导线
+- 对焦鼻子，锁定眼神光和耳朵动态
 
-4. **层次在哪里？** 前景能找到什么遮挡物（树/栏杆/橱窗）？中景的主体空间是什么？背景给什么城市语境？
+### 抓拍技法
 
-5. **这个街角/这条路/这片光影让你联想到哪位摄影师的观看方式？**
+**快门速度是关键**
+- 手机专业模式下快门（S）锁到1/500秒以上，光线好可怼到1/1000秒
+- 快门低于1/125秒时，90%以上动态画面出现拖影
+- 提升至1/250秒后清晰率升至76%，配合自然光成功率可达92%
 
-{street_knowledge}
+**连拍是保底大招**
+- 长按快门不松手，一秒拍摄十几到几十张，从中筛选眼睛锐利、姿态舒展的一张
+- 连拍比单张捕捉率提升90%以上
+- 活泼好动的宠物，单张拍摄永远抓不到最精彩瞬间
 
----
-## 阶段 2：知识库对照
+**连续对焦与运动追焦**
+- 切换到连续对焦（AF-C）模式，手机会自动跟踪移动目标
+- 各品牌追焦：华为/荣耀「鹰眼精彩抓拍」、小米/红米「AI万物追焦」、OPPO/vivo「运动抓拍」、iPhone「运动模式」
+- 追焦锁定：长按屏幕锁定宠物必经位置的对焦和曝光，等宠物自己走进框内
 
-{knowledge_context}
+**Live Photo/实况模式**
+- 苹果Live Photo，安卓动态照片——连续记录1.5秒内30帧画面
+- 单帧快门捕获理想神态的概率低于15%，Live Photo大幅降低错过率
 
-为每个方向标注 📚已有记录 或 🆕新发现。
+### 最值得抓拍的瞬间
+- 打哈欠、伸懒腰的时候——表情最松弛自然
+- 专注吃东西、玩玩具的时候——眼神最亮
+- 睡觉时的各种奇葩姿势——最治愈
+- 喝水时耳朵轻微震颤、追逐玩具途中瞳孔收缩
+- 和主人互动的时候——最真实的情感流露
 
----
-## 阶段 3：设备现实检查
+### 引导技巧
+- 声音吸引：叫名字、吹口哨、捏塑料袋、摇零食罐子
+- 零食/玩具引导：将零食置于手机上方15-30厘米处，稳定触发抬头动作
+- 道具增添趣味：小帽子、小围巾、泡泡（逆光下形成透明球体，强化空气感）
 
-{device_context}
+### 后期要点
+- 阴影+25至+35，高光-15至-25，还原毛发纹理与眼睛高光层次
+- 清晰度+10至+15，强化毛发绒感，勿超过+20以免塑料质感
+- 对焦务必对在眼睛上——眼睛清晰，整张照片就活了
+- 拍完等稳了再动——手机需要0.5-1秒完成多帧合成，过早移动导致糊片
 
-{env_context}
+### 安全与伦理
+- 观察宠物情绪：出现飞机耳、尾巴狂甩、频繁舔嘴唇等压力信号时，立即停止拍摄
+- 不强迫宠物做任何它不愿意的动作
+- 出门一定用牵引绳，安全永远第一
+"""
 
-{fast_path_note}
+# ============================================================
+# 🏠 居家生活感——知识库
+# ============================================================
+HOME_KNOWLEDGE = """
+## 🏠 居家生活感拍摄知识库
 
----
-## 输出：三条街拍方向
+### 核心理念
+不是房子有多贵，而是如何用光线讲好家的故事。居家生活感的核心是"松弛"——慢下来，感受风、光影、布料的触感，然后诚实地记录下来。生活痕迹（翻到一半的杂志、冒着热气的茶杯）比刻意摆放更有感染力。
 
-从你的街头探索中选出三条，写入三个固定槽位：
+### 窗光是灵魂
 
-### 📐 几何构图 — 必有
-利用场景中的建筑线条、光影分割、透视引导线。这张照片里最强的几何元素是什么？怎么把它变成构图的主心骨？
-→ **适合谁**：想要画面干净、有设计感的用户
+**最佳拍摄时间**
+- 下午2点-5点是黄金时段，光线柔和，光影美
+- 下午4点半左右落日余晖时分，光影特别美，是氛围感的关键
+- 上午9-10点的光线同样柔和可用
+- 需要晴天拍摄——阴天室内光线不够，画面会偏黑不通透
 
-### ⏱️ 决定性瞬间 — 有则放
-找到一个完美的"等待位置"——在这里站定，等人/车/鸟/光影变化进入画面的那一秒按下快门。
-→ **适合谁**：愿意花几分钟等待一张好照片的用户
+**窗边拍摄技巧**
+- 利用侧光或侧逆光，让光线从侧面打进来——人物轮廓柔和，自带柔光效果
+- 避免面部直冲窗户，不要有太硬的阳光直射脸上
+- 拉低曝光是关键技巧——根据环境光照程度调节，让画面更有氛围
+- 关掉室内所有顶灯，只让自然光进入——阴影更柔和，质感自然呈现
+- 如果光线太强，窗外挂一块白色床单当作柔光幕
+- 百叶窗投射的条纹光影是天然的构图利器
 
-### 🎭 街头戏剧 — 宁缺毋滥
-多层次的复杂构图——前景遮挡+中景主体+背景语境，或反射/投影/并置的视觉游戏。一张照片里至少发生两件事。
-→ **适合谁**：想拍出"看不懂但很厉害"的照片的用户
+### 穿搭法则——氛围感的一半
 
----
-## 创作原则
+- 选择宽松舒适、材质柔软的家居服（毛衣、棉麻衬衫、T恤、格子长裤）
+- 不要太花哨，简单干净的款式
+- 优选低饱和色系：米白、燕麦色、雾灰、藏青
+- 天然材质（棉、麻、羊毛）在光影下更显高级
+- 避雷：亮片、反光材质、大logo、夸张设计
 
-1. 每条 direction 必须引用 ≥1 个场景中的具体视觉锚点（光线位置/建筑线条/阴影形状/街角特征）
-2. 三条方向各不相同，覆盖几何/瞬间/层次三种街头审美
-3. 📐必有实质内容。⏱️尽量有内容。🎭宁缺毋滥
-4. 忠于实际光线——硬光推几何与剪影，柔光推色彩与氛围，暗光推高对比黑白
-5. style_promise 必须让人能想象出最终画面
+### 布景与道具
 
-## style_brief——街头风格视觉特征速写
+**随手可取的道具**
+水杯、枕头、书本、水果、咖啡杯、杂志、眼镜、白色耳机、绿植——和道具互动能避免手足无措
 
-{{
-  "essence": "一句话定义（≤20字）",
-  "color": "色彩策略（≤30字）",
-  "composition": "构图偏好（≤30字）",
-  "light": "光线偏好（≤30字）",
-  "mood": "情绪氛围（≤20字）"
-}}
+**布景三层次**
+创造三个视觉层次：前景（茶几上的果盘）→ 中景（散落的靠垫）→ 背景（窗帘或装饰画），让空间瞬间深邃
 
-## fold_details——社媒风文案（同通用格式）
+**生活痕迹是最佳道具**
+翻到一半的杂志、冒着热气的茶杯、搭在沙发上的毯子——这些"未完成状态"比刻意摆放更有感染力
 
-## 输出格式（同通用模式的 JSON schema）
+**按下快门前花三分钟清理杂物**
+充电线、遥控器、快递盒——干净背景让光线聚焦在美感上
 
-{{
-  "insight": "1-2句街拍视角描述——看到什么、觉得可以怎么拍。不说空话。",
-  "scene_tier": "🥇",
-  "discovery_note": "🆕 新发现说明",
-  "directions": [
-    {{
-      "id": "geometry", "emoji": "📐", "label": "几何构图", "subtitle": "让建筑替你构图",
-      "style": "风格名（中文）",
-      "kb_status": "📚 或 🆕",
-      "style_promise": "1句话——拍出来什么画面",
-      "reason": "为什么这个几何元素值得被拍（60-100字）",
-      "fit_rationale": "风格-场景适配逻辑",
-      "light_annotation": "🟢/🟡/🔴", "device_annotation": "🟢直接拍/🟡微调/🟠替代方案",
-      "style_brief": {{"essence":"","color":"","composition":"","light":"","mood":""}},
-      "plans": []
-    }},
-    {{
-      "id": "moment", "emoji": "⏱️", "label": "决定性瞬间", "subtitle": "等一个人走进光里",
-      "style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"",
-      "style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]
-    }},
-    {{
-      "id": "drama", "emoji": "🎭", "label": "街头戏剧", "subtitle": "一张照片两个世界",
-      "style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"",
-      "style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]
-    }}
-  ],
-  "fold_details": {{ "geometry": "▼ 几何分析\\n\\n...", "moment": "...", "drama": "..." }}
-}}
+### 构图技巧
 
-📐必有实质内容。⏱️尽量有内容，与📐互补。🎭无灵感时全部null。
-directions 必须是数组 []。"""
+**三分法与留白**
+- 人物偏左或偏右，留出空白更有呼吸感和故事感
+- 将视觉焦点放在三分线交叉点
 
-STREET_PLANS_CONTEXT = """
-## 🏙️ 街拍执行原则
+**不看镜头**
+- 侧脸、低头、背影更自然，氛围感拉满
+- 回想自己平时宅家做什么，然后真实地去拍
 
-你是街头摄影指导——不是旅行规划师。你的方案必须让用户**在街头完成拍摄**，不是做后期。
+**前景虚化**
+- 利用树叶、杯子、窗帘边缘做虚化前景，增加层次感
 
-### 街拍特有的执行维度
+**框景构图**
+- 用窗框、门廊、镜子当作天然相框
+- 对镜自拍：镜子是居家摄影最被低估的工具
 
-**站位与等待（写进 shooter）：**
+**俯拍45度**
+- 拍桌面/美食时手机抬高45°，加入小物件，生活感满分
+
+**非常规视角**
+- 手机贴墙拍走廊、举高俯拍——改变视角就是改变故事
+- 手机三脚架调整不同机位，先拍空镜调整构图
+- 轻微抖动拍模糊效果，制造朦胧氛围感
+
+### 光线氛围营造
+
+**不同时段的光线性格**
+- 清晨（6-8点）：冷调青蓝色，适合拍起床后的慵懒感
+- 上午（9-11点）：明亮通透，适合拍干净清爽的居家画面
+- 午后（2-5点）：黄金时段，暖调柔光，适合拍温馨氛围
+- 傍晚蓝调时刻（日落前后20分钟）：室内开一盏暖灯，窗外冷蓝色调形成冷暖对比
+
+**人造光技巧（没有自然光时）**
+- 一盏暖色台灯（2700K-3000K）从侧面打光——模拟窗光效果
+- 灯光不要直射——打在墙面或天花板反射回来，光线更柔
+- 多光源分层：主光源+环境光+点缀光（如香薰蜡烛）
+
+### 后期调色
+- 降低对比度约-15，让光影更柔和
+- 色温偏冷一点，营造清透感
+- 饱和度降低约-20——低饱和度是高级感王道
+- 添加少量锐化和颗粒，提升照片质感
+- 推荐App：Snapseed、醒图、VSCO
+
+### 一句话总结
+一件舒适的衣服 + 一个宁静的午后 + 一扇有光的窗 + 一部手机 = 属于你的氛围感居家照片
+"""
+SCENE_KNOWLEDGE_REGISTRY = {
+    "street": {
+        "keywords": [
+            # 直接街景词
+            "街道", "街头", "街景", "马路", "路边", "街边", "商业街", "临街",
+            "步行街", "巷", "胡同", "弄堂",
+            # 城市/建筑相关
+            "城市", "商圈", "路口", "人行道", "老城", "古镇", "骑楼",
+            "建筑群", "高楼", "CBD", "天际线", "立交桥", "天桥", "地下通道",
+            # 文化/活动相关
+            "街拍", "photowalk", "citywalk", "闹市", "集市", "市场", "广场"
+        ],
+        "knowledge_text": STREET_KNOWLEDGE,
+        "execution_principles": """
+### 站位与等待
 - 选好构图后站定不动——这是街拍最重要的原则
 - 预估人物/车辆/光影变化的路径，提前锁定焦点
 - 给出具体等待位置：站哪、面朝哪、离主体多远
 
-**时机判断（写进 subject/enhance）：**
+### 时机判断
 - 不是"摆姿势"——是"在正确的时间出现在正确的位置"
-- 给用户一个触发条件：看到什么就按快门（如"红绿灯变绿、人群开始流动的瞬间"）
+- 给用户一个触发条件：看到什么就按快门
 - 连拍模式：按住快门不放，每秒3-5张，后期从20张里选1张
 
-**光线优先（写进 gear/enhance）：**
+### 光线优先
 - 街拍的光不是你能控制的——先确定光源位置，再决定站哪
-- 逆光街拍：曝光补偿-0.7到-1.3，保住高光氛围，人脸后期提亮
+- 逆光街拍：曝光补偿-0.7到-1.3，保住高光氛围
 - 阴影街拍：找光缝/建筑间隙，让光"切"出一个形状
 
-**手机街拍特化：**
+### 手机街拍特化
 - 音量键当快门（比点屏幕快半秒——决定性瞬间的半秒就是成败）
 - 28mm主摄退一步拍：把人拍进环境里，不要用人像模式虚化背景
-- 腰平高度：手机在腰部位置、屏幕朝上——视角更低、更自然、不引人注意
+- 腰平高度：手机在腰部位置、屏幕朝上——视角更低、更自然
 - 连拍优先：多拍不亏，10张里总有1张表情/步态/光影恰到好处的
-
-### 禁止的街拍错误
+""",
+        "forbidden_constraints": """
+### 街拍特有禁止
 - ❌ "让人摆一个自然的姿势"——街拍不是摆拍，是等来的
 - ❌ "用人像模式虚化背景"——街拍的背景是城市，是照片的一半灵魂
-- ❌ "换个滤镜/后期加颗粒就叫街拍"——森山大道的颗粒是Tri-X胶片+Rodinal显影的前期选择
-- ❌ "退远一点拍全景"——街拍越近越好，Robert Capa说过"如果你的照片不够好，是因为你不够近"
+- ❌ "换个滤镜/后期加颗粒就叫街拍"——颗粒是前期选择
+- ❌ "退远一点拍全景"——街拍越近越好
 """
+    },
+    "pet": {
+        "keywords": [
+            # 宠物类型
+            "猫", "狗", "宠物", "喵", "汪", "毛孩子", "主子", "喵星人", "汪星人",
+            "猫咪", "小狗", " puppy", " kitten", "仓鼠", "兔子", "鸟", "鱼",
+            # 宠物相关场景
+            "遛狗", "逗猫", "吸猫", "撸猫", "撸狗", "萌宠"
+        ],
+        "knowledge_text": PET_KNOWLEDGE,
+        "execution_principles": """
+### 低角度平视——铁律
+- 蹲下、坐下甚至趴下，手机镜头与宠物眼睛持平
+- 俯拍是最常见的错误——让宠物看起来又小又矮
+- 超广角贴地：手机离地3-5厘米，镜头略仰，营造英雄感
+
+### 抓拍优先
+- 宠物不会摆pose——连拍是唯一正确的方式
+- 长按快门不松手，每秒10-30张，从中选1张
+- 快门速度锁定1/500秒以上（光线好可到1/1000秒）
+- 开启连续对焦（AF-C），锁定宠物必经位置的焦点
+
+### 眼睛是灵魂
+- 对焦必须对在眼睛上——眼睛清晰整张照片就活了
+- 眼神光（catchlight）是宠物照片从"还行"到"惊艳"的关键
+- Live Photo/实况模式：1.5秒内30帧，选神态最佳的一帧
+
+### 光线策略
+- 严禁闪光灯——红眼、吓到宠物、对眼睛有害
+- 窗边自然光是宠物最好的灯光师
+- 百叶窗光斑、树影光斑天然营造明暗节奏
+
+### 引导而非强迫
+- 声音吸引：叫名字、吹口哨、摇零食罐
+- 零食/玩具置于手机上方15-30厘米，触发抬头动作
+- 观察压力信号（飞机耳/尾巴狂甩/舔嘴唇）→ 立即停止
+""",
+        "forbidden_constraints": """
+### 宠物拍摄特有禁止
+- ❌ 禁止使用闪光灯——对宠物眼睛有害且会吓到它们
+- ❌ 禁止俯拍（站着往下拍）——让宠物看起来矮小且缺乏尊重感
+- ❌ 禁止强迫宠物做动作——宠物不是模特，是家人
+- ❌ 禁止在主摄近距离拍宠物面部——鼻子变大耳朵后缩，退后两步用长焦
+- ❌ 禁止快门低于1/125秒拍动态——拖影废片率90%+
+- ❌ 出门不牵绳拍照——安全永远第一
+- ❌ 禁止在宠物有压力信号时继续拍摄
+"""
+    },
+    "home": {
+        "keywords": [
+            # 居家场景
+            "室内", "家里", "居家", "卧室", "客厅", "房间", "公寓", "家",
+            "沙发", "床", "窗边", "窗前", "阳台",
+            # 居家活动
+            "宅家", "宅", "窝在", "躺在", "趴窝",
+            # 氛围相关
+            "生活感", "氛围感", "温馨", "治愈", "松弛", "慵懒"
+        ],
+        "knowledge_text": HOME_KNOWLEDGE,
+        "execution_principles": """
+### 窗光是灵魂
+- 下午2-5点是黄金时段，光线柔和
+- 利用侧光或侧逆光——人物轮廓柔和，自带柔光效果
+- 关掉室内所有顶灯，只让自然光进入
+- 拉低曝光是关键——让画面更有氛围
+
+### 生活痕迹 > 刻意摆拍
+- 翻到一半的杂志、冒着热气的茶杯——这些"未完成状态"最有感染力
+- 回想自己平时宅家做什么，然后真实地去拍
+- 按下快门前花三分钟清理杂物（充电线、遥控器）
+
+### 不看镜头——氛围感的秘密
+- 侧脸、低头、背影比正对镜头自然十倍
+- 和道具互动（翻书、端杯子、靠窗发呆）避免手足无措
+- 动起来抓拍——放松自然就是最好看的
+
+### 布景三层次
+- 前景（茶几上的果盘/窗帘边缘虚化）→ 中景（散落的靠垫/人物）→ 背景（窗帘/装饰画）
+- 用窗框、门廊、镜子做天然相框
+
+### 非常规视角
+- 手机贴墙拍走廊、举高俯拍——改变视角就是改变故事
+- 俯拍45度拍桌面/美食，加入小物件
+""",
+        "forbidden_constraints": """
+### 居家拍摄特有禁止
+- ❌ 禁止开顶灯——破坏自然光的柔和氛围，阴影变硬
+- ❌ 禁止穿亮片/反光材质/大logo衣服——破坏居家松弛感
+- ❌ 禁止背景杂乱（充电线/快递盒/遥控器入镜）——三分钟清理是必须的
+- ❌ 禁止人物正对镜头僵硬站立——居家感的核心是"松弛"
+- ❌ 禁止阴天纯靠室内自然光拍摄——光线不够画面会偏黑不通透
+- ❌ 禁止窗边强光直射面部——过曝且生硬，拉低曝光或用床单柔光
+"""
+    },
+    # 未来场景示例:
+    # "cafe": {
+    #     "keywords": ["咖啡", "咖啡厅", "甜品店", "茶室", "书吧"],
+    #     "knowledge_text": CAFE_KNOWLEDGE,
+    #     "execution_principles": "...",
+    #     "forbidden_constraints": "..."
+    # },
+}
+
+
+def detect_scene_mode(scene_type, vision_json):
+    """从 scene_type + vision_json 检测场景模式。
+    返回 scene_mode 字符串（如 'street'）或 None（通用模式）。
+    """
+    if not scene_type:
+        return None
+    loc_clues = vision_json.get('location_clues', '') if isinstance(vision_json, dict) else ''
+    space_text = json.dumps(vision_json.get('space', {}), ensure_ascii=False) if isinstance(vision_json, dict) else ''
+    combined = f"{scene_type} {loc_clues} {space_text}"
+
+    for mode_name, config in SCENE_KNOWLEDGE_REGISTRY.items():
+        keywords = config.get("keywords", [])
+        if any(kw in combined for kw in keywords):
+            return mode_name
+    return None
+
+
+def build_scene_execution_context(scene_mode):
+    """返回场景执行原则文本，注入 PLANS_PROMPT 的 {scene_execution_context}。"""
+    if not scene_mode or scene_mode not in SCENE_KNOWLEDGE_REGISTRY:
+        return ""
+    principles = SCENE_KNOWLEDGE_REGISTRY[scene_mode].get("execution_principles", "")
+    if not principles:
+        return ""
+    return f"\n## 🎬 场景执行原则\n{principles}\n"
+
 
 
 # ============================================================
@@ -843,6 +1049,7 @@ PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可�
 ## 设备适配
 {device_knowledge}
 
+{scene_execution_context}
 {forbidden_constraints}
 
 ## 场景等级：{scene_tier}
@@ -1999,7 +2206,7 @@ def build_material_inventory(vision_json):
     return "\n".join(lines)
 
 
-def build_forbidden_constraints(device_key, lens_key=None):
+def build_forbidden_constraints(device_key, lens_key=None, scene_mode=None):
     """生成禁止型约束——直接排除不可实现的建议"""
     lines = ["## 🚫 禁止型约束（以下建议一律不可出现）\n"]
 
@@ -2040,6 +2247,12 @@ def build_forbidden_constraints(device_key, lens_key=None):
     lines.append("- ❌ 闪光灯直打+油性皮肤 → 面部油光反光=灾难")
     lines.append("- ❌ 逆光+深色背景+无补光 → 主体全黑剪影（除非这是目的）")
 
+    # ── 场景特有禁止项 ──
+    if scene_mode and scene_mode in SCENE_KNOWLEDGE_REGISTRY:
+        scene_forbidden = SCENE_KNOWLEDGE_REGISTRY[scene_mode].get("forbidden_constraints", "")
+        if scene_forbidden:
+            lines.append(scene_forbidden)
+
     return "\n".join(lines) + "\n"
 
 
@@ -2047,7 +2260,7 @@ def build_forbidden_constraints(device_key, lens_key=None):
 # 流式分析生成器（：渐进式——EXIF→场景→方向，方案按需）
 # ============================================================
 
-def analyze_photo_stream(image_path, device_override=None, lens_key=None, client_ip=None, scene_mode=None):
+def analyze_photo_stream(image_path, device_override=None, lens_key=None, client_ip=None):
     """流式照片分析——SSE 事件生成器
     阶段：EXIF → 视觉分析 → 方向卡片（不含方案）
     方案由 /analyze/plans 按需生成
@@ -2259,6 +2472,11 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         location_clues = vision_json.get('location_clues', '')
         scene_category = extract_scene_category(scene_type, location_clues)
 
+        # ── 🎯 自动场景模式检测（融入统一流程，不创建平行路径）──
+        scene_mode = detect_scene_mode(scene_type, vision_json)
+        if scene_mode:
+            print(f"[SSE] 🎯 Auto-detected scene mode: {scene_mode}", file=sys.stderr, flush=True)
+
         # ── EXIF 交叉验证 ──
         exif_cross_check = ""
         if isinstance(exif_result, dict) and 'error' not in exif_result:
@@ -2308,6 +2526,13 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             fallback_level="medium"  # 固定权重——AI自由创作，KB作为参考
         )
         print(f"[SSE] Knowledge context: {len(knowledge_context)} chars", file=sys.stderr, flush=True)
+
+        # ── 场景知识注入（融入统一 knowledge_context，不替换 Prompt）──
+        if scene_mode and scene_mode in SCENE_KNOWLEDGE_REGISTRY:
+            scene_kb = SCENE_KNOWLEDGE_REGISTRY[scene_mode].get("knowledge_text", "")
+            if scene_kb:
+                knowledge_context = knowledge_context + "\n\n" + scene_kb
+                print(f"[SSE] Injected {scene_mode} knowledge: +{len(scene_kb)} chars", file=sys.stderr, flush=True)
 
         # ── 快速路径判断 ──
         fast_path_note = ""
@@ -2372,28 +2597,16 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         else:
             env_context = "（无可用环境数据）\n"
 
-        # ── 选择 Prompt（通用 vs 街拍）──
-        if scene_mode == 'street':
-            directions_prompt = STREET_DIRECTIONS_PROMPT.format(
-                vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
-                exif_summary=exif_summary,
-                exif_cross_check=exif_cross_check,
-                device_context=device_text,
-                knowledge_context=knowledge_context,
-                street_knowledge=STREET_KNOWLEDGE,
-                fast_path_note=fast_path_note,
-                env_context=env_context
-            )
-        else:
-            directions_prompt = DIRECTIONS_PROMPT.format(
-                vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
-                exif_summary=exif_summary,
-                exif_cross_check=exif_cross_check,
-                device_context=device_text,
-                knowledge_context=knowledge_context,
-                fast_path_note=fast_path_note,
-                env_context=env_context
-            )
+        # ── 统一 Prompt（场景知识已注入 knowledge_context，无需分支）──
+        directions_prompt = DIRECTIONS_PROMPT.format(
+            vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
+            exif_summary=exif_summary,
+            exif_cross_check=exif_cross_check,
+            device_context=device_text,
+            knowledge_context=knowledge_context,
+            fast_path_note=fast_path_note,
+            env_context=env_context
+        )
         print(f"[SSE] Directions prompt: {len(directions_prompt)} chars", file=sys.stderr, flush=True)
         directions_content, directions_usage = call_doubao([
             {"role": "user", "content": directions_prompt}
@@ -2653,8 +2866,9 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
 
     # 🆕 Stage 2 输入
     material_inventory = build_material_inventory(session.get('vision_json', {}))
-    forbidden_constraints = build_forbidden_constraints(device_key, lens_key)
+    forbidden_constraints = build_forbidden_constraints(device_key, lens_key, scene_mode=scene_mode or session.get('scene_mode'))
     scene_template = build_scene_template(session.get('vision_json', {}), scene_category)
+    scene_execution_context = build_scene_execution_context(scene_mode or session.get('scene_mode'))
 
     # 从 fold_details 获取方向详情
     fold_details = session.get('fold_details', {})
@@ -2692,11 +2906,8 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         env_context=session.get('env_context', ''),
         forbidden_constraints=forbidden_constraints,
         scene_template=scene_template,
+        scene_execution_context=scene_execution_context,
     )
-
-    # ── 街拍模式：注入街拍执行原则 ──
-    if scene_mode or session.get('scene_mode'):
-        plans_prompt = STREET_PLANS_CONTEXT + "\n\n" + plans_prompt
 
     print(f"[Plans] Prompt: {len(plans_prompt)} chars, direction={direction_id}, device={device_key}, mode={scene_mode or session.get('scene_mode', 'general')}", file=sys.stderr, flush=True)
 
@@ -2828,14 +3039,13 @@ def analyze():
     # 读取设备参数
     device_override = request.form.get('device', None) or None
     lens_key = request.form.get('lens', None) or None
-    scene_mode = request.form.get('scene_mode', None) or None  # 场景模式：None=通用, "street"=街拍
 
     _processing = True
     analyze._start_time = time.time()  # 记录开始时间供排队估算
 
     def cleanup_and_generate():
         try:
-            yield from analyze_photo_stream(tmp_path, device_override, lens_key, client_ip, scene_mode=scene_mode)
+            yield from analyze_photo_stream(tmp_path, device_override, lens_key, client_ip)
         finally:
             if os.path.exists(tmp_path):
                 try:

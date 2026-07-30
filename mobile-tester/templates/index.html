@@ -1476,6 +1476,7 @@ async function loadPlans(direction) {
 }
 
 function renderPlans(plans, direction) {
+  $('#errorMsg').classList.remove('show');
   activePlanIdx = 0;
   currentPlans = plans;
   const total = plans.length;
@@ -1646,22 +1647,27 @@ function renderPlanCard(p, i, direction) {
 
   let c = `<div class="plan-card-v5">`;
 
-  // ── 1. 效果预期 ──
-  if (p.result) {
-    c += `<div class="v5-item vibe"><div class="v5-label">✨ 效果预期</div><div class="v5-post-text">${esc(p.result)}</div></div>`;
+  // ── 1. 效果预期（社交媒体标题风）──
+  const socialTitle = p.name || '';
+  if (socialTitle) {
+    const comboLabel = p.combo_label || '';
+    c += `<div class="v5-item vibe"><div class="v5-label">✨ 效果预期</div>`;
+    c += `<div class="v5-social-title" style="font-size:16px;font-weight:700;color:${accent};line-height:1.5;margin-bottom:2px;">「${esc(socialTitle)}」</div>`;
+    if (comboLabel) c += `<div class="v5-social-sub" style="font-size:12px;color:var(--dimmer);">${esc(comboLabel)}</div>`;
+    c += `</div>`;
   }
 
-  // ── 2. 你怎么拍（shooter 全文 + gear 标签）──
+  // ── 2. 摄影师（shooter 全文 + gear 标签）──
   if (p.shooter || p.gear) {
-    c += `<div class="v5-item"><div class="v5-label">📍 你怎么拍</div>`;
+    c += `<div class="v5-item"><div class="v5-label">📷 摄影师</div>`;
     if (p.shooter) c += `<div class="v5-post-text">📷 ${esc(p.shooter)}</div>`;
     if (p.gear) c += `<div class="v5-tags"><span class="v5-tg gr">⚙️ ${esc(p.gear)}</span></div>`;
     c += `</div>`;
   }
 
-  // ── 3. 被摄者动作 ──
+  // ── 3. 拍摄对象 ──
   if (p.subject) {
-    c += `<div class="v5-item"><div class="v5-label">🧍 被摄者动作</div><div class="v5-tags">`;
+    c += `<div class="v5-item"><div class="v5-label">🧍 拍摄对象</div><div class="v5-tags">`;
     // Extract pose hints from subject text
     const subj = p.subject;
     const poseKeywords = [
@@ -1679,19 +1685,28 @@ function renderPlanCard(p, i, direction) {
     c += `</div><div class="v5-post-text">${esc(subj)}</div></div>`;
   }
 
-  // ── 4. 构图详解（折叠：enhance + why + prep + perspective）──
-  const detailItems = [];
-      if (p.prep) detailItems.push({i:'① 准备',t:p.prep});
-      if (p.enhance) detailItems.push({i:'② 增强',t:p.enhance});
-      if (p.why) detailItems.push({i:'③ 原理',t:p.why});
-      if (p.perspective) detailItems.push({i:'④ 视角',t:p.perspective});
-  if (detailItems.length) {
-    c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>📐 高级技巧</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
-      detailItems.forEach(d => { c += `<div class="v5-post-item"><span class="v5-pcat comp">${d.i}</span><span class="v5-post-text">${esc(d.t)}</span></div>`; });
+  // ── 4. 场景观察（折叠：为什么这样拍好看 — result + why）──
+  const observeItems = [];
+  if (p.result) observeItems.push({i:'📖 为什么好看',t:p.result});
+  if (p.why) observeItems.push({i:'💡 拍摄原理',t:p.why});
+  if (observeItems.length) {
+    c += `<div class="v5-detail" id="v5obs${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>🔍 场景观察</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
+    observeItems.forEach(d => { c += `<div class="v5-post-item"><span class="v5-pcat comp">${d.i}</span><span class="v5-post-text">${esc(d.t)}</span></div>`; });
     c += `</div></div></div>`;
   }
 
-  // ── 5. 一键修图（折叠面板）──
+  // ── 5. 技巧详解（折叠：prep + enhance + perspective）──
+  const techItems = [];
+  if (p.prep) techItems.push({i:'① 准备',t:p.prep});
+  if (p.enhance) techItems.push({i:'② 增强',t:p.enhance});
+  if (p.perspective) techItems.push({i:'③ 视角',t:p.perspective});
+  if (techItems.length) {
+    c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>🛠️ 技巧详解</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
+    techItems.forEach(d => { c += `<div class="v5-post-item"><span class="v5-pcat comp">${d.i}</span><span class="v5-post-text">${esc(d.t)}</span></div>`; });
+    c += `</div></div></div>`;
+  }
+
+  // ── 6. 一键修图（折叠面板）──
   const qe = p.quick_edit;
   if (qe && qe.steps && qe.steps.length) {
     c += `<div class="v5-post-wrap" id="v5post${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>✨ 一键修图</span><span class="ar">▼</span></div><div class="v5-post-body"><div class="v5-post-grid">`;

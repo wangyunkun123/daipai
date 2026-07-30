@@ -1,104 +1,45 @@
-我来说下我心目中完整的流程，你来分析一下是否可行。
-阶段 0：环境感知 ，用户发来找片，有两种情况，一是用户已经到现在随手拍的一张，可以 EXIF 提取照片现场信息。二是用户搜了一张看到想去的地方的图片，没有现场信息。这两种情况下用户也可能会补充信息，比如说几点去哪个地方，那地方大概有哪些景物。
-阶段 1：场景分析 ，调用豆包视觉识别用户图片信息，结合用户可能给到的信息，并利用大模型主动去手机拍摄场地的信息，对整个场景有清晰的认知。
-阶段 2：用户意图分析，结合用户的给到的图片和信息，来分析用户今天的拍摄意图，如果用户有给到关键的信息，下面的推荐围绕着用户的意图来推荐。如果用户没有给到关键的信息，则根据场景分析的结果，推荐一些可能的拍摄意图。
-阶段 3: 风格推荐，根据用户意图和场景分析的结果，推荐一些可能的风格。同时在互联网上搜索这个地方最流行的风格，以及能跟用户意图和场景的实际情况匹配上的摄影师，这个地方最流行的摄影师，用他们的视角来构思照片的拍摄。
-阶段 4: 方案生成，通过风格推荐这一阶段得到的风格，来做摄影方案策略，这里要考虑摄影基础理论、审美层、用户实现的可能性等等情况，确保每个策略都能落地。
-阶段 5：给用户选择方向，可以从好操作、社交媒体流行、这个地方大家都喜欢拍、摄影大师们的想法、创意融合风格等等，把适合用户的方向又可以实现的方案都呈现给用户。
-阶段 6: 方案展示，将用户选好有能落地的方案整理出来，让用户知道自己要拍的是什么，可给用语生图提示词，用生图的方式来直观的让用户知道拍完后的效果。
-阶段 7: 拍摄指导，给用户指定拍摄计划，并将所有专业术语进行翻译，引导用户一步步完成拍摄（如果用户用的是手机，后续还可能通过AR方案来实现引导）
-阶段 8: 成品分析，在不打断用户拍摄体验的情况下，对拍摄下来的照片进行评分，帮助用户后期选取照片。
-阶段 9: 后期修图，这是后续要做的功能，利用修图工具或者AI手段，将我们方案中给到的最终风格给还原出来。
-阶段 10:经验总结，将用户的整个拍摄内容，总结成可以用于分享的文案和模版，建立我们的摄影社区。
+# 城市街拍 · 场景知识注入 v2
 
+> 状态：✅ 本地部署完成，待测试验证
 
-  ⏺ 记好了。两份文件：
+---
+## 架构变更（v1 → v2）
 
-  - 计划文件：~/.claude/plans/foamy-crunching-stonebraker.md（144 行完整修复方案）
-  - 项目记忆：memory/mobile-tester-v3.4-gaps.md（关键发现摘要 + 修复顺序）
+v1 方向错了——街拍创建了平行 Prompt 路径（STREET_DIRECTIONS_PROMPT 替换 DIRECTIONS_PROMPT）。
+v2 改为**知识注入**：街拍知识融入统一流程，不创建平行路径。
 
-  姿势和避雷贴
+```
+Before（v1 错误）:                  After（v2 正确）:
+scene_mode == 'street'           scene_mode == 'street'
+    ↓                                ↓
+STREET_DIRECTIONS_PROMPT          DIRECTIONS_PROMPT（统一，不变）
+（替换整个 Prompt）                  + knowledge_context 含街拍知识
+    ↓                                ↓
+STREET_PLANS_CONTEXT              PLANS_PROMPT（统一，不变）
+（前置独立段落）                      + scene_execution_context（正向执行原则）
+                                    + forbidden_constraints（街拍禁止项）
+```
 
+## 核心改动
 
-  cd mobile-tester && bash start.sh
+1. **删除** `STREET_DIRECTIONS_PROMPT`（~117行）和 `STREET_PLANS_CONTEXT`（~34行）
+2. **保留** `STREET_KNOWLEDGE`——作为知识资产
+3. **新增** `SCENE_KNOWLEDGE_REGISTRY` 字典——每个场景包含 keywords / knowledge_text / execution_principles / forbidden_constraints
+4. **新增** `detect_scene_mode()` 和 `build_scene_execution_context()` 辅助函数
+5. **统一 Prompt**：DIRECTIONS_PROMPT 和 PLANS_PROMPT 不再分支，场景知识通过占位符注入
+6. 方向标签保持通用：🟢现在就拍 / 🔥最出片 / ✨脑洞大开
 
-  然后用手机访问 http://<电脑IP>:8888，拍一张照片试试新的渐进式流程。
+## 未来扩展
 
+添加咖啡厅/日落等场景只需向 SCENE_KNOWLEDGE_REGISTRY 添加条目——**只加数据，不加流程**。
 
-  1. 品牌文档已更新
-  
-  BRAND.md 已升级为 v2.0，记录了：
-  - 从「直出相机」→「带拍」的完整演变过程
-  - 10 轮命名的筛选轨迹
-  - 品牌可用性排查结果
-  - 新品牌体系（带拍 + GuidePic 双名架构）
-  - daipai.app 已记录为待注册域名
-  
-  2. 部署计划已写好
+---
+## 如何测试
 
-  部署计划-云端分发.md，保姆级操作手册，包含：
-  - ICP 备案是什么、为什么测试阶段用香港服务器可以绕过
-  - 三阶段路线（香港轻量云测试 → 大陆+ICP正式 → 规模化）
-  - 每一步的复制粘贴命令（Nginx、Gunicorn、SSL、systemd）
-  - SSE 长连接的特殊配置
-  - 费用预估（启动只需约 ¥120-200）
-  
-  ---
-  🔴 你现在唯一需要做的事
-
-  ▎ 去 阿里云万网 注册 guidepic.com
-
-  搜索 guidepic.com → 加入购物车 → 付款（约
-  ¥60-80）。就这一步需要你亲自操作（域名注册需要实名认证+身份证）。
-
-  注册完之后告诉我，我帮你走后面的服务器购买和部署脚本。
-
-⏺ 两种方式：
-     
-  🏠 局域网（手机和电脑同 WiFi，推荐）
-
-  cd mobile-tester
-  python3 server.py
-
-  然后用手机访问：
-
-  http://<你电脑的局域网IP>:8888
-
-  你的局域网 IP：
-
-⏺ Bash(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null ||
-      echo "未获取到")
-  ⎿  192.168.3.244
-
-  Thought for 2s (ctrl+o to expand)
-
-⏺ 手机访问：
-     
-  http://192.168.3.244:8888
-
-  电脑本机直接用 http://localhost:8888。
-
-  🔒 Tailscale（手机不在同一 WiFi 也能用）
-
-  如果手机装了 Tailscale 并登录同一账号：
-
-  cd mobile-tester
-  ./start.sh
-
-  会同时显示 Tailscale IP 和局域网 IP。
-
-  管理员链接：  http://192.168.3.244:8888/admin
-  本地连接： http://192.168.3.244:8888
-
-    以后本地有新的风格技法需要同步到生产，两条命令搞定
-   
-    # 导出本地数据
-  curl -c /tmp/c.txt -X POST http://192.168.3.244:8888/admin/login -d
-  "password=daipai2026"
-  curl -b /tmp/c.txt http://192.168.3.244:8888/admin/export-data > /tmp/sync.json
-
-  # 导入到生产
-  curl -c /tmp/p.txt -X POST https://guidepic.cn/admin/login -d
-  "password=daipai2026"
-  curl -b /tmp/p.txt -X POST https://guidepic.cn/admin/import-data \
-    -H "Content-Type: application/json" -d @/tmp/sync.json
+```
+手机访问 http://192.168.3.72:8888
+1. 拍一张街景照片（不需任何手动选择）
+2. 看三个方向是否仍是 🟢/🔥/✨（通用标签）
+3. 看方向内容、方案是否融入了街拍大师视角和执行原则
+4. 确认上传非街景照片时通用模式不受影响
+```
