@@ -14,9 +14,9 @@ import subprocess
 import sys
 import time
 import threading
-import urllib.request
 import urllib.parse
 import uuid
+import httpx
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 load_dotenv()
@@ -34,6 +34,23 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "daipai2026")
 DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
+
+# ── httpx 共享客户端（连接复用，减少 API 延迟）──
+_httpx_client = None
+_httpx_client_lock = threading.Lock()
+
+def _get_httpx_client():
+    """获取或创建 httpx 客户端——全局复用连接池"""
+    global _httpx_client
+    if _httpx_client is None:
+        with _httpx_client_lock:
+            if _httpx_client is None:  # 双重检查
+                _httpx_client = httpx.Client(
+                    timeout=httpx.Timeout(REQUEST_TIMEOUT),
+                    limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+                    http2=True  # HTTP/2 多路复用
+                )
+    return _httpx_client
 DOUBAO_MODEL = "doubao-seed-2.0-pro"
 DOUBAO_FAST_MODEL = "doubao-seed-2.0-lite"  # 方案生成用快速模型——结构化JSON不需要最强推理
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
@@ -42,11 +59,11 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "10"))  # 每人每天免费次数
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
 VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
-REQUEST_TIMEOUT = 300  # 含大图上传时间
+REQUEST_TIMEOUT = 120  # LLM 调用超时——2分钟够用了，超时就重试
 SESSION_TTL = 86400  # 24小时——与前端 localStorage 恢复窗口一致
 
-# 并发控制
-_processing = False  # 是否有 /analyze 正在运行（队列门控）
+# 并发控制——已移除全局排队锁，多用户可同时使用
+# 活跃任务追踪见 _active_tasks（管理员面板可见+可打断）
 
 # ── 活跃任务追踪（管理员可见 + 可打断）──
 _active_tasks: dict[str, dict] = {}  # task_id → {type, session_id, ip, start_time, stage}
@@ -55,7 +72,6 @@ _cancel_events: dict[str, threading.Event] = {}  # task_id → cancel event
 
 def _register_task(task_id, task_type, session_id, ip, stage="starting"):
     """注册活跃任务——管理员面板可见"""
-    global _processing
     with _active_tasks_lock:
         _active_tasks[task_id] = {
             "type": task_type,
@@ -65,8 +81,6 @@ def _register_task(task_id, task_type, session_id, ip, stage="starting"):
             "stage": stage,
         }
         _cancel_events[task_id] = threading.Event()
-        if task_type == "analyze":
-            _processing = True
 
 def _update_task_stage(task_id, stage):
     """更新任务当前阶段（无需加锁——单线程写入）"""
@@ -75,12 +89,9 @@ def _update_task_stage(task_id, stage):
 
 def _unregister_task(task_id):
     """注销任务"""
-    global _processing
     with _active_tasks_lock:
         _active_tasks.pop(task_id, None)
         _cancel_events.pop(task_id, None)
-        if not any(t["type"] == "analyze" for t in _active_tasks.values()):
-            _processing = False
 
 def _is_cancelled(task_id):
     """检查任务是否被打断——供分析流程各阶段轮询"""
@@ -92,8 +103,9 @@ def _is_cancelled(task_id):
 _plan_generating: dict[str, float] = {}  # key: global_cache_key → started_at_timestamp
 _plan_generating_lock = threading.Lock()
 
-# Session 存储
+# Session 存储——多用户并发时需加锁保护
 _sessions: dict[str, dict] = {}
+_sessions_lock = threading.Lock()
 _SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "sessions")
 # 本地分析留存目录——每次分析完存一份，方便代码改动后对比
 _RECENT_DIR = os.path.join(os.path.dirname(__file__), "recent_analyses")
@@ -1489,9 +1501,10 @@ def _get_place_name(lat, lon):
             f"https://nominatim.openstreetmap.org/reverse?"
             f"format=json&lat={lat}&lon={lon}&zoom=12&addressdetails=1&accept-language=zh"
         )
-        req = urllib.request.Request(url, headers={"User-Agent": "GuidePic/1.0"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read().decode())
+        _client = _get_httpx_client()
+        resp = _client.get(url, headers={"User-Agent": "GuidePic/1.0"}, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
         addr = data.get("address", {})
         # 构建层级地名：国家·省·市·区·具体地点
         parts = []
@@ -1541,9 +1554,10 @@ def _get_weather(lat, lon, photo_dt):
             "timezone": "Asia/Shanghai",
         })
         url = f"https://archive-api.open-meteo.com/v1/archive?{params}"
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read().decode())
+        _client = _get_httpx_client()
+        resp = _client.get(url, timeout=8)
+        resp.raise_for_status()
+        data = resp.json()
         hourly = data.get("hourly", {})
         times = hourly.get("time", [])
         if times:
@@ -1587,9 +1601,10 @@ def _get_weather(lat, lon, photo_dt):
                 "forecast_hours": 6,
             })
             url = f"https://api.open-meteo.com/v1/forecast?{params}"
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                data = json.loads(resp.read().decode())
+            _client = _get_httpx_client()
+            resp = _client.get(url, timeout=8)
+            resp.raise_for_status()
+            data = resp.json()
             hourly = data.get("hourly", {})
             times = hourly.get("time", [])
             if times:
@@ -1658,20 +1673,21 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
     """创建分析会话"""
     if session_id is None:
         session_id = uuid.uuid4().hex[:12]
-    _sessions[session_id] = {
-        'vision_json': vision_json,
-        'exif_summary': exif_summary,
-        'device_key': device_key,
-        'device_context': device_context,
-        'directions': directions,
-        'scene_tier': scene_tier,
-        'plan_cache': {},   # key: f"{direction_id}:{device_key}"
-        'created_at': time.time(),
-        'client_ip': client_ip,
-        'env_context': env_context,
-        'fold_details': fold_details or {},
-        'scene_category': scene_category
-    }
+    with _sessions_lock:
+        _sessions[session_id] = {
+            'vision_json': vision_json,
+            'exif_summary': exif_summary,
+            'device_key': device_key,
+            'device_context': device_context,
+            'directions': directions,
+            'scene_tier': scene_tier,
+            'plan_cache': {},   # key: f"{direction_id}:{device_key}"
+            'created_at': time.time(),
+            'client_ip': client_ip,
+            'env_context': env_context,
+            'fold_details': fold_details or {},
+            'scene_category': scene_category
+        }
     _cleanup_old_sessions()
     _save_session(session_id)
     return session_id
@@ -1686,7 +1702,9 @@ def get_session(session_id):
         if not sess:
             return None
     if time.time() - sess['created_at'] > SESSION_TTL:
-        del _sessions[session_id]
+        with _sessions_lock:
+            if session_id in _sessions:  # 双重检查——加锁后再次确认
+                del _sessions[session_id]
         try: os.remove(_session_path(session_id))
         except: pass
         try: os.remove(_img_path(session_id))
@@ -1698,9 +1716,11 @@ def get_session(session_id):
 def _cleanup_old_sessions():
     """清理过期会话"""
     now = time.time()
-    expired = [sid for sid, s in _sessions.items() if now - s['created_at'] > SESSION_TTL]
+    with _sessions_lock:
+        expired = [sid for sid, s in _sessions.items() if now - s['created_at'] > SESSION_TTL]
+        for sid in expired:
+            del _sessions[sid]
     for sid in expired:
-        del _sessions[sid]
         try: os.remove(_session_path(sid))
         except: pass
         try: os.remove(_img_path(sid))
@@ -1740,16 +1760,16 @@ def call_doubao(messages, max_tokens=2000, call_type='unknown', session_id=None,
             "messages": messages,
             "max_tokens": max_tokens
         }
-        req = urllib.request.Request(
+        # 使用 httpx 客户端——连接复用，比 urllib 快 10-15%
+        _client = _get_httpx_client()
+        resp = _client.post(
             DOUBAO_URL,
-            data=json.dumps(payload).encode(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {DOUBAO_API_KEY}"
-            }
+            json=payload,
+            headers={"Authorization": f"Bearer {DOUBAO_API_KEY}"},
+            timeout=REQUEST_TIMEOUT
         )
-        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
-            result = json.loads(resp.read().decode())
+        resp.raise_for_status()
+        result = resp.json()
         content = result['choices'][0]['message']['content'].strip()
         usage = result.get('usage', {})
     except Exception as e:
@@ -2876,6 +2896,26 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             sess['scene_mode'] = scene_mode  # 记住场景模式，方案生成时复用
             _save_session(session_id)  # 立即持久化到磁盘，防止重启丢图片
 
+        # ── 🔥 服务端自动预热：后台生成 🟢 现在就拍 的方案 ──
+        # 利用用户查看风格卡片的 5-10 秒时间窗口，偷偷把方案生成了
+        _prewarm_device = device_override
+        _prewarm_lens = lens_key
+        _prewarm_sid = session_id
+        _prewarm_scene = scene_mode
+        def _auto_prewarm_now():
+            try:
+                plans, err = generate_plans_for_direction(
+                    _prewarm_sid, "now", _prewarm_device, _prewarm_lens, scene_mode=_prewarm_scene
+                )
+                if err:
+                    print(f"[AutoPreheat] 🟢 now plans failed: {err}", file=sys.stderr, flush=True)
+                else:
+                    print(f"[AutoPreheat] 🟢 now plans ready: {len(plans) if plans else 0} plans", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"[AutoPreheat] 🟢 now plans error: {e}", file=sys.stderr, flush=True)
+        threading.Thread(target=_auto_prewarm_now, daemon=True).start()
+        print(f"[AutoPreheat] 🟢 now started in background for session={_prewarm_sid}", file=sys.stderr, flush=True)
+
         # ── 📋 本地分析留存：每次分析完保存视觉数据，方便代码改动后对比 ──
         try:
             os.makedirs(_RECENT_DIR, exist_ok=True)
@@ -3189,8 +3229,6 @@ def index():
 @app.route('/analyze', methods=['POST'])
 def analyze():
     """流式分析上传的照片（SSE）—— 渐进式 EXIF→场景→方向"""
-    global _processing
-
     if not DOUBAO_API_KEY:
         return jsonify({"success": False, "error": "API Key 未配置"}), 500
 
@@ -3206,17 +3244,6 @@ def analyze():
             "used": used,
             "limit": limit,
             "message": f"今日免费次数已用完（{used}/{limit}），可以申请更多次数"
-        }), 429
-
-    if _processing:
-        # 正在处理中——返回排队信息
-        elapsed = time.time() - getattr(analyze, '_start_time', time.time())
-        estimated = max(30, 120 - int(elapsed))
-        return jsonify({
-            "success": False,
-            "error": "queue",
-            "message": "前面有人在用，请稍候...",
-            "estimated_wait_seconds": estimated
         }), 429
 
     if 'photo' not in request.files:
@@ -3241,8 +3268,6 @@ def analyze():
     # 读取设备参数
     device_override = request.form.get('device', None) or None
     lens_key = request.form.get('lens', None) or None
-
-    _processing = True
 
     def cleanup_and_generate():
         try:
@@ -3425,7 +3450,7 @@ def health():
         "exif_script_exists": os.path.exists(EXIF_SCRIPT),
         "db_stats": stats,
         "sessions_active": len(_sessions),
-        "processing": _processing
+        "processing": any(t["type"] == "analyze" for t in _active_tasks.values())
     })
 
 
@@ -3627,7 +3652,7 @@ def admin_stats():
         "dislike_reasons": DISLIKE_REASONS,
         "daily_limit": DAILY_LIMIT,
         "active_sessions": len(_sessions),
-        "processing": _processing,
+        "processing": any(t["type"] == "analyze" for t in _active_tasks.values()),
         "running_tasks": running_tasks,
         "api_stats": api_stats,
         "style_exploration": style_exploration,

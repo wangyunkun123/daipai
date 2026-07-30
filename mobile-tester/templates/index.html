@@ -725,6 +725,28 @@ function nameSourceBadge(ns) {
   return '';  // discovered 或空 → 不显示标签
 }
 
+// ── 🔥 级联预热：预热下一个方向的方案 ──
+// 级联顺序：now → best → creative
+const PREHEAT_CASCADE = { now: 'best', best: 'creative', creative: null };
+function preheatDirection(dirId) {
+  if (!dirId || !sessionId) return;
+  const dir = allDirs.find(d => d.id === dirId);
+  if (!dir || !dir.style) return;  // 无实质内容不预热
+  const deviceKey = currentDeviceKey || 'unknown';
+  const lensKey = (document.getElementById('lensSelect')?.value) || '';
+  fetch('/analyze/plans', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      direction_id: dirId,
+      device: deviceKey !== 'unknown' ? deviceKey : null,
+      lens: lensKey || null,
+      prewarm: true
+    })
+  }).catch(() => {});
+  console.log('[Preheat] 🔥 triggered:', dirId);
+}
+
 // State
 let sessionId = null;
 let allDirs = [];
@@ -1262,24 +1284,9 @@ function showDirectionsResult(data) {
   $('#resultArea').scrollIntoView({ behavior:'smooth' });
   saveSessionId();
 
-  // ── 后台预生成：提前预热 best + creative，用户看方向时方案已在生成了 ──
-  const deviceKey = currentDeviceKey || 'unknown';
-  const lensKey = (document.getElementById('lensSelect')?.value) || '';
-  ['best', 'creative'].forEach(dirId => {
-    const dir = allDirs.find(d => d.id === dirId);
-    if (dir && sessionId && dir.style) {  // 有实质内容才预热
-      fetch('/analyze/plans', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          direction_id: dirId,
-          device: deviceKey !== 'unknown' ? deviceKey : null,
-          lens: lensKey || null,
-          prewarm: true
-        })
-      }).catch(() => {});
-    }
-  });
+  // ── 🔥 级联预热：服务端已后台生成 🟢 now，前端预热 🔥 best ──
+  // 用户查看 now 时预热 best，查看 best 时预热 creative，逐级递进
+  preheatDirection('best');
 }
 
 function renderDirectionCarousel() {
@@ -1326,7 +1333,18 @@ function renderDirectionCarousel() {
 
   // 滚动监听更新 active
   const track = $('#dirCarouselTrack');
-  track.onscroll = () => updateCarouselActive('dirCarouselTrack', 'dirCarouselDots', idx => { activeDirIdx = idx; $('#dirProgress').textContent = `风格方向 ${idx+1} / ${total} · 左右滑动切换`; });
+  track.onscroll = () => updateCarouselActive('dirCarouselTrack', 'dirCarouselDots', idx => {
+    if (idx !== activeDirIdx) {
+      activeDirIdx = idx;
+      $('#dirProgress').textContent = `风格方向 ${idx+1} / ${total} · 左右滑动切换`;
+      // 🔥 级联预热：看 now → 预热 best，看 best → 预热 creative
+      const curDir = allDirs[idx];
+      if (curDir) {
+        const nextId = PREHEAT_CASCADE[curDir.id];
+        if (nextId) preheatDirection(nextId);
+      }
+    }
+  });
 
   // 滚动到当前 active
   scrollCarouselTo('dirCarouselTrack', activeDirIdx);
