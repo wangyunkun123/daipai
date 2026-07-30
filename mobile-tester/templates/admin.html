@@ -512,7 +512,6 @@ function renderStyleExploration(se) {
   } else {
     const renderRow = (r, hidden) => {
       const localDt = toLocal(r.created_at);
-      const time = localDt.datetime || localDt.time;
       const decisionIcon = r.decision === 'selected' ? '✅ 选取' : '❌ 舍弃';
       const decisionColor = r.decision === 'selected' ? 'var(--green)' : 'var(--red)';
 
@@ -521,16 +520,21 @@ function renderStyleExploration(se) {
       if (r.promoted || r.in_kb) {
         actionHtml = '<span style="font-size:10px;color:var(--green);white-space:nowrap">📚 已在库</span>';
       } else {
-        actionHtml = `<button onclick="promoteExploration(${r.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:var(--green);color:#000;border:none;border-radius:4px;white-space:nowrap">📥 入库</button>
-          <button onclick="deleteExploration(${r.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);border-radius:4px;margin-left:4px;white-space:nowrap">🗑 删除</button>`;
+        actionHtml = `<button onclick="promoteExploration(${r.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:var(--green);color:#000;border:none;border-radius:4px;white-space:nowrap;display:block">📥 入库</button>
+          <button onclick="deleteExploration(${r.id})" style="font-size:10px;padding:2px 6px;cursor:pointer;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);border-radius:4px;white-space:nowrap;display:block;margin-top:3px">🗑 删除</button>`;
       }
 
+      // 时间上下排列（日期/时间），腾出横向空间给理由栏
+      const datePart = (localDt.datetime || '').slice(0, 10);  // "2026-07-30"
+      const timePart = localDt.time || (localDt.datetime || '').slice(11, 16);  // "14:30"
+      const timeHtml = `<span style="font-size:10px">${datePart}</span><br><span style="font-size:10px;color:var(--dimmer)">${timePart}</span>`;
+
       return `<tr class="${hidden?'hidden-row':''}">
-        <td style="white-space:nowrap;font-size:11px">${time}</td>
+        <td style="white-space:nowrap;font-size:11px;line-height:1.4">${timeHtml}</td>
         <td style="font-weight:600">${esc(r.style_name)}</td>
-        <td style="color:${decisionColor};white-space:nowrap">${decisionIcon}</td>
-        <td style="font-size:11px;color:var(--dim);max-width:320px;white-space:normal;word-break:break-word;line-height:1.5">${esc(r.reason||'-')}</td>
-        <td style="white-space:nowrap">${actionHtml}</td>
+        <td style="color:${decisionColor};white-space:nowrap;font-size:11px">${decisionIcon}</td>
+        <td style="font-size:11px;color:var(--dim);white-space:normal;word-break:break-word;line-height:1.5">${esc(r.reason||'-')}</td>
+        <td style="white-space:nowrap;line-height:1.6">${actionHtml}</td>
       </tr>`;
     };
 
