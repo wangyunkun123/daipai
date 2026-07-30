@@ -59,7 +59,7 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "10"))  # 每人每天免费次数
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
 VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
-REQUEST_TIMEOUT = 120  # LLM 调用超时——2分钟够用了，超时就重试
+REQUEST_TIMEOUT = 180  # LLM 调用超时——方案生成 prompt 长需要 2 分钟左右
 SESSION_TTL = 86400  # 24小时——与前端 localStorage 恢复窗口一致
 
 # 并发控制——已移除全局排队锁，多用户可同时使用
