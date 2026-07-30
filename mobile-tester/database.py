@@ -35,7 +35,10 @@ def get_db():
 
 
 def _init_tables(conn):
-    """创建表（如果不存在）"""
+    """创建表（如果不存在）+ 一次性迁移"""
+    # 迁移只跑一次（进程生命周期内），避免每次 get_db() 都重复执行
+    if getattr(_init_tables, '_done', False):
+        return
     conn.executescript("""
     CREATE TABLE IF NOT EXISTS styles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -257,6 +260,8 @@ def _init_tables(conn):
         print("[DB] Migration: added promoted column to style_exploration_log", file=sys.stderr, flush=True)
     except Exception:
         pass
+
+    _init_tables._done = True  # 标记迁移完成，后续 get_db() 调用跳过
 
 
 # ============================================================

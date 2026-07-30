@@ -85,6 +85,7 @@ def _save_session(session_id):
             "daily_count_key": sess.get("daily_count_key", ""),
             "plan_cache": sess.get("plan_cache", {}),
             "img_b64": sess.get("img_b64", ""),
+            "scene_mode": sess.get("scene_mode", ""),
         }
         with open(_session_path(session_id), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -121,6 +122,7 @@ def _load_session_from_disk(session_id):
             "daily_count_key": data.get("daily_count_key", ""),
             "plan_cache": data.get("plan_cache", {}),
             "img_b64": data.get("img_b64", ""),
+            "scene_mode": data.get("scene_mode", ""),
         }
         if sess["photo_path"] and not os.path.exists(sess["photo_path"]):
             sess["photo_path"] = ""
@@ -568,6 +570,226 @@ fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风文案...\\n\\n灵
 
 🟢必有实质内容。🔥尽量有内容，与🟢互补。✨无灵感时全部null，fold_details.creative空字符串。
 directions 必须是数组 []，不是对象 {{}}！"""
+
+
+# ============================================================
+# 🏙️ 城市街拍——知识库 & 专用 Prompt
+# ============================================================
+STREET_KNOWLEDGE = """
+## 🏙️ 城市街拍知识库
+
+### 六位大师的观看方式
+
+**Henri Cartier-Bresson — 决定性瞬间**
+"Photography is the simultaneous recognition, in a fraction of a second, of the significance of an event."
+- 核心：等待几何构图与人物动作完美重合的那一瞬
+- 技法：50mm镜头、不裁切、画面中每一毫米都有意义
+- 启示：不是在按快门，是在识别"这个瞬间值得留下来"
+
+**Saul Leiter — 反射与层次**
+- 核心：用窗户、雨水、雾气、遮阳棚做前景——世界是层层叠叠的
+- 技法：透过玻璃拍、利用雨雾模糊前景、让色彩渗透而不是并置
+- 启示：不用拍清楚全部——朦胧的局部比全景更有诗意
+
+**Alex Webb — 复杂构图**
+- 核心：一个画面里同时发生多件事——前景、中景、背景各有故事
+- 技法：深景深、鲜艳色彩、等待多个元素同时到位
+- 启示：好街拍不是简洁，是有层次的复杂
+
+**Vivian Maier — 街头肖像**
+- 核心：用方画幅拍陌生人——不是偷拍，是有尊严的相遇
+- 技法：Rolleiflex腰平取景（被摄者不知道被拍）、利用阴影和反射
+- 启示：街头的人不是"元素"，是照片的灵魂
+
+**Fan Ho (何藩) — 光与几何**
+- 核心：香港街头的戏剧性光影——一束光从巷口斜切进来，一个人恰好走过
+- 技法：强侧光、烟雾、几何分割、极简构图中的单点人物
+- 启示：先找到光，然后等人走进来
+
+**Daido Moriyama (森山大道) — 粗糙的力量**
+- 核心：高对比黑白、颗粒、晃动、倾斜——街头的能量不是秩序
+- 技法：不需要对焦完美，需要的是"我在现场"的紧迫感
+- 启示：有时糊了比清楚更有力量
+
+### 街拍核心技法
+
+**光线利用：**
+- 黄金时刻侧光：最安全也最出片的街拍光线——长阴影拉出空间深度
+- 逆光剪影：利用建筑之间的光缝，等人走进光里
+- 反射光：玻璃幕墙、水洼、汽车表面——用反射做第二层画面
+- 斑驳光：树影、遮阳棚、格栅——碎光是天然的构图工具
+
+**构图公式：**
+- 框架构图：门洞、拱廊、窗户、桥洞——在城市里找一个天然画框
+- 引导线：人行道边缘、栏杆、建筑线条——把视线引向主体
+- 三层空间：前景（遮挡物/虚化）+ 中景（主体）+ 背景（城市语境）
+- 对比并置：新与旧、大与小、动与静、明与暗
+
+**拍摄策略：**
+- 站定等待法：选好构图站定不动，让城市从你面前流过，等对的元素进入画面
+- 预对焦/陷阱对焦：预估人物经过的位置，提前锁定焦点
+- 腰平盲拍：相机在腰部，不看屏幕——视角更低、更自然、也不引人注意
+- 跟随拍摄：发现有趣的人物，跟着走一段，等他走到合适的光线里
+
+**手机街拍特化：**
+- 28mm广角≈手机主摄：天生适合街拍——退一步把人拍进环境里
+- 音量键当快门：比屏幕按钮更快、更稳
+- 连拍模式+后期选片：决定性瞬间在手机上是概率游戏——多拍
+- 曝光补偿下拉：逆光场景下拉-1EV保住高光，人脸可以后期提亮
+"""
+
+STREET_DIRECTIONS_PROMPT = """你是街头摄影专家。你的知识覆盖 Cartier-Bresson、Saul Leiter、Alex Webb、Vivian Maier、Fan Ho、森山大道等大师的观看方式，以及小红书/Instagram/TikTok 上流行的街拍风格。
+
+## 🧭 工作流程
+
+与通用模式相同——先自由联想 → 后知识库对照 → 最后设备现实检查。但你的**审美坐标系是街头摄影**。
+
+---
+## 阶段 1：自由联想——从街头视角看这张照片
+
+{vision_json}
+
+{exif_summary}
+
+{exif_cross_check}
+
+**你已经看过这张照片的视觉数据。现在用街头摄影师的眼睛重新看：**
+
+1. **光在哪里？** 光从哪个方向来？哪些区域是亮的、哪些是暗的？光在街景中制造了什么形状？有没有光缝、反射、斑驳、剪影的机会？
+
+2. **几何在哪里？** 建筑线条如何分割画面？有没有天然的框架（门洞/拱廊/桥洞）？地砖/栏杆/电线/路标有没有制造引导线？阴影的边缘在哪里——它们是硬的还是柔的？
+
+3. **人会在哪里？** 如果这是有人经过的街道——大多数人走哪条路线？他们会在哪个位置被光照亮？有没有一个位置是"等人走过来就完美了"的？
+
+4. **层次在哪里？** 前景能找到什么遮挡物（树/栏杆/橱窗）？中景的主体空间是什么？背景给什么城市语境？
+
+5. **这个街角/这条路/这片光影让你联想到哪位摄影师的观看方式？**
+
+{street_knowledge}
+
+---
+## 阶段 2：知识库对照
+
+{knowledge_context}
+
+为每个方向标注 📚已有记录 或 🆕新发现。
+
+---
+## 阶段 3：设备现实检查
+
+{device_context}
+
+{env_context}
+
+{fast_path_note}
+
+---
+## 输出：三条街拍方向
+
+从你的街头探索中选出三条，写入三个固定槽位：
+
+### 📐 几何构图 — 必有
+利用场景中的建筑线条、光影分割、透视引导线。这张照片里最强的几何元素是什么？怎么把它变成构图的主心骨？
+→ **适合谁**：想要画面干净、有设计感的用户
+
+### ⏱️ 决定性瞬间 — 有则放
+找到一个完美的"等待位置"——在这里站定，等人/车/鸟/光影变化进入画面的那一秒按下快门。
+→ **适合谁**：愿意花几分钟等待一张好照片的用户
+
+### 🎭 街头戏剧 — 宁缺毋滥
+多层次的复杂构图——前景遮挡+中景主体+背景语境，或反射/投影/并置的视觉游戏。一张照片里至少发生两件事。
+→ **适合谁**：想拍出"看不懂但很厉害"的照片的用户
+
+---
+## 创作原则
+
+1. 每条 direction 必须引用 ≥1 个场景中的具体视觉锚点（光线位置/建筑线条/阴影形状/街角特征）
+2. 三条方向各不相同，覆盖几何/瞬间/层次三种街头审美
+3. 📐必有实质内容。⏱️尽量有内容。🎭宁缺毋滥
+4. 忠于实际光线——硬光推几何与剪影，柔光推色彩与氛围，暗光推高对比黑白
+5. style_promise 必须让人能想象出最终画面
+
+## style_brief——街头风格视觉特征速写
+
+{{
+  "essence": "一句话定义（≤20字）",
+  "color": "色彩策略（≤30字）",
+  "composition": "构图偏好（≤30字）",
+  "light": "光线偏好（≤30字）",
+  "mood": "情绪氛围（≤20字）"
+}}
+
+## fold_details——社媒风文案（同通用格式）
+
+## 输出格式（同通用模式的 JSON schema）
+
+{{
+  "insight": "1-2句街拍视角描述——看到什么、觉得可以怎么拍。不说空话。",
+  "scene_tier": "🥇",
+  "discovery_note": "🆕 新发现说明",
+  "directions": [
+    {{
+      "id": "geometry", "emoji": "📐", "label": "几何构图", "subtitle": "让建筑替你构图",
+      "style": "风格名（中文）",
+      "kb_status": "📚 或 🆕",
+      "style_promise": "1句话——拍出来什么画面",
+      "reason": "为什么这个几何元素值得被拍（60-100字）",
+      "fit_rationale": "风格-场景适配逻辑",
+      "light_annotation": "🟢/🟡/🔴", "device_annotation": "🟢直接拍/🟡微调/🟠替代方案",
+      "style_brief": {{"essence":"","color":"","composition":"","light":"","mood":""}},
+      "plans": []
+    }},
+    {{
+      "id": "moment", "emoji": "⏱️", "label": "决定性瞬间", "subtitle": "等一个人走进光里",
+      "style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"",
+      "style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]
+    }},
+    {{
+      "id": "drama", "emoji": "🎭", "label": "街头戏剧", "subtitle": "一张照片两个世界",
+      "style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"",
+      "style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"plans":[]
+    }}
+  ],
+  "fold_details": {{ "geometry": "▼ 几何分析\\n\\n...", "moment": "...", "drama": "..." }}
+}}
+
+📐必有实质内容。⏱️尽量有内容，与📐互补。🎭无灵感时全部null。
+directions 必须是数组 []。"""
+
+STREET_PLANS_CONTEXT = """
+## 🏙️ 街拍执行原则
+
+你是街头摄影指导——不是旅行规划师。你的方案必须让用户**在街头完成拍摄**，不是做后期。
+
+### 街拍特有的执行维度
+
+**站位与等待（写进 shooter）：**
+- 选好构图后站定不动——这是街拍最重要的原则
+- 预估人物/车辆/光影变化的路径，提前锁定焦点
+- 给出具体等待位置：站哪、面朝哪、离主体多远
+
+**时机判断（写进 subject/enhance）：**
+- 不是"摆姿势"——是"在正确的时间出现在正确的位置"
+- 给用户一个触发条件：看到什么就按快门（如"红绿灯变绿、人群开始流动的瞬间"）
+- 连拍模式：按住快门不放，每秒3-5张，后期从20张里选1张
+
+**光线优先（写进 gear/enhance）：**
+- 街拍的光不是你能控制的——先确定光源位置，再决定站哪
+- 逆光街拍：曝光补偿-0.7到-1.3，保住高光氛围，人脸后期提亮
+- 阴影街拍：找光缝/建筑间隙，让光"切"出一个形状
+
+**手机街拍特化：**
+- 音量键当快门（比点屏幕快半秒——决定性瞬间的半秒就是成败）
+- 28mm主摄退一步拍：把人拍进环境里，不要用人像模式虚化背景
+- 腰平高度：手机在腰部位置、屏幕朝上——视角更低、更自然、不引人注意
+- 连拍优先：多拍不亏，10张里总有1张表情/步态/光影恰到好处的
+
+### 禁止的街拍错误
+- ❌ "让人摆一个自然的姿势"——街拍不是摆拍，是等来的
+- ❌ "用人像模式虚化背景"——街拍的背景是城市，是照片的一半灵魂
+- ❌ "换个滤镜/后期加颗粒就叫街拍"——森山大道的颗粒是Tri-X胶片+Rodinal显影的前期选择
+- ❌ "退远一点拍全景"——街拍越近越好，Robert Capa说过"如果你的照片不够好，是因为你不够近"
+"""
 
 
 # ============================================================
@@ -1445,8 +1667,11 @@ def repair_json(text):
     return text
 
 
-def parse_json_safe(content, retry_prompt=None):
-    """安全解析 JSON。先尝试直接解析，失败后本地修复，再失败才 API retry"""
+def parse_json_safe(content, retry_prompt=None, original_prompt=None):
+    """安全解析 JSON。先尝试直接解析，失败后本地修复，再失败才 API retry。
+
+    original_prompt: 如果提供，retry 时会作为上下文附上，防止 LLM 丢失场景信息胡编。"""
+
     parse_errors = []
 
     # ── 尝试 1: 直接解析 ──
@@ -1494,6 +1719,13 @@ def parse_json_safe(content, retry_prompt=None):
 
 原始输出的JSON解析错误：{parse_errors[-1]}
 请务必输出完整JSON，包含所有字段。特别是 directions 必须是数组格式。"""
+        if original_prompt:
+            full_retry = f"""以下是原始拍摄任务的全部信息，你需要基于这些信息重新输出JSON：
+
+{original_prompt}
+
+---
+{full_retry}"""
         try:
             retry_content, _ = call_doubao([
                 {"role": "user", "content": full_retry}
@@ -1815,7 +2047,7 @@ def build_forbidden_constraints(device_key, lens_key=None):
 # 流式分析生成器（：渐进式——EXIF→场景→方向，方案按需）
 # ============================================================
 
-def analyze_photo_stream(image_path, device_override=None, lens_key=None, client_ip=None):
+def analyze_photo_stream(image_path, device_override=None, lens_key=None, client_ip=None, scene_mode=None):
     """流式照片分析——SSE 事件生成器
     阶段：EXIF → 视觉分析 → 方向卡片（不含方案）
     方案由 /analyze/plans 按需生成
@@ -2140,15 +2372,28 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         else:
             env_context = "（无可用环境数据）\n"
 
-        directions_prompt = DIRECTIONS_PROMPT.format(
-            vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
-            exif_summary=exif_summary,
-            exif_cross_check=exif_cross_check,
-            device_context=device_text,
-            knowledge_context=knowledge_context,
-            fast_path_note=fast_path_note,
-            env_context=env_context
-        )
+        # ── 选择 Prompt（通用 vs 街拍）──
+        if scene_mode == 'street':
+            directions_prompt = STREET_DIRECTIONS_PROMPT.format(
+                vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
+                exif_summary=exif_summary,
+                exif_cross_check=exif_cross_check,
+                device_context=device_text,
+                knowledge_context=knowledge_context,
+                street_knowledge=STREET_KNOWLEDGE,
+                fast_path_note=fast_path_note,
+                env_context=env_context
+            )
+        else:
+            directions_prompt = DIRECTIONS_PROMPT.format(
+                vision_json=json.dumps(vision_json, ensure_ascii=False, indent=2),
+                exif_summary=exif_summary,
+                exif_cross_check=exif_cross_check,
+                device_context=device_text,
+                knowledge_context=knowledge_context,
+                fast_path_note=fast_path_note,
+                env_context=env_context
+            )
         print(f"[SSE] Directions prompt: {len(directions_prompt)} chars", file=sys.stderr, flush=True)
         directions_content, directions_usage = call_doubao([
             {"role": "user", "content": directions_prompt}
@@ -2158,7 +2403,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         # 解析方向输出
         directions_json, directions_error = parse_json_safe(
             directions_content,
-            retry_prompt="你上次的输出不是有效JSON。请重新输出，只输出纯JSON对象，不要markdown包裹，不要任何额外文字。directions 必须是数组 []。"
+            retry_prompt="你上次的输出不是有效JSON。请重新输出，只输出纯JSON对象，不要markdown包裹，不要任何额外文字。directions 必须是数组 []。",
+            original_prompt=directions_prompt
         )
         directions_json = normalize_creative_output(directions_json)
 
@@ -2282,6 +2528,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             sess['exif_data'] = exif_display
             sess['insight'] = insight
             sess['fold_details'] = fold_details
+            sess['scene_mode'] = scene_mode  # 记住场景模式，方案生成时复用
             _save_session(session_id)  # 立即持久化到磁盘，防止重启丢图片
 
         # ── 完成 ──
@@ -2311,7 +2558,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
 # 方案按需生成（用户选方向后调用）
 # ============================================================
 
-def generate_plans_for_direction(session_id, direction_id, device_override=None, lens_key=None):
+def generate_plans_for_direction(session_id, direction_id, device_override=None, lens_key=None, scene_mode=None):
     """为指定方向生成方案，支持缓存"""
     session = get_session(session_id)
     if not session:
@@ -2447,7 +2694,11 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         scene_template=scene_template,
     )
 
-    print(f"[Plans] Prompt: {len(plans_prompt)} chars, direction={direction_id}, device={device_key}", file=sys.stderr, flush=True)
+    # ── 街拍模式：注入街拍执行原则 ──
+    if scene_mode or session.get('scene_mode'):
+        plans_prompt = STREET_PLANS_CONTEXT + "\n\n" + plans_prompt
+
+    print(f"[Plans] Prompt: {len(plans_prompt)} chars, direction={direction_id}, device={device_key}, mode={scene_mode or session.get('scene_mode', 'general')}", file=sys.stderr, flush=True)
 
     try:
         plans_content, plans_usage = call_doubao([
@@ -2456,7 +2707,8 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
 
         plans_json, plans_error = parse_json_safe(
             plans_content,
-            retry_prompt="你上次输出的拍摄方案JSON格式有误。请重新输出，只输出包含 plans 数组的纯JSON对象。注意：这是摄影拍摄方案，不是旅行攻略。每条方案包含 name/prep/subject/shooter/gear/enhance/result/why/shot_size/angle/quick_edit/img_gen_prompt/ai_tips/combo_label 字段。"
+            retry_prompt="你上次输出的拍摄方案JSON格式有误。请重新输出，只输出包含 plans 数组的纯JSON对象。注意：这是摄影拍摄方案，不是旅行攻略。每条方案包含 name/prep/subject/shooter/gear/enhance/result/why/shot_size/angle/quick_edit/img_gen_prompt/ai_tips/combo_label 字段。",
+            original_prompt=plans_prompt  # 重试时带上完整场景上下文，防止胡编
         )
 
         if plans_error or not isinstance(plans_json, dict):
@@ -2576,13 +2828,14 @@ def analyze():
     # 读取设备参数
     device_override = request.form.get('device', None) or None
     lens_key = request.form.get('lens', None) or None
+    scene_mode = request.form.get('scene_mode', None) or None  # 场景模式：None=通用, "street"=街拍
 
     _processing = True
     analyze._start_time = time.time()  # 记录开始时间供排队估算
 
     def cleanup_and_generate():
         try:
-            yield from analyze_photo_stream(tmp_path, device_override, lens_key, client_ip)
+            yield from analyze_photo_stream(tmp_path, device_override, lens_key, client_ip, scene_mode=scene_mode)
         finally:
             if os.path.exists(tmp_path):
                 try:
@@ -2623,6 +2876,9 @@ def analyze_plans():
     if not session:
         return jsonify({"success": False, "error": "会话已过期，请重新上传照片"}), 404
 
+    # 从 session 获取场景模式（通用 / 街拍）
+    scene_mode = session.get('scene_mode', None)
+
     cache_key = f"{direction_id}:{device_override or session['device_key']}"
     if lens_key:
         cache_key += f":{lens_key}"
@@ -2660,7 +2916,7 @@ def analyze_plans():
 
         def _prewarm():
             try:
-                plans, err = generate_plans_for_direction(session_id, direction_id, device_override, lens_key)
+                plans, err = generate_plans_for_direction(session_id, direction_id, device_override, lens_key, scene_mode=scene_mode)
                 if err:
                     print(f"[Prewarm] Failed for {global_key}: {err}", file=sys.stderr, flush=True)
                 else:
@@ -2674,7 +2930,7 @@ def analyze_plans():
         return jsonify({"success": True, "prewarm": "started", "direction_id": direction_id})
 
     # 正常模式：触发 LLM 生成（可能耗时 30-90 秒，移动网络 NAT 可能断开）
-    plans, error = generate_plans_for_direction(session_id, direction_id, device_override, lens_key)
+    plans, error = generate_plans_for_direction(session_id, direction_id, device_override, lens_key, scene_mode=scene_mode)
 
     if error:
         return jsonify({"success": False, "error": error}), 500
@@ -3121,7 +3377,8 @@ def restore_session(session_id):
         "search_quality": sess.get('search_quality'),
         "device_key": sess.get('device_key', ''),
         "device_context": sess.get('device_context', {}),
-        "plan_cache": sess.get('plan_cache', {})
+        "plan_cache": sess.get('plan_cache', {}),
+        "scene_mode": sess.get('scene_mode', "")
     }})
 
 
