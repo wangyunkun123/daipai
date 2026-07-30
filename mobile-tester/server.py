@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
-from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map, get_knowledge_files_by_quality
+from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map, get_knowledge_files_by_quality, load_series_rhythm
 from database import accumulate, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, get_api_call_stats, get_style_technique_panel, get_style_exploration_stats, log_style_exploration, promote_exploration_to_style, delete_exploration, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -1100,10 +1100,15 @@ PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可�
 
 ### 多张节奏（≥4张时启用，≤3张不套）
 
-- 景别分散：远景开场→中景叙事→近景亲密→1张创意高点→远景收束。弹性框架，不用严格1:1对应
-- 首尾呼应（≥5张）：第1张和最后1张有呼应——景别/色彩/构图/主题四选一
-- 情绪起伏：不是每张都安静或都大笑——至少1张情绪不同于其他
+**景别分散**：远景开场→中景叙事→近景亲密→1张创意高点→远景收束。弹性框架。
+**首尾呼应（≥5张）**：第1张和最后1张有呼应——景别/色彩/构图/主题四选一。
+**情绪起伏**：不是每张都安静或都大笑——至少1张情绪不同于其他。
+**色彩统一**：所有方案共享同一色温方向和主色调。选1个强调色在2-3张中复现做「韵脚」。
 ⛔ 场景支持3种拍法就3张——不凑"开场→发展→收束"
+⛔ 9张不能全中景——覆盖≥4种景别
+⛔ 破格方案放中间（5-7张），不放开头或结尾
+
+{series_rhythm}
 
 ## 每套方案字段
 ① name: 能记住的方案名——最好含素材元素+视角暗示，如"树缝光斑里的回眸""水洼倒影双世界"
@@ -2853,6 +2858,14 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     device_constraints = build_device_constraints(device_key, lens_key)
     tier_constraint = get_tier_constraint(session['scene_tier'])
 
+    # ── 组图节奏知识注入（仅 🥇 丰富场景启用）──
+    scene_tier = session.get('scene_tier', '🥈')
+    if scene_tier == '🥇':
+        series_rhythm = load_series_rhythm()
+        print(f"[Plans] Series rhythm injected: {len(series_rhythm)} chars for 🥇 scene", file=sys.stderr, flush=True)
+    else:
+        series_rhythm = ""
+
     # 构建 prompt
     style_knowledge = get_style_detail(direction.get('style', '')) or ""
     device_knowledge = get_device_adaptation(device_key) or ""
@@ -2907,6 +2920,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         forbidden_constraints=forbidden_constraints,
         scene_template=scene_template,
         scene_execution_context=scene_execution_context,
+        series_rhythm=series_rhythm,
     )
 
     print(f"[Plans] Prompt: {len(plans_prompt)} chars, direction={direction_id}, device={device_key}, mode={scene_mode or session.get('scene_mode', 'general')}", file=sys.stderr, flush=True)
