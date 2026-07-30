@@ -41,6 +41,26 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 .btn-reject { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
 .btn-reject:active { opacity: 0.8; }
 
+/* Running tasks */
+.task-card { background: var(--card); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.task-card .task-info { font-size: 13px; min-width: 0; }
+.task-card .task-info .tid { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--purple); word-break: break-all; }
+.task-card .task-info .meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.task-card .task-info .stage { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; margin-left: 4px; }
+.stage-loading { background: rgba(138,138,138,0.15); color: var(--dim); }
+.stage-exif-vision { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.stage-vision { background: rgba(168,85,247,0.15); color: #a855f7; }
+.stage-directions { background: rgba(245,158,11,0.15); color: var(--fire); }
+.stage-saving { background: rgba(34,197,94,0.15); color: #22c55e; }
+.stage-plans { background: rgba(236,72,153,0.15); color: #ec4899; }
+.btn-cancel {
+  padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none;
+  background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3);
+  white-space: nowrap; flex-shrink: 0;
+}
+.btn-cancel:active { opacity: 0.8; }
+.btn-cancel:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* Empty state */
 .empty { text-align: center; padding: 20px; color: var(--dimmer); font-size: 13px; }
 
@@ -99,6 +119,10 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 <div class="subtitle" id="lastUpdate">加载中...</div>
 
 <div class="status-bar" id="statusBar"></div>
+
+<!-- 🔄 运行中的任务 -->
+<h2>🔄 运行中的后台任务 <span style="font-size:11px;color:var(--dimmer);font-weight:400" id="taskCount"></span></h2>
+<div id="runningTasks"><div class="empty">暂无运行中的任务</div></div>
 
 <!-- ⏳ 待审批申请 -->
 <h2>⏳ 待审批申请</h2>
@@ -212,6 +236,48 @@ const REASON_LABELS = {
   'other': '💬 其他'
 };
 
+const STAGE_LABELS = {
+  'loading': '📥 加载图片',
+  'exif-vision': '🔍 EXIF+视觉',
+  'vision': '🔮 等待视觉',
+  'directions': '🧠 生成方向',
+  'saving': '💾 保存结果',
+  'plans': '📋 生成方案',
+  'starting': '🚀 启动中'
+};
+const TYPE_ICONS = { 'analyze': '📷', 'plans': '📋' };
+
+async function cancelTask(taskId) {
+  const btn = document.getElementById('cancelBtn-' + taskId.replace(/[^a-zA-Z0-9:-]/g, ''));
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 打断中...'; }
+  try {
+    const r = await fetch('/admin/cancel-task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task_id: taskId })
+    });
+    const d = await r.json();
+    if (d.success) {
+      // 短暂显示成功状态
+      const card = document.getElementById('task-' + taskId.replace(/[^a-zA-Z0-9:-]/g, ''));
+      if (card) {
+        card.style.opacity = '0.5';
+        card.style.borderColor = 'var(--red)';
+        const btn2 = card.querySelector('.btn-cancel');
+        if (btn2) { btn2.textContent = '✅ 已打断'; btn2.style.background = 'rgba(239,68,68,0.3)'; }
+      }
+      // 2秒后刷新
+      setTimeout(() => loadData(), 2000);
+    } else {
+      alert('打断失败: ' + (d.error || '未知错误'));
+      if (btn) { btn.disabled = false; btn.textContent = '⏹ 打断'; }
+    }
+  } catch(e) {
+    alert('网络错误: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '⏹ 打断'; }
+  }
+}
+
 // DB stores UTC; convert to local for display. Input: "2026-07-28 14:30:00"
 // Returns: { datetime: "2026-07-28 22:30", time: "22:30:00" }
 function toLocal(utcStr) {
@@ -310,6 +376,35 @@ function render(d) {
     <span>🟢 活跃: ${d.active_sessions||0}</span>
     <span class="${d.processing?'warn':'ok'}">${d.processing?'🔴 处理中':'🟢 空闲'}</span>
   `;
+
+  // ── 运行中的后台任务 ──
+  const runningTasks = d.running_tasks || [];
+  const rtDiv = document.getElementById('runningTasks');
+  const tcSpan = document.getElementById('taskCount');
+  if (runningTasks.length === 0) {
+    rtDiv.innerHTML = '<div class="empty">✅ 暂无运行中的后台任务</div>';
+    tcSpan.textContent = '';
+  } else {
+    tcSpan.textContent = `(${runningTasks.length}个)`;
+    rtDiv.innerHTML = runningTasks.map(t => {
+      const elapsed = t.elapsed || 0;
+      const min = Math.floor(elapsed / 60);
+      const sec = elapsed % 60;
+      const elapsedStr = min > 0 ? `${min}分${sec}秒` : `${sec}秒`;
+      const stageLabel = STAGE_LABELS[t.stage] || t.stage;
+      const stageCls = `stage-${t.stage}` in STAGE_LABELS ? `stage-${t.stage}` : 'stage-loading';
+      return `<div class="task-card" id="task-${esc(t.task_id)}">
+        <div class="task-info">
+          <div class="tid">${esc(t.task_id)}</div>
+          <div class="meta">
+            ${TYPE_ICONS[t.type]||'📌'} ${t.type} · ${esc(t.ip)} · ⏱ ${elapsedStr}
+            <span class="stage ${stageCls}">${stageLabel}</span>
+          </div>
+        </div>
+        <button class="btn-cancel" onclick="cancelTask('${esc(t.task_id)}')" id="cancelBtn-${esc(t.task_id)}">⏹ 打断</button>
+      </div>`;
+    }).join('');
+  }
 
   // Pending requests
   const preq = document.getElementById('pendingRequests');

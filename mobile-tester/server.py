@@ -46,8 +46,47 @@ REQUEST_TIMEOUT = 300  # 含大图上传时间
 SESSION_TTL = 86400  # 24小时——与前端 localStorage 恢复窗口一致
 
 # 并发控制
-_processing_lock = threading.Lock()
-_processing = False
+_processing = False  # 是否有 /analyze 正在运行（队列门控）
+
+# ── 活跃任务追踪（管理员可见 + 可打断）──
+_active_tasks: dict[str, dict] = {}  # task_id → {type, session_id, ip, start_time, stage}
+_active_tasks_lock = threading.Lock()
+_cancel_events: dict[str, threading.Event] = {}  # task_id → cancel event
+
+def _register_task(task_id, task_type, session_id, ip, stage="starting"):
+    """注册活跃任务——管理员面板可见"""
+    global _processing
+    with _active_tasks_lock:
+        _active_tasks[task_id] = {
+            "type": task_type,
+            "session_id": session_id or "",
+            "ip": ip or "unknown",
+            "start_time": time.time(),
+            "stage": stage,
+        }
+        _cancel_events[task_id] = threading.Event()
+        if task_type == "analyze":
+            _processing = True
+
+def _update_task_stage(task_id, stage):
+    """更新任务当前阶段（无需加锁——单线程写入）"""
+    if task_id in _active_tasks:
+        _active_tasks[task_id]["stage"] = stage
+
+def _unregister_task(task_id):
+    """注销任务"""
+    global _processing
+    with _active_tasks_lock:
+        _active_tasks.pop(task_id, None)
+        _cancel_events.pop(task_id, None)
+        if not any(t["type"] == "analyze" for t in _active_tasks.values()):
+            _processing = False
+
+def _is_cancelled(task_id):
+    """检查任务是否被打断——供分析流程各阶段轮询"""
+    with _active_tasks_lock:
+        event = _cancel_events.get(task_id)
+    return event.is_set() if event else False
 
 # 方案生成并发控制——防止重复 LLM 调用（retry/poll 同时来时只生成一次）
 _plan_generating: dict[str, float] = {}  # key: global_cache_key → started_at_timestamp
@@ -2331,15 +2370,18 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
     阶段：EXIF → 视觉分析 → 方向卡片（不含方案）
     方案由 /analyze/plans 按需生成
     """
-    global _processing
     t0 = time.time()
     trace_id = uuid.uuid4().hex[:12]  # 提前生成，用于全链路 API 调用埋点
+    task_id = f"analyze:{trace_id}"
 
     def emit(event, data):
         return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
     def emit_progress(phase, text):
         return emit("progress", {"phase": phase, "text": text})
+
+    # 注册活跃任务（管理员面板可见 + 可打断）
+    _register_task(task_id, "analyze", "", client_ip, "loading")
 
     try:
         # ── Phase 0: 图片载入 ──
@@ -2378,10 +2420,11 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         except Exception as imgerr:
             print(f"[SSE] Image open error: {imgerr}", file=sys.stderr, flush=True)
             yield emit("error", {"message": f"无法读取照片: {str(imgerr)}"})
-            _processing = False
+            _unregister_task(task_id)
             return
 
         # ── Phase 1: 先读 EXIF（~1s），立刻发给前端，不等 Vision ──
+        _update_task_stage(task_id, "exif-vision")
         exif_result = {"error": "未执行"}
         vision_result = {"error": "未执行"}
 
@@ -2492,9 +2535,18 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             "location_weather": location_weather  # 🆕 天气/地名/光照时段
         })
 
-        # ── Phase 2: 等 Vision API 完成 ──
+        # ── Phase 2: 等 Vision API 完成（可打断轮询）──
         yield emit_progress("vision", "正在分析画面内容...")
-        t_vision.join()
+        _update_task_stage(task_id, "vision")
+        # 轮询等待 vision 线程，每 2 秒检查取消标志
+        vision_join_timeout = 2.0
+        while t_vision.is_alive():
+            t_vision.join(timeout=vision_join_timeout)
+            if _is_cancelled(task_id):
+                print(f"[SSE] Task {task_id} cancelled during vision wait", file=sys.stderr, flush=True)
+                yield emit("cancelled", {"message": "任务已被管理员打断"})
+                _unregister_task(task_id)
+                return
         print("[SSE] Vision thread joined", file=sys.stderr, flush=True)
 
         # ── 处理视觉结果 ──
@@ -2504,18 +2556,18 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
 
         if vision_error_msg:
             yield emit("error", {"message": f"视觉分析失败: {vision_error_msg}"})
-            _processing = False
+            _unregister_task(task_id)
             return
 
         if not vision_content:
             yield emit("error", {"message": "视觉分析返回空结果，请换张照片重试"})
-            _processing = False
+            _unregister_task(task_id)
             return
 
         vision_json, vision_error = parse_json_safe(vision_content)
         if vision_error or (isinstance(vision_json, dict) and vision_json.get('parse_error')):
             yield emit("error", {"message": "视觉分析结果解析失败，请换张照片重试"})
-            _processing = False
+            _unregister_task(task_id)
             return
 
         print("[SSE] Vision parsed OK", file=sys.stderr, flush=True)
@@ -2674,6 +2726,15 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             env_context=env_context
         )
         print(f"[SSE] Directions prompt: {len(directions_prompt)} chars", file=sys.stderr, flush=True)
+
+        # 取消检查点：LLM 调用前
+        if _is_cancelled(task_id):
+            print(f"[SSE] Task {task_id} cancelled before directions LLM", file=sys.stderr, flush=True)
+            yield emit("cancelled", {"message": "任务已被管理员打断"})
+            _unregister_task(task_id)
+            return
+
+        _update_task_stage(task_id, "directions")
         directions_content, directions_usage = call_doubao([
             {"role": "user", "content": directions_prompt}
         ], max_tokens=2500, call_type='directions', session_id=trace_id)  # 方向输出通常<1500 tokens
@@ -2801,6 +2862,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         })
 
         # ── 保存恢复数据到 session（用户误关后可找回）──
+        _update_task_stage(task_id, "saving")
         sess = _sessions.get(session_id)
         if sess:
             sess['img_b64'] = img_b64
@@ -2881,8 +2943,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         traceback.print_exc(file=sys.stderr)
         yield emit("error", {"message": str(e)})
     finally:
-        _processing = False
-        print("[SSE] Generator finished", file=sys.stderr, flush=True)
+        _unregister_task(task_id)
+        print(f"[SSE] Generator finished, task {task_id} unregistered", file=sys.stderr, flush=True)
 
 
 # ============================================================
@@ -3177,7 +3239,6 @@ def analyze():
     lens_key = request.form.get('lens', None) or None
 
     _processing = True
-    analyze._start_time = time.time()  # 记录开始时间供排队估算
 
     def cleanup_and_generate():
         try:
@@ -3367,16 +3428,34 @@ def health():
 # ── 处理中状态查询（前端排队轮询）──
 @app.route('/processing-status')
 def processing_status():
-    """查询是否正在处理中"""
-    global _processing
-    elapsed = 0
-    if _processing:
-        start = getattr(analyze, '_start_time', time.time())
-        elapsed = int(time.time() - start)
+    """查询是否正在处理中（含活跃任务详情）"""
+    with _active_tasks_lock:
+        tasks = []
+        for task_id, t in _active_tasks.items():
+            tasks.append({
+                "task_id": task_id,
+                "type": t["type"],
+                "session_id": t["session_id"],
+                "ip": t["ip"],
+                "start_time": t["start_time"],
+                "stage": t["stage"],
+                "elapsed": int(time.time() - t["start_time"])
+            })
+        is_processing = any(t["type"] == "analyze" for t in _active_tasks.values())
+        # 找到最旧的 analyze 任务估算等待时间
+        analyze_tasks = [t for t in tasks if t["type"] == "analyze"]
+        if analyze_tasks:
+            oldest_elapsed = min(t["elapsed"] for t in analyze_tasks)
+            estimated_wait = max(0, 120 - oldest_elapsed)
+        else:
+            oldest_elapsed = 0
+            estimated_wait = 0
+
     return jsonify({
-        "processing": _processing,
-        "elapsed_seconds": elapsed,
-        "estimated_wait_seconds": max(0, 120 - elapsed) if _processing else 0
+        "processing": is_processing,
+        "elapsed_seconds": oldest_elapsed,
+        "estimated_wait_seconds": estimated_wait,
+        "active_tasks": tasks
     })
 
 
@@ -3523,6 +3602,20 @@ def admin_stats():
     except Exception:
         knowledge_quality = {}
 
+    # ── 活跃任务快照 ──
+    with _active_tasks_lock:
+        running_tasks = []
+        for task_id, t in _active_tasks.items():
+            running_tasks.append({
+                "task_id": task_id,
+                "type": t["type"],
+                "session_id": t["session_id"],
+                "ip": t["ip"],
+                "start_time": t["start_time"],
+                "stage": t["stage"],
+                "elapsed": int(time.time() - t["start_time"])
+            })
+
     return jsonify({
         "db": db_stats,
         "feedback": feedback_stats,
@@ -3531,11 +3624,64 @@ def admin_stats():
         "daily_limit": DAILY_LIMIT,
         "active_sessions": len(_sessions),
         "processing": _processing,
+        "running_tasks": running_tasks,
         "api_stats": api_stats,
         "style_exploration": style_exploration,
         "style_panel": style_panel,
         "knowledge_quality": knowledge_quality
     })
+
+
+# ── 活跃任务管理（管理员打断）──
+@app.route('/admin/running-tasks')
+@login_required
+def admin_running_tasks():
+    """返回当前所有活跃任务（含类型、阶段、耗时）"""
+    with _active_tasks_lock:
+        tasks = []
+        for task_id, t in _active_tasks.items():
+            tasks.append({
+                "task_id": task_id,
+                "type": t["type"],
+                "session_id": t["session_id"],
+                "ip": t["ip"],
+                "start_time": t["start_time"],
+                "stage": t["stage"],
+                "elapsed": int(time.time() - t["start_time"])
+            })
+    return jsonify({"running_tasks": tasks, "count": len(tasks)})
+
+
+@app.route('/admin/cancel-task', methods=['POST'])
+@login_required
+def admin_cancel_task():
+    """打断指定任务——设置取消标志，任务会在下个检查点自行终止"""
+    data = request.get_json() or {}
+    task_id = (data.get('task_id') or '').strip()
+    if not task_id:
+        return jsonify({"success": False, "error": "缺少 task_id"}), 400
+
+    with _active_tasks_lock:
+        if task_id not in _active_tasks:
+            return jsonify({"success": False, "error": f"任务不存在或已完成: {task_id}"}), 404
+        event = _cancel_events.get(task_id)
+        if event:
+            event.set()
+            task_info = _active_tasks[task_id]
+            print(f"[Admin] Cancelling task: {task_id} (type={task_info['type']}, stage={task_info['stage']})",
+                  file=sys.stderr, flush=True)
+            return jsonify({
+                "success": True,
+                "message": f"已发送打断信号给 {task_id}（当前阶段: {task_info['stage']}），任务将在下个检查点终止",
+                "task": {
+                    "task_id": task_id,
+                    "type": task_info["type"],
+                    "stage": task_info["stage"],
+                    "elapsed": int(time.time() - task_info["start_time"])
+                }
+            })
+        else:
+            return jsonify({"success": False, "error": "无法获取取消事件"}), 500
 
 
 # ── AI 风格探索日志 ──
