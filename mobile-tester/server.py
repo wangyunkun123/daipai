@@ -575,13 +575,14 @@ DIRECTIONS_PROMPT = """你是摄影美学专家。你的知识覆盖摄影史、
 
 从你的自由探索中选出三条，写入三个固定槽位：
 
+### 🔥 最出片 — 必有（第一张）
+最有记忆点的方向——社媒话题性、或这张照片最独特的视觉锚点。必须有高辨识度的实质内容。
+🔥 放在数组第一位。如果这个场景确实没有高辨识度方向 → style/kb_status/style_promise/reason 全部留空字符串 ""，后续会自动降级。
+
 ### 🟢 现在就拍 — 必有
-最简单易上手的拍法。利用场景已有的光线/色彩/空间优势。
+最简单易上手的拍法。利用场景已有的光线/色彩/空间优势。每个场景都能出。
 
-### 🔥 最出片 — 有则放
-最有记忆点的方向——社媒话题性、或这张照片最独特的视觉锚点。尽量不放空。
-
-### ✨ 脑洞大开 — 宁缺毋滥
+### ✨ 脑洞大开 — 有则放
 跨媒介、小众、非典型的视角。必须有至少一个具体视觉锚点支撑。没有就全填空。
 
 ---
@@ -590,7 +591,7 @@ DIRECTIONS_PROMPT = """你是摄影美学专家。你的知识覆盖摄影史、
 
 1. 每条 direction 的 style_promise/reason 必须引用 ≥1 个视觉素材（光线/色彩/空间锚点/构图元素/人物特征）
 2. 三条风格各不相同，覆盖不同审美取向
-3. 🟢 必有实质内容。🔥 尽量有内容。✨ 宁缺毋滥
+3. 🔥 必有高辨识度实质内容（没有就全部留空）。🟢 必有实质内容。✨ 宁缺毋滥
 4. 忠于实际光线——硬光不推柔光风格，阴天不推逆光小清新
 
 ## style_brief——风格视觉特征速写
@@ -607,8 +608,8 @@ DIRECTIONS_PROMPT = """你是摄影美学专家。你的知识覆盖摄影史、
   "mood": "情绪氛围（≤20字，如：冷静幽默 / 松弛慵懒 / 冷酷张力）"
 }}
 
-🟢 → 基于视觉数据的自然推导，反映当前场景的实际光线和色彩
 🔥 → 社媒流行风格，引用该风格在摄影社区中的典型视觉特征
+🟢 → 基于视觉数据的自然推导，反映当前场景的实际光线和色彩
 ✨ → 跨媒介/小众风格，必须精确描述视觉特征（后续方案 AI 全靠这个理解）
 
 ## photo_guide——🆕新风格专属·摄影可执行翻译
@@ -655,6 +656,18 @@ fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风文案...\\n\\n灵
   "discovery_note": "🆕 如果发现了知识库没有的新风格，在这里简要说明",
   "directions": [
     {{
+      "id": "best", "emoji": "🔥", "label": "最出片", "subtitle": "发出去会被赞的那种",
+      "style": "风格名（中文）——没有高辨识度方向时留空字符串",
+      "kb_status": "📚已有记录 或 🆕新发现——没有时留空",
+      "style_promise": "1句话说出拍出来什么效果",
+      "reason": "为什么这个风格适合现在这张照片（60-100字）——没有高辨识度方向时留空",
+      "fit_rationale": "风格-场景适配逻辑（1-2句）",
+      "light_annotation": "🟢/🟡/🔴", "device_annotation": "🟢直接拍/🟡微调/🟠替代方案",
+      "style_brief": {{"essence":"","color":"","composition":"","light":"","mood":""}},
+      "photo_guide": "🆕新发现时填写（格式见上文photo_guide模板）；📚已有记录填空字符串",
+      "plans": []
+    }},
+    {{
       "id": "now", "emoji": "🟢", "label": "现在就拍", "subtitle": "零门槛，站在这就能拍",
       "style": "风格名（中文）",
       "kb_status": "📚已有记录 或 🆕新发现",
@@ -666,13 +679,12 @@ fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风文案...\\n\\n灵
       "photo_guide": "🆕新发现时填写（格式见上文photo_guide模板）；📚已有记录填空字符串",
       "plans": []
     }},
-    {{"id":"best","emoji":"🔥","label":"最出片","subtitle":"发出去会被赞的那种","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"photo_guide":"","plans":[]}},
     {{"id":"creative","emoji":"✨","label":"脑洞大开","subtitle":"不像游客照的视角","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"photo_guide":"","plans":[]}}
   ],
-  "fold_details": {{ "now": "▼ 为什么选这个\\n\\n...", "best": "...", "creative": "..." }}
+  "fold_details": {{ "best": "▼ 为什么选这个\\n\\n...", "now": "▼ 为什么选这个\\n\\n...", "creative": "..." }}
 }}
 
-🟢必有实质内容。🔥尽量有内容，与🟢互补。✨无灵感时全部null，fold_details.creative空字符串。
+🔥必有高辨识度实质内容——没有就全部留空字符串（前端自动降级为🟢首位）。🟢必有实质内容。✨无灵感时全部留空。
 directions 必须是数组 []，不是对象 {{}}！"""
 
 
@@ -2821,25 +2833,26 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             sess['scene_mode'] = scene_mode  # 记住场景模式，方案生成时复用
             _save_session(session_id)  # 立即持久化到磁盘，防止重启丢图片
 
-        # ── 🔥 服务端自动预热：后台生成 🟢 现在就拍 的方案 ──
-        # 利用用户查看风格卡片的 5-10 秒时间窗口，偷偷把方案生成了
+        # ── 🔥 服务端自动预热：后台生成第一张方向（🔥 最出片）的方案 ──
+        # 利用用户查看风格卡片的 5-10 秒时间窗口进行预热
+        # 只预热一张——不做级联（用户点击才触发生成，避免并发冲突）
         _prewarm_device = device_override
         _prewarm_lens = lens_key
         _prewarm_sid = session_id
         _prewarm_scene = scene_mode
-        def _auto_prewarm_now():
+        def _auto_prewarm_first():
             try:
                 plans, err = generate_plans_for_direction(
-                    _prewarm_sid, "now", _prewarm_device, _prewarm_lens, scene_mode=_prewarm_scene
+                    _prewarm_sid, "best", _prewarm_device, _prewarm_lens, scene_mode=_prewarm_scene
                 )
                 if err:
-                    print(f"[AutoPreheat] 🟢 now plans failed: {err}", file=sys.stderr, flush=True)
+                    print(f"[AutoPreheat] 🔥 best plans failed: {err}", file=sys.stderr, flush=True)
                 else:
-                    print(f"[AutoPreheat] 🟢 now plans ready: {len(plans) if plans else 0} plans", file=sys.stderr, flush=True)
+                    print(f"[AutoPreheat] 🔥 best plans ready: {len(plans) if plans else 0} plans", file=sys.stderr, flush=True)
             except Exception as e:
-                print(f"[AutoPreheat] 🟢 now plans error: {e}", file=sys.stderr, flush=True)
-        threading.Thread(target=_auto_prewarm_now, daemon=True).start()
-        print(f"[AutoPreheat] 🟢 now started in background for session={_prewarm_sid}", file=sys.stderr, flush=True)
+                print(f"[AutoPreheat] 🔥 best plans error: {e}", file=sys.stderr, flush=True)
+        threading.Thread(target=_auto_prewarm_first, daemon=True).start()
+        print(f"[AutoPreheat] 🔥 best started in background for session={_prewarm_sid}", file=sys.stderr, flush=True)
 
         # ── 📋 本地分析留存：每次分析完保存视觉数据，方便代码改动后对比 ──
         try:

@@ -203,16 +203,15 @@
 
   /* ====== Carousel (方向卡片 + 方案卡片) ====== */
   .carousel-track {
-    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    display: flex; overflow-x: auto; scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; -ms-overflow-style: none;
-    scroll-snap-stop: always;
   }
   .carousel-track::-webkit-scrollbar { display: none; }
   .carousel-card {
-    flex: 0 0 100%; min-width: 0; scroll-snap-align: start;
+    flex: 0 0 88%; min-width: 0; scroll-snap-align: start;
     padding: 0 2px; box-sizing: border-box;
-    max-width: 100%; overflow: hidden;
+    max-width: 88%; overflow: hidden;
   }
   .carousel-dots {
     display: flex; justify-content: center; gap: 6px; padding: 14px 0 6px;
@@ -279,6 +278,25 @@
   .btn-select.secondary:active { border-color: var(--dim); color: var(--text); }
   .btn-select:disabled { opacity: 0.3; pointer-events: none; }
 
+  /* 方向导航行 */
+  .dir-nav-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 0 4px;
+  }
+  .btn-nav-arrow {
+    padding: 10px 12px; border-radius: 12px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    background: var(--card); color: var(--dim);
+    border: 1px solid var(--border);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-nav-arrow:active { border-color: var(--dim); color: var(--text); }
+  .btn-nav-arrow:disabled { opacity: 0.25; pointer-events: none; }
+  .dir-counter {
+    font-size: 13px; font-weight: 600; color: var(--cyan);
+    white-space: nowrap; flex-shrink: 0; min-width: 36px; text-align: center;
+  }
+
   /* ====== Plans ====== */
   .plans-header {
     display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
@@ -293,6 +311,10 @@
   .plans-header .info { flex: 1; }
   .plans-header .dir-label { font-size: 12px; color: var(--dim); }
   .plans-header .dir-style { font-size: 16px; font-weight: 700; }
+  .plan-counter {
+    font-size: 13px; font-weight: 600; color: var(--cyan);
+    white-space: nowrap; flex-shrink: 0;
+  }
 
   .plan-loading { text-align: center; padding: 30px 0; display: none; }
   .plan-loading.show { display: block; }
@@ -465,6 +487,13 @@
   .limit-banner .lb-btn.rejected {
     background: rgba(239,68,68,0.1); color: var(--red);
   }
+  /* approved state */
+  .limit-banner.approved {
+    background: rgba(74,222,128,0.06); border-color: rgba(74,222,128,0.2);
+  }
+  .limit-banner.approved .lb-btn {
+    background: rgba(74,222,128,0.15); color: var(--green);
+  }
 
   /* Data sections */
   .data-sections { margin-top: 20px; }
@@ -608,6 +637,16 @@
     </div>
   </div>
 
+  <!-- ====== Limit Banner ====== -->
+  <div class="limit-banner" id="limitBanner">
+    <span class="lb-icon">🎫</span>
+    <span class="lb-text">
+      <span id="limitMsg">今日免费次数已用完</span>
+      <br><span class="lb-dim" id="limitSub"></span>
+    </span>
+    <button class="lb-btn" id="limitBtn">申请更多</button>
+  </div>
+
   <!-- Upload -->
   <div class="upload-zone" id="uploadZone">
     <span class="icon">📸</span>
@@ -660,6 +699,7 @@
         <div class="dir-label" id="planDirLabel"></div>
         <div class="dir-style" id="planDirStyle"></div>
       </div>
+      <span class="plan-counter" id="planCounter"></span>
     </div>
     <div class="plan-loading" id="planLoading">
       <div class="mini-spin"></div>
@@ -685,16 +725,6 @@
     <div class="queue-count" id="queueCount">⏱️ 正在等待...</div>
     <button class="queue-cancel" id="queueCancel">❌ 取消排队</button>
   </div>
-</div>
-
-<!-- ====== v3.5: Limit Banner ====== -->
-<div class="limit-banner" id="limitBanner">
-  <span class="lb-icon">🎫</span>
-  <span class="lb-text">
-    <span id="limitMsg">今日免费次数已用完</span>
-    <br><span class="lb-dim" id="limitSub"></span>
-  </span>
-  <button class="lb-btn" id="limitBtn">申请更多</button>
 </div>
 
 <!-- ====== Restore Bar (bottom) ====== -->
@@ -723,28 +753,6 @@ function nameSourceBadge(ns) {
   if (ns === 'translated') return ' <span class="ai-badge">🤖 AI翻译</span>';
   if (ns === 'generated') return ' <span class="ai-badge">🤖 AI总结</span>';
   return '';  // discovered 或空 → 不显示标签
-}
-
-// ── 🔥 级联预热：预热下一个方向的方案 ──
-// 级联顺序：now → best → creative
-const PREHEAT_CASCADE = { now: 'best', best: 'creative', creative: null };
-function preheatDirection(dirId) {
-  if (!dirId || !sessionId) return;
-  const dir = allDirs.find(d => d.id === dirId);
-  if (!dir || !dir.style) return;  // 无实质内容不预热
-  const deviceKey = currentDeviceKey || 'unknown';
-  const lensKey = (document.getElementById('lensSelect')?.value) || '';
-  fetch('/analyze/plans', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      session_id: sessionId,
-      direction_id: dirId,
-      device: deviceKey !== 'unknown' ? deviceKey : null,
-      lens: lensKey || null,
-      prewarm: true
-    })
-  }).catch(() => {});
-  console.log('[Preheat] 🔥 triggered:', dirId);
 }
 
 // State
@@ -984,13 +992,11 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
       $('#limitSub').textContent = '还想继续用？点击申请，等待管理员批准';
       $('#limitBtn').textContent = '申请更多';
       $('#limitBtn').className = 'lb-btn';
+      $('#limitBanner').classList.remove('approved');
       $('#limitBanner').classList.add('show');
-      // 插入到方案区顶部
-      const pa = $('#plansArea');
-      if (pa && !pa.contains($('#limitBanner'))) {
-        pa.insertBefore($('#limitBanner'), pa.firstChild);
-      }
     }
+
+    let quotaPollTimer = null;
 
     $('#limitBtn').onclick = async () => {
       const btn = $('#limitBtn');
@@ -1000,13 +1006,17 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
         const r = await fetch('/request-quota', { method: 'POST' });
         const d = await r.json();
         if (d.success) {
-          btn.textContent = '✅ 已提交';
+          btn.textContent = '⏳ 等待批准';
           btn.className = 'lb-btn done';
           $('#limitSub').textContent = '已提交申请，等待管理员批准';
+          startQuotaPolling();
         } else {
           btn.textContent = d.message === '已有待处理的申请，请耐心等待' ? '⏳ 等待中' : '⚠️ 重试';
           btn.className = 'lb-btn done';
           $('#limitSub').textContent = d.message;
+          if (d.message === '已有待处理的申请，请耐心等待') {
+            startQuotaPolling();
+          }
         }
       } catch(e) {
         btn.textContent = '⚠️ 重试';
@@ -1014,8 +1024,78 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
       }
     };
 
-    // ── 启动分析 ──
-    doAnalyze();
+    // ── 轮询检查申请是否通过 ──
+    function startQuotaPolling() {
+      if (quotaPollTimer) clearInterval(quotaPollTimer);
+      let attempts = 0;
+      quotaPollTimer = setInterval(async () => {
+        attempts++;
+        try {
+          const r = await fetch('/quota-status');
+          const s = await r.json();
+          if (s.request_status === 'approved') {
+            clearInterval(quotaPollTimer);
+            quotaPollTimer = null;
+            // 绿色通过条幅
+            $('#limitMsg').textContent = `✅ 申请已通过！今日可用 ${s.effective_limit} 次（+${s.extra}）`;
+            $('#limitSub').textContent = `已用 ${s.used} 次，还剩 ${s.effective_limit - s.used} 次`;
+            $('#limitBtn').textContent = '知道了';
+            $('#limitBtn').className = 'lb-btn';
+            $('#limitBtn').disabled = false;
+            $('#limitBanner').classList.add('approved');
+            $('#limitBtn').onclick = () => {
+              $('#limitBanner').classList.remove('show', 'approved');
+            };
+          } else if (s.request_status === 'rejected') {
+            clearInterval(quotaPollTimer);
+            quotaPollTimer = null;
+            $('#limitSub').textContent = '申请未通过，明天自动重置';
+            $('#limitBtn').textContent = '知道了';
+            $('#limitBtn').className = 'lb-btn rejected';
+            $('#limitBtn').disabled = false;
+            $('#limitBtn').onclick = () => {
+              $('#limitBanner').classList.remove('show');
+            };
+          }
+          // 超过 120 次轮询（10分钟）自动停止
+          if (attempts > 120) {
+            clearInterval(quotaPollTimer);
+            quotaPollTimer = null;
+          }
+        } catch(e) { /* 静默继续轮询 */ }
+      }, 5000);  // 每 5 秒查一次
+    }
+
+    // ── 页面加载时检查配额 ──
+    async function checkQuotaOnLoad() {
+      try {
+        const r = await fetch('/quota-status');
+        const s = await r.json();
+        if (s.used >= s.effective_limit) {
+          // 次数用完——显示红条
+          showLimitBanner(s.used, s.effective_limit);
+          if (s.request_status === 'pending') {
+            $('#limitBtn').textContent = '⏳ 等待批准';
+            $('#limitBtn').className = 'lb-btn done';
+            $('#limitSub').textContent = '已提交申请，等待管理员批准';
+            startQuotaPolling();
+          }
+        } else if (s.request_status === 'approved') {
+          // 已通过——显示绿条
+          $('#limitMsg').textContent = `✅ 申请已通过！今日可用 ${s.effective_limit} 次（+${s.extra}）`;
+          $('#limitSub').textContent = `已用 ${s.used} 次，还剩 ${s.effective_limit - s.used} 次`;
+          $('#limitBtn').textContent = '知道了';
+          $('#limitBtn').className = 'lb-btn';
+          $('#limitBanner').classList.add('show', 'approved');
+          $('#limitBtn').onclick = () => {
+            $('#limitBanner').classList.remove('show', 'approved');
+          };
+        }
+      } catch(e) { /* 静默失败——不影响正常使用 */ }
+    }
+
+    // ── 页面加载：先查配额，再启动分析 ──
+    checkQuotaOnLoad().then(() => doAnalyze());
   });
 });
 
@@ -1273,6 +1353,7 @@ function showDirectionsResult(data) {
     ? `<div class="insight">${esc(data.insight)}</div>`
     : '';
 
+  // 🔥降级：best 若无实质内容（style/reason 留空），filter 自动移除，🟢 now 顶上第一张
   allDirs = (data.directions||[]).filter(d => d && (d.style || d.reason));
   if (allDirs.length === 0) { showError('未找到合适的方向'); return; }
 
@@ -1284,9 +1365,6 @@ function showDirectionsResult(data) {
   $('#resultArea').scrollIntoView({ behavior:'smooth' });
   saveSessionId();
 
-  // ── 🔥 级联预热：服务端已后台生成 🟢 now，前端预热 🔥 best ──
-  // 用户查看 now 时预热 best，查看 best 时预热 creative，逐级递进
-  preheatDirection('best');
 }
 
 function renderDirectionCarousel() {
@@ -1332,31 +1410,52 @@ function renderDirectionCarousel() {
   });
 
   // 滚动监听更新 active
-  const track = $('#dirCarouselTrack');
-  track.onscroll = () => updateCarouselActive('dirCarouselTrack', 'dirCarouselDots', idx => {
+  const track2 = $('#dirCarouselTrack');
+  track2.onscroll = () => updateCarouselActive('dirCarouselTrack', 'dirCarouselDots', idx => {
     if (idx !== activeDirIdx) {
       activeDirIdx = idx;
       $('#dirProgress').textContent = `风格方向 ${idx+1} / ${total} · 左右滑动切换`;
-      // 🔥 级联预热：看 now → 预热 best，看 best → 预热 creative
-      const curDir = allDirs[idx];
-      if (curDir) {
-        const nextId = PREHEAT_CASCADE[curDir.id];
-        if (nextId) preheatDirection(nextId);
-      }
+      updateDirNavRow(idx, total);  // 刷新计数器 + 上一个按钮状态
     }
   });
 
   // 滚动到当前 active
   scrollCarouselTo('dirCarouselTrack', activeDirIdx);
 
-  // 底部按钮——简洁操作，不重复卡片上的标签
-  const d = allDirs[activeDirIdx];
-  $('#dirActions').innerHTML = `
-    <button class="btn-select primary" id="btnSelectDir" style="width:100%">📸 出方案</button>`;
-  $('#btnSelectDir').addEventListener('click', ()=>{ loadPlans(allDirs[activeDirIdx]); });
-
-  // 滑动时保持按钮文字不变（不管切到哪个方向，操作语义都一样）
+  // ── 底部导航行：上一个 | 计数器 | 出方案 ──
+  renderDirNavRow();
 }
+
+function renderDirNavRow() {
+  const total = allDirs.length;
+  const idx = activeDirIdx;
+  $('#dirActions').innerHTML = `
+    <div class="dir-nav-row">
+      <button class="btn-nav-arrow" id="btnDirPrev"${idx===0?' disabled':''}>← 上一个</button>
+      <span class="dir-counter">${idx+1} / ${total}</span>
+      <button class="btn-select primary" id="btnSelectDir">📸 就这个，出方案 →</button>
+    </div>`;
+  $('#btnSelectDir').addEventListener('click', ()=>{ loadPlans(allDirs[activeDirIdx]); });
+  if (idx > 0) {
+    $('#btnDirPrev').addEventListener('click', ()=>{
+      if (activeDirIdx > 0) {
+        activeDirIdx--;
+        scrollCarouselTo('dirCarouselTrack', activeDirIdx);
+        updateDirNavRow(activeDirIdx, total);
+        $('#dirProgress').textContent = `风格方向 ${activeDirIdx+1} / ${total} · 左右滑动切换`;
+        updateCarouselActive('dirCarouselTrack', 'dirCarouselDots', ()=>{});
+      }
+    });
+  }
+}
+
+function updateDirNavRow(idx, total) {
+  const prevBtn = $('#btnDirPrev');
+  if (prevBtn) prevBtn.disabled = idx === 0;
+  const counter = document.querySelector('.dir-counter');
+  if (counter) counter.textContent = `${idx+1} / ${total}`;
+}
+
 
 function scrollCarouselTo(trackId, idx) {
   const track = document.getElementById(trackId);
@@ -1517,9 +1616,15 @@ function renderPlans(plans, direction) {
     });
   });
 
-  // 滚动监听——切换方案时同步更新标注
+  // 方案计数器
+  $('#planCounter').textContent = total > 1 ? `方案 1 / ${total}` : '';
+  
+  // 滚动监听——切换方案时同步更新标注+计数器
   const track = $('#planCarouselTrack');
-  track.onscroll = () => updateCarouselActive('planCarouselTrack', 'planCarouselDots', idx => { activePlanIdx = idx; });
+  track.onscroll = () => updateCarouselActive('planCarouselTrack', 'planCarouselDots', idx => {
+    activePlanIdx = idx;
+    $('#planCounter').textContent = total > 1 ? `方案 ${idx+1} / ${total}` : '';
+  });
 
   plans.forEach((p,i)=>{
     if (p.why) {
