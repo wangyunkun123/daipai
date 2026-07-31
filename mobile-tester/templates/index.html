@@ -1537,6 +1537,9 @@ async function loadPlans(direction) {
   $('#planPillBar').innerHTML = '';
   $('#dataSections').innerHTML = '';
   $('#planLoading').classList.add('show');
+  // 显示正在处理的风格名，让用户知道在干什么
+  const loadStyleName = direction.style || direction.label || '';
+  $('#planLoading').querySelector('.load-text').textContent = loadStyleName ? `正在准备「${loadStyleName}」方案...` : '正在生成拍摄方案...';
   $('#plansArea').classList.add('active');
   $('#plansArea').scrollIntoView({ behavior:'smooth' });
 
@@ -1565,9 +1568,9 @@ async function loadPlans(direction) {
     console.log('First plans request failed: ' + err.message + ', starting poll...');
   }
 
-  // ── 轮询模式：每 3 秒检查一次缓存（最多 20 次 = 60 秒）──
+  // ── 轮询模式：每 3 秒检查一次缓存（最多 40 次 = 120 秒，匹配后端预热超时）──
   const pollPayload = { ...payload, poll: true };
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 40; attempt++) {
     await new Promise(r => setTimeout(r, 3000));
 
     try {

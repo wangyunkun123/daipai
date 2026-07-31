@@ -2984,9 +2984,11 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
             _plan_generating[global_key] = time.time()
 
     if is_generating:
-        # 另一个请求正在生成中，等待它完成（在锁外等待，不阻塞其他请求）
+        # 另一个请求正在生成中（预热或 retry/poll），等待它完成
+        # 用户指令优先级 > 预热：不报错，等预热完成或接管生成
         waited = 0
-        while waited < 60:
+        MAX_WAIT = 120  # 预热 LLM 生成最长 90s+，留 30s 余量
+        while waited < MAX_WAIT:
             time.sleep(1.5)
             waited += 1.5
             # 每 3 秒检查一次缓存
@@ -2995,20 +2997,22 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
                 if sess and cache_key in sess.get('plan_cache', {}):
                     print(f"[Plans] Waited {waited:.0f}s for in-progress generation, cache now ready", file=sys.stderr, flush=True)
                     return sess['plan_cache'][cache_key], None
-            # 检查生成标记是否已清除（生成失败或完成）
+            # 检查生成标记是否已清除（预热失败或完成但未写缓存）
             with _plan_generating_lock:
                 if global_key not in _plan_generating:
                     sess = get_session(session_id)
                     if sess and cache_key in sess.get('plan_cache', {}):
                         return sess['plan_cache'][cache_key], None
-                    # 生成失败且无缓存 → 重新标记并触发生成
+                    # 预热失败且无缓存 → 重新标记，接管生成
                     _plan_generating[global_key] = time.time()
+                    print(f"[Plans] Pre-generation failed after {waited:.0f}s, taking over", file=sys.stderr, flush=True)
                     break
 
-        # 等待超时（>60s）— 原请求可能还在跑但特别慢，不触发生成避免重复
-        if waited >= 60:
-            print(f"[Plans] Timed out waiting for existing generation ({global_key})", file=sys.stderr, flush=True)
-            return None, "方案生成时间较长，请稍后重试"
+        if waited >= MAX_WAIT:
+            # 预热超时 → 不报错，接管生成（用户优先）
+            with _plan_generating_lock:
+                _plan_generating[global_key] = time.time()  # 刷新标记
+            print(f"[Plans] Pre-generation timed out after {MAX_WAIT}s, taking over", file=sys.stderr, flush=True)
 
     # 构建设备上下文
     device_text, _ = build_device_context(device_key, lens_key)
