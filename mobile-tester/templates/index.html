@@ -213,14 +213,8 @@
     padding: 0 2px; box-sizing: border-box;
     max-width: 88%; overflow: hidden;
   }
-  .carousel-dots {
-    display: flex; justify-content: center; gap: 6px; padding: 14px 0 6px;
-  }
-  .carousel-dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--border);
-    transition: all 0.25s ease; flex-shrink: 0;
-  }
-  .carousel-dot.active { background: var(--cyan); width: 20px; border-radius: 3px; }
+  .carousel-dots { display: none; }  /* 旧版圆点——已被 pill-bar 替代 */
+  .carousel-dot { display: none; }
 
   /* ====== Final Result: Directions ====== */
   .result-area { display: none; }
@@ -237,7 +231,30 @@
     margin-bottom: 10px; font-weight: 600;
   }
 
-  .dir-progress { text-align: center; font-size: 11px; color: var(--dimmer); margin-bottom: 4px; }
+  /* 风格/方案 Pill 标签栏 */
+  .pill-bar {
+    display: flex; gap: 8px; padding: 4px 0 12px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .pill-bar::-webkit-scrollbar { display: none; }
+  .pill-tab {
+    flex-shrink: 0; padding: 8px 16px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    white-space: nowrap; transition: all 0.2s;
+    border: 1.5px solid var(--border);
+    background: var(--card); color: var(--dim);
+  }
+  .pill-tab:active { transform: scale(0.96); }
+  .pill-tab.now { border-color: rgba(74,222,128,0.3); }
+  .pill-tab.now.active { background: rgba(74,222,128,0.15); color: var(--green); border-color: var(--green); }
+  .pill-tab.best { border-color: rgba(245,158,11,0.3); }
+  .pill-tab.best.active { background: rgba(245,158,11,0.15); color: var(--fire); border-color: var(--fire); }
+  .pill-tab.creative { border-color: rgba(167,139,250,0.3); }
+  .pill-tab.creative.active { background: rgba(167,139,250,0.15); color: var(--purple); border-color: var(--purple); }
+  /* 方案 pill 可横滚 */
+  .plan-pills { flex-wrap: nowrap; padding-bottom: 8px; margin-bottom: 4px; }
+  .dir-progress { display: none; }  /* 旧版文字提示隐藏 */
   .dir-card-single {
     background: var(--card); border-radius: var(--radius); padding: 22px 18px;
     margin: 0; border: 1px solid transparent; min-height: 200px;
@@ -685,9 +702,8 @@
   <!-- ====== Final Result: Directions ====== -->
   <div class="result-area" id="resultArea">
     <div class="insight-block" id="insightBlock"></div>
-    <div class="dir-progress" id="dirProgress"></div>
+    <div class="pill-bar" id="dirPillBar"></div>
     <div class="carousel-track" id="dirCarouselTrack"></div>
-    <div class="carousel-dots" id="dirCarouselDots"></div>
     <div class="dir-actions" id="dirActions"></div>
   </div>
 
@@ -705,8 +721,8 @@
       <div class="mini-spin"></div>
       <div class="load-text">正在生成拍摄方案...</div>
     </div>
+    <div class="pill-bar plan-pills" id="planPillBar"></div>
     <div class="carousel-track" id="planCarouselTrack"></div>
-    <div class="carousel-dots" id="planCarouselDots"></div>
     <div class="data-sections" id="dataSections"></div>
   </div>
 
@@ -886,7 +902,7 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
     foldDetails = {}; currentPlans = []; sourceTags = {};
     clearSessionId(); $('#restoreBar').classList.remove('show');
     $('#planCarouselTrack').innerHTML = '';
-    $('#planCarouselDots').innerHTML = '';
+    $('#planPillBar').innerHTML = '';
     $('#dataSections').innerHTML = '';
     $('#infoPanel').innerHTML = '';
     $('#insightBlock').innerHTML = '';
@@ -1369,7 +1385,25 @@ function showDirectionsResult(data) {
 
 function renderDirectionCarousel() {
   const total = allDirs.length;
-  $('#dirProgress').textContent = `风格方向 ${activeDirIdx+1} / ${total} · 左右滑动切换`;
+  
+  // ── 顶部风格名 Pill 标签栏 ──
+  let pillsHtml = '';
+  allDirs.forEach((d, i) => {
+    const pillCls = d.id==='now'?'now':d.id==='best'?'best':'creative';
+    const styleName = (d.style&&!/^[a-z_]+$/.test(d.style))?d.style:(d.style_promise||'未命名');
+    pillsHtml += `<span class="pill-tab ${pillCls}${i===activeDirIdx?' active':''}" data-idx="${i}">${esc(d.emoji)} ${esc(styleName)}</span>`;
+  });
+  $('#dirPillBar').innerHTML = pillsHtml;
+  // 点击 pill → 切换卡片
+  $('#dirPillBar').querySelectorAll('.pill-tab').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const idx = parseInt(pill.dataset.idx);
+      activeDirIdx = idx;
+      scrollCarouselTo('dirCarouselTrack', idx);
+      updateDirPills(idx);
+      updateDirNavRow(idx, total);
+    });
+  });
 
   // 渲染卡片
   let cardsHtml = '';
@@ -1380,7 +1414,6 @@ function renderDirectionCarousel() {
     if (d.light_annotation) meta += `<span class="meta-light">光线 ${esc(d.light_annotation)}</span>`;
     if (d.device_annotation) meta += `<span class="meta-device">设备 ${esc(d.device_annotation)}</span>`;
     if (sourceTags[d.id]) meta += `<span class="meta-source">${esc(sourceTags[d.id])}</span>`;
-    // 只在 name_source 也是 AI 生成时标注——避免真实风格被误标
     if (d.source_type === 'inference' && d.name_source && d.name_source !== 'discovered') meta += `<span class="meta-source">🤖 AI推理</span>`;
     cardsHtml += `
       <div class="carousel-card">
@@ -1395,27 +1428,13 @@ function renderDirectionCarousel() {
   });
   $('#dirCarouselTrack').innerHTML = cardsHtml;
 
-  // 渲染圆点
-  let dotsHtml = '';
-  for (let i = 0; i < total; i++) {
-    dotsHtml += `<span class="carousel-dot${i===activeDirIdx?' active':''}" data-idx="${i}"></span>`;
-  }
-  $('#dirCarouselDots').innerHTML = dotsHtml;
-  // 圆点点击切换
-  $('#dirCarouselDots').querySelectorAll('.carousel-dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-      const idx = parseInt(dot.dataset.idx);
-      scrollCarouselTo('dirCarouselTrack', idx);
-    });
-  });
-
-  // 滚动监听更新 active
+  // 滚动监听 → 同步 pill 高亮 + 底部导航
   const track2 = $('#dirCarouselTrack');
-  track2.onscroll = () => updateCarouselActive('dirCarouselTrack', 'dirCarouselDots', idx => {
+  track2.onscroll = () => updateCarouselActive('dirCarouselTrack', null, idx => {
     if (idx !== activeDirIdx) {
       activeDirIdx = idx;
-      $('#dirProgress').textContent = `风格方向 ${idx+1} / ${total} · 左右滑动切换`;
-      updateDirNavRow(idx, total);  // 刷新计数器 + 上一个按钮状态
+      updateDirPills(idx);
+      updateDirNavRow(idx, total);
     }
   });
 
@@ -1424,6 +1443,16 @@ function renderDirectionCarousel() {
 
   // ── 底部导航行：上一个 | 计数器 | 出方案 ──
   renderDirNavRow();
+}
+
+function updateDirPills(idx) {
+  const pills = $('#dirPillBar').querySelectorAll('.pill-tab');
+  pills.forEach((p, i) => p.classList.toggle('active', i === idx));
+}
+
+function updatePlanPills(idx) {
+  const pills = $('#planPillBar').querySelectorAll('.pill-tab');
+  pills.forEach((p, i) => p.classList.toggle('active', i === idx));
 }
 
 function renderDirNavRow() {
@@ -1442,8 +1471,7 @@ function renderDirNavRow() {
         activeDirIdx--;
         scrollCarouselTo('dirCarouselTrack', activeDirIdx);
         updateDirNavRow(activeDirIdx, total);
-        $('#dirProgress').textContent = `风格方向 ${activeDirIdx+1} / ${total} · 左右滑动切换`;
-        updateCarouselActive('dirCarouselTrack', 'dirCarouselDots', ()=>{});
+        updateDirPills(activeDirIdx);
       }
     });
   }
@@ -1506,7 +1534,7 @@ async function loadPlans(direction) {
   if (planCache[cacheKey]) { renderPlans(planCache[cacheKey], direction); return; }
 
   $('#planCarouselTrack').innerHTML = '';
-  $('#planCarouselDots').innerHTML = '';
+  $('#planPillBar').innerHTML = '';
   $('#dataSections').innerHTML = '';
   $('#planLoading').classList.add('show');
   $('#plansArea').classList.add('active');
@@ -1597,33 +1625,45 @@ function renderPlans(plans, direction) {
   activePlanIdx = 0;
   currentPlans = plans;
   const total = plans.length;
+  const pillCls = direction.id==='now'?'now':direction.id==='best'?'best':'creative';
+  
+  // ── 顶部方案名 Pill 标签栏（可横滚）──
+  let pillsHtml = '';
+  plans.forEach((p, i) => {
+    const name = p.name || `方案${i+1}`;
+    pillsHtml += `<span class="pill-tab ${pillCls}${i===0?' active':''}" data-idx="${i}">${esc(name)}</span>`;
+  });
+  $('#planPillBar').innerHTML = pillsHtml;
+  // 点击 pill → 切换方案卡片
+  $('#planPillBar').querySelectorAll('.pill-tab').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const idx = parseInt(pill.dataset.idx);
+      activePlanIdx = idx;
+      scrollCarouselTo('planCarouselTrack', idx);
+      updatePlanPills(idx);
+      $('#planCounter').textContent = total > 1 ? `方案 ${idx+1} / ${total}` : '';
+    });
+  });
 
   // 渲染卡片
   let html = '';
   plans.forEach((p,i)=>{ html += `<div class="carousel-card">${renderPlanCard(p,i,direction)}</div>`; });
   $('#planCarouselTrack').innerHTML = html;
 
-  // 渲染圆点
-  let dotsHtml = '';
-  for (let i = 0; i < total; i++) {
-    dotsHtml += `<span class="carousel-dot${i===0?' active':''}" data-idx="${i}"></span>`;
-  }
-  $('#planCarouselDots').innerHTML = dotsHtml;
-  $('#planCarouselDots').querySelectorAll('.carousel-dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-      const idx = parseInt(dot.dataset.idx);
-      scrollCarouselTo('planCarouselTrack', idx);
-    });
-  });
-
   // 方案计数器
   $('#planCounter').textContent = total > 1 ? `方案 1 / ${total}` : '';
   
-  // 滚动监听——切换方案时同步更新标注+计数器
+  // 滚动监听 → 同步 pill 高亮 + 自动滚到可见 + 计数器
   const track = $('#planCarouselTrack');
-  track.onscroll = () => updateCarouselActive('planCarouselTrack', 'planCarouselDots', idx => {
-    activePlanIdx = idx;
-    $('#planCounter').textContent = total > 1 ? `方案 ${idx+1} / ${total}` : '';
+  track.onscroll = () => updateCarouselActive('planCarouselTrack', null, idx => {
+    if (idx !== activePlanIdx) {
+      activePlanIdx = idx;
+      updatePlanPills(idx);
+      $('#planCounter').textContent = total > 1 ? `方案 ${idx+1} / ${total}` : '';
+      // 自动滚动 pill 到可见区域
+      const activePill = $('#planPillBar').querySelector('.pill-tab.active');
+      if (activePill) activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
   });
 
   plans.forEach((p,i)=>{
@@ -2157,8 +2197,8 @@ function resetAll() {
   $('#metaBar').innerHTML=''; $('#dataSections').innerHTML='';
   $('#reshootBtn').style.display='none';
   $('#cameraInput').value=''; $('#galleryInput').value='';
-  $('#dirCarouselTrack').innerHTML=''; $('#dirCarouselDots').innerHTML='';
-  $('#planCarouselTrack').innerHTML=''; $('#planCarouselDots').innerHTML='';
+  $('#dirCarouselTrack').innerHTML=''; $('#dirPillBar').innerHTML='';
+  $('#planCarouselTrack').innerHTML=''; $('#planPillBar').innerHTML='';
   $('#insightBlock').innerHTML=''; $('#dirActions').innerHTML='';
   $('#infoPanel').innerHTML='';
   $('#deviceSelect').value=''; $('#lensSelect').value='';
