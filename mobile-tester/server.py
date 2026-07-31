@@ -53,6 +53,12 @@ def _get_httpx_client():
     return _httpx_client
 DOUBAO_MODEL = "doubao-seed-2.0-pro"
 DOUBAO_FAST_MODEL = "doubao-seed-2.0-lite"  # 方案生成用快速模型——结构化JSON不需要最强推理
+
+# ── DeepSeek（方向/方案生成）──
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
+DEEPSEEK_MODEL = "deepseek-v4-flash"  # Flash 关思考——实测最快（方向~24s/方案~30s），质量接近 Pro
+DEEPSEEK_NO_THINK = {"thinking": {"type": "disabled"}}  # ⚠️ 必须关思考：Flash 默认深度思考会吃光 max_tokens 导致空响应
 EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daipai/scripts/exif-extract.py")
 STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")  # 已弃用，保留变量以防旧引用
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
@@ -1184,6 +1190,26 @@ PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可�
 
 {scene_template}
 
+## 🚨 方案差异度硬约束
+
+每条方案必须在 ≥1 个「前期维度」上跟原片有实质不同：
+
+| 维度 | 含义 | 示例 |
+|------|------|------|
+| 景别 | 取景范围变化 | 全身→半身、中景→特写、远景→近景 |
+| 角度 | 相机位置/方向变化 | 平视→仰拍、正面→侧面、高角度俯拍 |
+| 姿势 | 身体动作变化 | 站→坐、正对→背对、静态→走动 |
+| 表情/神态 | 面部情绪变化 | 看镜头→看远方、笑→不笑、闭眼→回眸 |
+| 焦点转移 | 画面主体变化 | 人→环境、整体→手部细节、主体→影子/倒影 |
+| 距离 | 拍摄距离变化 | 退远→环境叙事、靠近→亲密感、极近→抽象 |
+
+「后期差异」= 只改调色/滤镜/光影/AI修图，前期站位/角度/景别不变。这类方案最多 2 套。
+其余方案必须回到上表找差异——改了至少一项前期维度才算数。
+
+🚨 诚实降量：如果场景确实找不出足够多有前期差异的好方案——宁可减少总数，也不要为了凑数塞入低质量后期方案。3 套有真差异的 > 6 套灌水的。这是铁律。
+
+{selfie_context}
+
 ### 多张节奏（≥4张时启用）
 景别分散：远景→中景→近景→创意→收束。首尾呼应（≥5张）。⛔ 不强凑，不全是中景。
 
@@ -1221,11 +1247,14 @@ PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可�
 ☐ 方案之间拍了不同的东西（视角/焦点/景别有实质变化）？
 ☐ img_gen_prompt 包含景别+视角+人物变化+光线变化+色调？
 ☐ 不强凑——有意义的几套就几套
+☐ 这套方案跟原片比，改了哪个前期维度？（如果只改了调色/滤镜 → 计数，最多 2 套）
+☐ 后期方案超过 2 套了吗？→ 删除最弱的，或诚实降量减少总方案数
 
 ## 约束
 - 口吻：朋友分享 ✅"你"视角 ❌摄影术语
 - 前期优先：enhance 不混入调色/滤镜，quick_edit 不混入站位/构图
 - 不强凑不套壳不说废话
+- 后期方案 ≤ 2 套——超出就删，或诚实降量减少总数
 
 ## 输出格式
 严格JSON，只输出 plans 数组。不要markdown包裹。
@@ -1610,7 +1639,7 @@ def get_location_weather(exif_result):
 # Session 管理
 # ============================================================
 
-def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", fold_details=None, scene_category="", session_id=None):
+def create_session(vision_json, exif_summary, device_key, device_context, directions, scene_tier, client_ip=None, env_context="", fold_details=None, scene_category="", selfie_mode=False, session_id=None):
     """创建分析会话"""
     if session_id is None:
         session_id = uuid.uuid4().hex[:12]
@@ -1627,7 +1656,8 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
             'client_ip': client_ip,
             'env_context': env_context,
             'fold_details': fold_details or {},
-            'scene_category': scene_category
+            'scene_category': scene_category,
+            'selfie_mode': selfie_mode
         }
     _cleanup_old_sessions()
     _save_session(session_id)
@@ -1753,6 +1783,87 @@ def call_doubao(messages, max_tokens=2000, call_type='unknown', session_id=None,
             content = content[:-3].strip()
 
     # 策略 2: 如果仍不是有效 JSON，尝试提取第一个 { 到最后一个 }
+    try:
+        json.loads(content)
+    except (json.JSONDecodeError, ValueError):
+        start = content.find('{')
+        end = content.rfind('}')
+        if start >= 0 and end > start:
+            extracted = content[start:end+1]
+            try:
+                json.loads(extracted)
+                content = extracted
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+    return content, usage
+
+
+def call_deepseek(messages, max_tokens=4000, call_type='unknown', session_id=None, model=None):
+    """调用 DeepSeek API（Flash 关思考）——方向/方案生成用。视觉识别保留豆包。
+
+    ⚠️ DeepSeek Flash 默认深度思考会吃光 max_tokens 导致空响应，必须显式关闭思考。
+    日志记录实际使用的 model（区别于 call_doubao 硬编码豆包模型的 bug）。
+    """
+    import time as time_mod
+    t0 = time_mod.time()
+    usage = {}
+    success = 1
+    result = None
+    if model is None:
+        model = DEEPSEEK_MODEL
+    try:
+        payload = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            **DEEPSEEK_NO_THINK,  # 关思考——Flash 默认思考推理 tokens 巨大
+        }
+        _client = _get_httpx_client()
+        resp = _client.post(
+            DEEPSEEK_URL,
+            json=payload,
+            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+            timeout=REQUEST_TIMEOUT
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        content = result['choices'][0]['message'].get('content', '').strip()
+        usage = result.get('usage', {})
+    except Exception as e:
+        success = 0
+        duration_ms = int((time_mod.time() - t0) * 1000)
+        try:
+            log_api_call(session_id or '', call_type, model, 0, 0, 0, duration_ms, 0)
+        except Exception:
+            pass
+        raise
+
+    duration_ms = int((time_mod.time() - t0) * 1000)
+    try:
+        log_api_call(
+            session_id=session_id or '',
+            call_type=call_type,
+            model=model,  # 记录实际模型（修复 call_doubao 硬编码 DOUBAO_MODEL 的问题）
+            prompt_tokens=usage.get('prompt_tokens', 0),
+            completion_tokens=usage.get('completion_tokens', 0),
+            total_tokens=usage.get('total_tokens', 0),
+            duration_ms=duration_ms,
+            success=1
+        )
+    except Exception:
+        pass
+
+    # ── 健壮的 JSON 提取（与 call_doubao 一致）──
+    m = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', content, re.DOTALL)
+    if m:
+        content = m.group(1).strip()
+    elif content.startswith('```'):
+        lines = content.split('\n')
+        content = '\n'.join(lines[1:])
+        if content.endswith('```'):
+            content = content[:-3].strip()
+
     try:
         json.loads(content)
     except (json.JSONDecodeError, ValueError):
@@ -1944,10 +2055,11 @@ def repair_json(text):
     return text
 
 
-def parse_json_safe(content, retry_prompt=None, original_prompt=None):
+def parse_json_safe(content, retry_prompt=None, original_prompt=None, retry_model='doubao'):
     """安全解析 JSON。先尝试直接解析，失败后本地修复，再失败才 API retry。
 
-    original_prompt: 如果提供，retry 时会作为上下文附上，防止 LLM 丢失场景信息胡编。"""
+    original_prompt: 如果提供，retry 时会作为上下文附上，防止 LLM 丢失场景信息胡编。
+    retry_model: 'doubao' 或 'deepseek'——重试走哪个 API，默认豆包（视觉解析）。"""
 
     parse_errors = []
 
@@ -2004,9 +2116,14 @@ def parse_json_safe(content, retry_prompt=None, original_prompt=None):
 ---
 {full_retry}"""
         try:
-            retry_content, _ = call_doubao([
-                {"role": "user", "content": full_retry}
-            ], max_tokens=4000, call_type='vision')
+            if retry_model == 'deepseek':
+                retry_content, _ = call_deepseek([
+                    {"role": "user", "content": full_retry}
+                ], max_tokens=4000, call_type='vision')
+            else:
+                retry_content, _ = call_doubao([
+                    {"role": "user", "content": full_retry}
+                ], max_tokens=4000, call_type='vision')
             retry_content = repair_json(retry_content)
             try:
                 data = json.loads(retry_content)
@@ -2068,6 +2185,65 @@ def get_tier_constraint(scene_tier):
     }
     min_n, max_n, range_n = tiers.get(scene_tier, ('3', '6', '3-6'))
     return f"当前场景等级 {scene_tier}：必须生成 {range_n} 套方案。上限 {max_n} 套——不准超过。场景给不出那么多就诚实少给（最少 {min_n} 套）。"
+
+
+def detect_selfie_mode(vision_json):
+    """判断是否为前置摄像头自拍场景"""
+    if not vision_json or not isinstance(vision_json, dict):
+        return False
+
+    people_str = str(vision_json.get('people', '')).lower()
+    scene_type = str(vision_json.get('scene_type', '')).lower()
+    composition = str(vision_json.get('composition', '')).lower()
+
+    # 条件1: 只有1个人
+    has_single_person = False
+    nums = re.findall(r'\d+', people_str)
+    if nums and int(nums[0]) == 1:
+        has_single_person = True
+
+    if not has_single_person:
+        return False
+
+    # 条件2: 近距离特征（半身/近景/特写 + 手臂前伸姿态）
+    close_keywords = ['半身', '近景', '特写', '自拍', '前置', '手臂', '伸手', '举着',
+                      'selfie', 'close-up', 'arm', 'front camera']
+    scene_and_comp = scene_type + ' ' + composition
+
+    close_hits = sum(1 for kw in close_keywords if kw in scene_and_comp)
+
+    # 条件3: 场景不是明显由他人拍摄（没有"摄影师""第三视角"等描述）
+    third_party_keywords = ['路人', '摄影师', '第三视角', '远处', '偷拍', '抓拍']
+    third_party = any(kw in scene_and_comp for kw in third_party_keywords)
+
+    return close_hits >= 1 and not third_party
+
+
+def build_selfie_context():
+    """自拍场景专属约束文本，注入 PLANS_PROMPT"""
+    return """## 🤳 自拍场景专属约束
+
+检测到这是前置摄像头自拍场景。用户只有一只手可自由活动（另一只手持手机）。
+
+### 推荐的发力方向（主打——约 2/3 方案从这里出）：
+- 面部角度：正脸→侧脸→3/4侧→微仰头→微低头
+- 表情变化：微笑→露齿笑→不笑→眯眼→看远方→闭眼享受
+- 手的位置：自然垂放→抬手整理头发→手指轻触锁骨→手搭颈侧
+- 身体微调：上半身微左转/右转——不是整个人转身
+- 光线找角度：转头迎光→侧脸让光勾勒轮廓→让发丝透光
+- 氛围制造：另一只手举片叶子/花瓣到镜头边缘做前景虚化
+
+### 补充方案（约 1/3——丰富拍摄可能性）：
+以下方式可作为少数补充方案，但不能喧宾夺主：
+- 自拍杆/支架：延长拍摄距离→半身变全身、俯拍角度更自由
+- 对镜子：利用镜子做框中框构图、拍出手机+人的双重叙事
+- 找路人：请路人帮忙→获得第三视角（远景/环境人像）
+- 定时拍摄：手机靠窗台/书架→退后拍环境氛围人像
+
+比例原则：如果总共出 N 套方案，手持自拍技巧 ≥ ceil(2N/3)，支架/镜子/路人 ≤ floor(N/3)。
+
+### 话术提醒：
+> 🤳 这些方案以手持自拍为主——只需要你和你的手机。后面也放了几个用支架/镜子/路人的补充思路，想换换感觉可以试试。"""
 
 
 def build_scene_template(vision_json, scene_category):
@@ -2700,16 +2876,17 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             return
 
         _update_task_stage(task_id, "directions")
-        directions_content, directions_usage = call_doubao([
+        directions_content, directions_usage = call_deepseek([
             {"role": "user", "content": directions_prompt}
-        ], max_tokens=2500, call_type='directions', session_id=trace_id)  # 方向输出通常<1500 tokens
+        ], max_tokens=4000, call_type='directions', session_id=trace_id)  # 方向输出通常<1500 tokens
         print(f"[SSE] Directions API done: {directions_usage.get('total_tokens','?')} tokens", file=sys.stderr, flush=True)
 
         # 解析方向输出
         directions_json, directions_error = parse_json_safe(
             directions_content,
             retry_prompt="你上次的输出不是有效JSON。请重新输出，只输出纯JSON对象，不要markdown包裹，不要任何额外文字。directions 必须是数组 []。",
-            original_prompt=directions_prompt
+            original_prompt=directions_prompt,
+            retry_model='deepseek'  # 重试也走 DeepSeek，保持一致
         )
         directions_json = normalize_creative_output(directions_json)
 
@@ -2779,6 +2956,11 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             except Exception:
                 pass  # 日志失败不阻塞主流程
 
+        # ── 自拍场景检测 ──
+        selfie_mode = detect_selfie_mode(vision_json)
+        if selfie_mode:
+            print(f"[Selfie] Detected for session {trace_id}", file=sys.stderr, flush=True)
+
         # ── 创建 session（后续方案生成使用）──
         session_id = create_session(
             session_id=trace_id,
@@ -2791,7 +2973,8 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             client_ip=client_ip,
             env_context=env_context,
             fold_details=fold_details,
-            scene_category=scene_category
+            scene_category=scene_category,
+            selfie_mode=selfie_mode
         )
 
         # ── 记录使用统计 ──
@@ -3073,6 +3256,9 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     else:
         style_brief_text = '（无特殊视觉约束，基于场景数据自由发挥）'
 
+    # ── 自拍场景上下文 ──
+    selfie_context = build_selfie_context() if session.get('selfie_mode') else ""
+
     plans_prompt = PLANS_PROMPT.format(
         vision_json=json.dumps(session['vision_json'], ensure_ascii=False, indent=2),
         material_inventory=material_inventory,
@@ -3093,6 +3279,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
         env_context=session.get('env_context', ''),
         forbidden_constraints=forbidden_constraints,
         scene_template=scene_template,
+        selfie_context=selfie_context,
         scene_execution_context=scene_execution_context,
         series_rhythm=series_rhythm,
     )
@@ -3100,14 +3287,15 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
     print(f"[Plans] Prompt: {len(plans_prompt)} chars, direction={direction_id}, device={device_key}, mode={scene_mode or session.get('scene_mode', 'general')}", file=sys.stderr, flush=True)
 
     try:
-        plans_content, plans_usage = call_doubao([
+        plans_content, plans_usage = call_deepseek([
             {"role": "user", "content": plans_prompt}
         ], max_tokens=8000, call_type='plans', session_id=session_id)  # 方案输出较长，需要充足 token
 
         plans_json, plans_error = parse_json_safe(
             plans_content,
             retry_prompt="你上次输出的拍摄方案JSON格式有误。请重新输出，只输出包含 plans 数组的纯JSON对象。注意：这是摄影拍摄方案，不是旅行攻略。每条方案包含 name/prep/subject/shooter/gear/enhance/result/why/shot_size/angle/quick_edit/img_gen_prompt/ai_tips/combo_label/img_additions 字段。",
-            original_prompt=plans_prompt  # 重试时带上完整场景上下文，防止胡编
+            original_prompt=plans_prompt,  # 重试时带上完整场景上下文，防止胡编
+            retry_model='deepseek'  # 重试也走 DeepSeek，保持一致
         )
 
         if plans_error or not isinstance(plans_json, dict):
@@ -3170,6 +3358,11 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
 def index():
     """移动端主页"""
     return render_template('index.html')
+
+@app.route('/test-contact')
+def test_contact():
+    """分镜表交互原型"""
+    return render_template('test-contact.html')
 
 
 @app.route('/analyze', methods=['POST'])
