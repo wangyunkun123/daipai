@@ -394,6 +394,21 @@
   .v5-btn.copy { background: rgba(138,138,138,0.15); color: var(--dim); }
   .v5-btn.gen  { background: rgba(34,211,238,0.08); color: var(--cyan); opacity: 0.7; }
 
+  /* 组图预览网格 */
+  .contact-grid { display: grid; gap: 3px; width: 100%; aspect-ratio: 3/4; margin-bottom: 10px; }
+  .contact-grid .gcell {
+    position: relative; border: 1px solid #2a2a2a; border-radius: 4px;
+    background: #0f0f0f; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 6px; transition: border-color 0.2s, background 0.2s;
+  }
+  .contact-grid .gcell:active { background: #1a1a1a; border-color: #444; }
+  .contact-grid .gcell .cnum { font-size: 10px; font-weight: 600; color: var(--dimmer); margin-bottom: 2px; }
+  .contact-grid .gcell .clbl { font-size: 10px; font-weight: 500; color: #aaa; line-height: 1.3; }
+  .contact-grid .gcell .cmt { font-size: 8px; color: #555; margin-top: 2px; }
+  .contact-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .contact-hint { font-size: 11px; color: var(--dimmer); margin-bottom: 14px; text-align: center; }
+
   /* 生图免责声明 */
   .img-disclaimer {
     margin-top: 8px; padding: 8px 10px; border-radius: 8px;
@@ -1482,6 +1497,13 @@ function scrollCarouselTo(trackId, idx) {
   }
 }
 
+function jumpToPlan(planNum, total) {
+  scrollCarouselTo('planCarouselTrack', planNum);
+  updatePlanPills(planNum);
+  activePlanIdx = planNum;
+  if (total > 1) $('#planCounter').textContent = `方案 ${planNum} / ${total}`;
+}
+
 function updateCarouselActive(trackId, dotsId, onUpdate) {
   const track = document.getElementById(trackId);
   if (!track) return;
@@ -1617,44 +1639,47 @@ async function loadPlans(direction) {
 
 function renderPlans(plans, direction) {
   $('#errorMsg').classList.remove('show');
-  activePlanIdx = 0;
+  activePlanIdx = 0; // 0 = 组图预览卡片
   currentPlans = plans;
   const total = plans.length;
   const pillCls = direction.id==='now'?'now':direction.id==='best'?'best':'creative';
-  
-  // ── 顶部方案名 Pill 标签栏（可横滚）──
-  let pillsHtml = '';
+
+  // ── 顶部 Pill 标签栏：组图预览 + 方案名 ──
+  let pillsHtml = `<span class="pill-tab ${pillCls} active" data-idx="0">组图预览</span>`;
   plans.forEach((p, i) => {
     const name = p.name || `方案${i+1}`;
-    pillsHtml += `<span class="pill-tab ${pillCls}${i===0?' active':''}" data-idx="${i}">${esc(name)}</span>`;
+    pillsHtml += `<span class="pill-tab ${pillCls}" data-idx="${i+1}">${esc(name)}</span>`;
   });
   $('#planPillBar').innerHTML = pillsHtml;
-  // 点击 pill → 切换方案卡片
+  // 点击 pill → 切换卡片
   $('#planPillBar').querySelectorAll('.pill-tab').forEach(pill => {
     pill.addEventListener('click', () => {
       const idx = parseInt(pill.dataset.idx);
       activePlanIdx = idx;
       scrollCarouselTo('planCarouselTrack', idx);
       updatePlanPills(idx);
-      $('#planCounter').textContent = total > 1 ? `方案 ${idx+1} / ${total}` : '';
+      if (idx === 0) $('#planCounter').textContent = '';
+      else $('#planCounter').textContent = total > 1 ? `方案 ${idx} / ${total}` : '';
     });
   });
 
-  // 渲染卡片
-  let html = '';
+  // ── 渲染卡片：card 0 = 组图预览，card 1..N = 方案 ──
+  const contactHtml = renderContactCard(plans, direction);
+  let html = `<div class="carousel-card">${contactHtml}</div>`;
   plans.forEach((p,i)=>{ html += `<div class="carousel-card">${renderPlanCard(p,i,direction)}</div>`; });
   $('#planCarouselTrack').innerHTML = html;
 
-  // 方案计数器
-  $('#planCounter').textContent = total > 1 ? `方案 1 / ${total}` : '';
-  
-  // 滚动监听 → 同步 pill 高亮 + 自动滚到可见 + 计数器
+  // 方案计数器（组图预览时不显示数字）
+  $('#planCounter').textContent = '';
+
+  // 滚动监听 → 同步 pill 高亮 + 计数器
   const track = $('#planCarouselTrack');
   track.onscroll = () => updateCarouselActive('planCarouselTrack', null, idx => {
     if (idx !== activePlanIdx) {
       activePlanIdx = idx;
       updatePlanPills(idx);
-      $('#planCounter').textContent = total > 1 ? `方案 ${idx+1} / ${total}` : '';
+      if (idx === 0) $('#planCounter').textContent = '';
+      else $('#planCounter').textContent = total > 1 ? `方案 ${idx} / ${total}` : '';
       // 自动滚动 pill 到可见区域
       const activePill = $('#planPillBar').querySelector('.pill-tab.active');
       if (activePill) activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
@@ -1792,6 +1817,101 @@ function renderPlans(plans, direction) {
       console.log('🟢 无溢出，所有元素在屏幕宽度内');
     }
   }, 500);
+}
+
+// ── 组图预览布局 ──
+function getContactLayout(count) {
+  if (count <= 1) return { cols: 1, rows: 1, cells: [[0]], wideIdx: -1 };
+  if (count === 2) return { cols: 2, rows: 1, cells: [[0,1]], wideIdx: -1 };
+  if (count === 3) return { cols: 3, rows: 1, cells: [[0,1,2]], wideIdx: -1 };
+  if (count === 4) return { cols: 2, rows: 2, cells: [[0,1],[2,3]], wideIdx: -1 };
+  if (count === 5) return { cols: 3, rows: 3, cells: [[0,1,-1],[2,-1,-1],[3,4,-1]], wideIdx: 2 };
+  if (count === 6) return { cols: 3, rows: 2, cells: [[0,1,2],[3,4,5]], wideIdx: -1 };
+  if (count === 7) return { cols: 3, rows: 3, cells: [[0,1,2],[3,-1,-1],[4,5,6]], wideIdx: 3 };
+  if (count === 8) return { cols: 4, rows: 2, cells: [[0,1,2,3],[4,5,6,7]], wideIdx: -1 };
+  // 9+
+  const rows3 = [[0,1,2],[3,4,5],[6,7,8]];
+  return { cols: 3, rows: 3, cells: rows3, wideIdx: -1 };
+}
+
+function buildContactPrompt(plans) {
+  const count = plans.length;
+  const layout = getContactLayout(count);
+  let desc = '';
+  if (count <= 3) desc = `${count}格横向排列`;
+  else if (count === 4) desc = '2×2四宫格';
+  else if (count === 5) desc = '上排2格 + 中排1格宽幅居中 + 下排2格，共5格';
+  else if (count === 6) desc = '2行×3列共6格等大均匀排列';
+  else if (count === 7) desc = '上排3格等大 + 中排1格宽幅居中 + 下排3格等大，共7格';
+  else if (count === 8) desc = '2行×4列共8格等大均匀排列';
+  else desc = '3行×3列九宫格均匀排列';
+
+  let prompt = `参考上传的照片，保持人物面部特征和场景环境不变。生成一张组图预览：${desc}。白线分隔。\n`;
+  plans.forEach((p, i) => {
+    const sz = p.shot_size || ''; const ang = p.angle || '';
+    prompt += `\n[${i+1}] ${sz}${ang?' '+ang:''}：`;
+    // 从 img_gen_prompt 中提取"修改如下："后面的描述
+    const igp = p.img_gen_prompt || '';
+    const modMatch = igp.match(/修改如下[：:]\s*(.+?)(?:自然肤质|$)/);
+    if (modMatch) prompt += modMatch[1].trim().replace(/，自然肤质.*$/,'');
+    else prompt += (p.subject || '').substring(0, 60);
+  });
+  prompt += '\n\n自然肤质，真实摄影感，无文字水印。';
+  return prompt;
+}
+
+function renderContactCard(plans, direction) {
+  const count = plans.length;
+  const layout = getContactLayout(count);
+  const prompt = buildContactPrompt(plans);
+  const accent = direction.id==='now'?'var(--green)':direction.id==='best'?'var(--fire)':'var(--purple)';
+
+  let c = `<div class="plan-card-v5" style="text-align:center">`;
+  c += `<div class="contact-title" style="color:${accent}">组图预览</div>`;
+  c += `<div class="contact-hint">点击任意格子跳转到对应方案</div>`;
+
+  // 网格
+  const ar = layout.rows === 1 ? `${layout.cols}/1` : layout.rows === 2 ? `${layout.cols}/2` : `${layout.cols}/${layout.rows}`;
+  c += `<div class="contact-grid" style="grid-template-columns:repeat(${layout.cols},1fr);aspect-ratio:${ar};">`;
+  for (let row = 0; row < layout.rows; row++) {
+    for (let col = 0; col < layout.cols; col++) {
+      const planIdx = (layout.cells[row] && layout.cells[row][col] !== undefined) ? layout.cells[row][col] : -1;
+      if (planIdx < 0 || planIdx >= count) {
+        c += `<div class="gcell" style="visibility:hidden"></div>`;
+        continue;
+      }
+      const p = plans[planIdx];
+      const name = p.name || `方案${planIdx+1}`;
+      const sz = p.shot_size || ''; const ang = p.angle || '';
+      c += `<div class="gcell" onclick="event.stopPropagation();jumpToPlan(${planIdx+1},${count})">
+        <span class="cnum">${planIdx+1}</span>
+        <span class="clbl">${esc(name)}</span>
+        <span class="cmt">${esc(sz)} · ${esc(ang)}</span>
+      </div>`;
+    }
+  }
+  c += `</div>`;
+
+  // 提示词框
+  c += `<div class="v5-gen"><div class="v5-lb" style="font-size:11px;color:var(--dimmer);letter-spacing:0.3px;margin-bottom:6px">🖼️ 组图生成提示词 <span style="color:var(--cyan);font-weight:400">（豆包 · 图生图模式）</span></div>`;
+  c += `<div class="v5-pbox" id="pt_contact">${esc(prompt)}</div>`;
+  c += `<div class="v5-pact"><button class="v5-btn copy" onclick="copyContactPrompt()">📋 复制提示词</button><button class="v5-btn gen" onclick="genContactPrompt()">🖼️ 生成组图</button></div>`;
+  c += `</div>`;
+
+  c += `</div>`;
+  return c;
+}
+
+// 组图提示词操作
+function copyContactPrompt() {
+  const el = document.getElementById('pt_contact');
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => showToast('✅ 组图提示词已复制，打开豆包粘贴即可生图'));
+}
+function genContactPrompt() {
+  const el = document.getElementById('pt_contact');
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => showToast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成'));
 }
 
 function renderPlanCard(p, i, direction) {
