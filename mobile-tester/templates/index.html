@@ -354,7 +354,7 @@
   .v5-item { display: flex; flex-direction: column; gap: 4px; padding: 9px 12px; font-size: 12px; line-height: 1.5; }
   .v5-item + .v5-item { border-top: 1px solid rgba(255,255,255,0.04); }
   .v5-item.vibe { background: rgba(245,158,11,0.03); }
-  .v5-label { font-size: 10px; color: var(--dimmer); letter-spacing: 0.5px; text-transform: uppercase; }
+  .v5-label { font-size: 12px; font-weight: 600; color: var(--dim); letter-spacing: 0.3px; }
   .v5-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
   .v5-tg { display: inline-flex; align-items: center; gap: 2px; padding: 3px 7px; border-radius: 6px; font-size: 11px; font-weight: 600; }
   .v5-tg.mv { background: rgba(34,211,238,0.10); color: var(--cyan); }
@@ -367,7 +367,7 @@
 
   /* 构图详解 & 后期折叠 */
   .v5-detail, .v5-post-wrap { border-top: 1px solid rgba(255,255,255,0.04); }
-  .v5-dhead { padding: 9px 12px; font-size: 12px; color: var(--dim); display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .v5-dhead { padding: 9px 12px; font-size: 13px; font-weight: 600; color: var(--dim); display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
   .v5-dhead .ar { font-size: 10px; transition: transform 0.2s; }
   .v5-detail.open .v5-dhead .ar, .v5-post-wrap.open .v5-dhead .ar { transform: rotate(180deg); }
   .v5-dbody, .v5-post-body { max-height: 0; overflow: hidden; transition: max-height 0.3s; }
@@ -394,6 +394,31 @@
   .v5-btn.copy { background: rgba(138,138,138,0.15); color: var(--dim); }
   .v5-btn.gen  { background: rgba(34,211,238,0.08); color: var(--cyan); opacity: 0.7; }
 
+  /* 生图免责声明 */
+  .img-disclaimer {
+    margin-top: 8px; padding: 8px 10px; border-radius: 8px;
+    background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.15);
+    font-size: 11px; color: var(--fire); line-height: 1.6;
+  }
+  .img-disclaimer .add-tag {
+    display: inline-block; margin: 2px 4px; padding: 2px 8px;
+    background: rgba(245,158,11,0.12); border-radius: 10px;
+    color: var(--fire); font-size: 10px; font-weight: 500;
+  }
+
+  /* 摄影原理术语标签 */
+  .why-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+  .why-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: 600;
+  }
+  .why-tag.comp { background: rgba(138,138,138,0.12); color: var(--dim); }
+  .why-tag.light { background: rgba(250,204,21,0.12); color: #facc15; }
+  .why-tag.color { background: rgba(245,158,11,0.12); color: var(--fire); }
+  .why-tag.dof { background: rgba(74,222,128,0.1); color: var(--green); }
+  .why-tag.space { background: rgba(34,211,238,0.1); color: var(--cyan); }
+  .why-tag.time { background: rgba(167,139,250,0.12); color: var(--purple); }
+  .why-tag.tone { background: rgba(244,114,182,0.1); color: #f472b6; }
+
   /* 旧版卡片保留兼容 */
   .plan-card {
     background: var(--card); border-radius: var(--radius); padding: 18px;
@@ -407,10 +432,6 @@
   .sec-shooter .sec-text { color: var(--green); }
   .sec-gear .sec-text { color: var(--fire); }
   .sec-result .sec-text { color: var(--fire); }
-  .why-toggle { display: flex; align-items: center; gap: 6px; padding: 8px 0; font-size: 12px; color: var(--dimmer); cursor: pointer; border-top: 1px solid var(--border); margin-top: 4px; user-select: none; }
-  .why-toggle .arrow { transition: transform 0.2s; font-size: 10px; }
-  .why-toggle.open .arrow { transform: rotate(90deg); }
-  .why-content { display: none; padding: 10px 14px; margin-bottom: 8px; background: rgba(167,139,250,0.05); border-radius: 10px; font-size: 13px; color: var(--purple); line-height: 1.7; }
   .why-content.open { display: block; }
   .plan-perspective { margin-top: 8px; padding: 8px 12px; background: rgba(74,222,128,0.05); border-radius: 10px; font-size: 12px; color: var(--green); line-height: 1.6; }
   .img-gen-btn { display: flex; align-items: center; gap: 6px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; color: var(--fire); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; justify-content: center; }
@@ -1641,10 +1662,6 @@ function renderPlans(plans, direction) {
   });
 
   plans.forEach((p,i)=>{
-    if (p.why) {
-      const tg = document.getElementById(`wt${i}`), ct = document.getElementById(`wc${i}`);
-      if (tg&&ct) tg.addEventListener('click', ()=>{ tg.classList.toggle('open'); ct.classList.toggle('open'); });
-    }
     // v5: 旧版生图按钮已移除，v5 有自己的 onclick handler（copyPromptV5/genPromptV5）
     const btn = document.getElementById(`igb${i}`), pnl = document.getElementById(`igp${i}`);
     if (btn&&pnl) btn.addEventListener('click', ()=>{ pnl.classList.toggle('open'); if(pnl.classList.contains('open')) pnl.scrollIntoView({behavior:'smooth'}); });
@@ -1779,64 +1796,71 @@ function renderPlans(plans, direction) {
 
 function renderPlanCard(p, i, direction) {
   const cv = direction.id==='now'?'var(--green)':direction.id==='best'?'var(--fire)':'var(--purple)';
-  const cb = direction.id==='now'?'rgba(74,222,128,0.08)':direction.id==='best'?'rgba(245,158,11,0.08)':'rgba(167,139,250,0.08)';
   const accent = direction.id==='now'?'var(--green)':direction.id==='best'?'var(--fire)':'var(--purple)';
 
   let c = `<div class="plan-card-v5">`;
 
-  // ── 1. 效果预期（社交媒体标题风）──
+  // ── 1. 方案名（效果预期合并）──
   const socialTitle = p.name || '';
   if (socialTitle) {
     const comboLabel = p.combo_label || '';
-    c += `<div class="v5-item vibe"><div class="v5-label">✨ 效果预期</div>`;
-    c += `<div class="v5-social-title" style="font-size:16px;font-weight:700;color:${accent};line-height:1.5;margin-bottom:2px;">「${esc(socialTitle)}」</div>`;
-    if (comboLabel) c += `<div class="v5-social-sub" style="font-size:12px;color:var(--dimmer);">${esc(comboLabel)}</div>`;
+    c += `<div class="v5-item vibe"><div class="v5-social-title" style="font-size:17px;font-weight:700;color:${accent};line-height:1.4;">「${esc(socialTitle)}」</div>`;
+    if (comboLabel) c += `<div class="v5-social-sub" style="font-size:12px;color:var(--dimmer);margin-top:2px;">${esc(comboLabel)}</div>`;
     c += `</div>`;
   }
 
-  // ── 2. 摄影师（shooter 全文 + gear 标签）──
+  // ── 2. 摄影师（文字标签：位置 + 设置）──
   if (p.shooter || p.gear) {
     c += `<div class="v5-item"><div class="v5-label">📷 摄影师</div>`;
-    if (p.shooter) c += `<div class="v5-post-text">📷 ${esc(p.shooter)}</div>`;
-    if (p.gear) c += `<div class="v5-tags"><span class="v5-tg gr">⚙️ ${esc(p.gear)}</span></div>`;
+    if (p.shooter) c += `<div class="v5-post-item"><span class="v5-pcat comp">位置</span><span class="v5-post-text">${esc(p.shooter)}</span></div>`;
+    if (p.gear) c += `<div class="v5-post-item"><span class="v5-pcat comp">设置</span><span class="v5-post-text">${esc(p.gear)}</span></div>`;
     c += `</div>`;
   }
 
-  // ── 3. 拍摄对象 ──
+  // ── 3. 拍摄对象（纯文本，不提取标签）──
   if (p.subject) {
-    c += `<div class="v5-item"><div class="v5-label">🧍 拍摄对象</div><div class="v5-tags">`;
-    // Extract pose hints from subject text
-    const subj = p.subject;
-    const poseKeywords = [
-      {re:/侧身|45°|转身|站立|[站直立]/,i:'🧍',t:'站姿'},
-      {re:/蹲|跪下|坐/,i:'🧎',t:'蹲/坐'},
-      {re:/看镜头|不看|眼神|望|注视|回看|转头/,i:'👀',t:'眼神'},
-      {re:/笑|微[笑乐]|表情|自然/,i:'😊',t:'表情'},
-      {re:/手|摸|扶|牵|握|抱/,i:'✋',t:'手势'},
-    ];
-    let found = false;
-    for (const pk of poseKeywords) {
-      if (pk.re.test(subj)) { c += `<span class="v5-tg ps">${pk.i} ${pk.t}</span>`; found = true; }
-    }
-    if (!found) c += `<span class="v5-tg ps">🧍 姿势</span>`;
-    c += `</div><div class="v5-post-text">${esc(subj)}</div></div>`;
+    c += `<div class="v5-item"><div class="v5-label">🧍 拍摄对象</div>`;
+    c += `<div class="v5-post-text">${esc(p.subject)}</div></div>`;
   }
 
-  // ── 4. 场景观察（折叠：为什么这样拍好看 — result + why）──
-  const observeItems = [];
-  if (p.result) observeItems.push({i:'📖 为什么好看',t:p.result});
-  if (p.why) observeItems.push({i:'💡 拍摄原理',t:p.why});
-  if (observeItems.length) {
+  // ── 4. 场景观察（折叠：画面预览 + 原理术语标签）──
+  const hasObserve = p.result || p.why;
+  if (hasObserve) {
     c += `<div class="v5-detail" id="v5obs${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>🔍 场景观察</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
-    observeItems.forEach(d => { c += `<div class="v5-post-item"><span class="v5-pcat comp">${d.i}</span><span class="v5-post-text">${esc(d.t)}</span></div>`; });
+    if (p.result) c += `<div class="v5-post-item"><span class="v5-pcat comp">画面预览</span><span class="v5-post-text">${esc(p.result)}</span></div>`;
+    if (p.why) {
+      // 提取摄影术语 → 标签
+      const whyText = p.why;
+      const TERMS = [
+        {re:/三分法|九宫格|黄金分割/,cat:'comp'},{re:/引导线|对角线|S型|汇聚线/,cat:'comp'},
+        {re:/框架构图|框中框|天然画框/,cat:'comp'},{re:/负空间|留白/,cat:'comp'},
+        {re:/侧光|逆光|顺光|顶光|漫射光|边缘光|轮廓光/,cat:'light'},
+        {re:/冷暖对比|互补色|邻近色|单色/,cat:'color'},
+        {re:/主体分离|景深|虚实|背景虚化|前景虚化/,cat:'dof'},
+        {re:/前景层次|空间深度|纵深感/,cat:'space'},
+        {re:/决定性瞬间|动态捕捉|静态|抓拍/,cat:'time'},
+        {re:/明暗对比|影调|高调|低调/,cat:'tone'},
+      ];
+      let tags = '';
+      TERMS.forEach(t=>{if(t.re.test(whyText)){const m=whyText.match(t.re);if(m)tags+=`<span class="why-tag ${t.cat}">${m[0]}</span>`;}});
+      if (tags) {
+        c += `<div class="v5-post-item"><span class="v5-pcat comp">拍摄原理</span><div class="why-tags">${tags}</div></div>`;
+      } else {
+        c += `<div class="v5-post-item"><span class="v5-pcat comp">拍摄原理</span><span class="v5-post-text">${esc(whyText)}</span></div>`;
+      }
+    }
     c += `</div></div></div>`;
   }
 
-  // ── 5. 技巧详解（折叠：prep + enhance + perspective）──
+  // ── 5. 技巧详解（折叠：prep + enhance + perspective + ai_tips 拍摄建议）──
   const techItems = [];
-  if (p.prep) techItems.push({i:'① 准备',t:p.prep});
-  if (p.enhance) techItems.push({i:'② 增强',t:p.enhance});
-  if (p.perspective) techItems.push({i:'③ 视角',t:p.perspective});
+  if (p.prep) techItems.push({i:'准备',t:p.prep});
+  if (p.enhance) techItems.push({i:'增强',t:p.enhance});
+  if (p.perspective) techItems.push({i:'视角',t:p.perspective});
+  // ai_tips 拍摄技巧类并入
+  const aiTips = p.ai_tips || [];
+  const shootTips = aiTips.filter(t => !/生图|参数|seed|提示词/i.test(t));
+  if (shootTips.length) { shootTips.forEach(t => techItems.push({i:'💡 额外建议',t:t})); }
   if (techItems.length) {
     c += `<div class="v5-detail" id="v5det${i}"><div class="v5-dhead" onclick="this.parentElement.classList.toggle('open')"><span>🛠️ 技巧详解</span><span class="ar">▼</span></div><div class="v5-dbody"><div class="v5-post-grid">`;
     techItems.forEach(d => { c += `<div class="v5-post-item"><span class="v5-pcat comp">${d.i}</span><span class="v5-post-text">${esc(d.t)}</span></div>`; });
@@ -1855,19 +1879,20 @@ function renderPlanCard(p, i, direction) {
     c += `</div></div></div>`;
   }
 
-  // ── 6. 生图提示词 ──
+  // ── 7. 生图提示词 ──
   const imgPromptText = p.img_gen_prompt || '';
   if (imgPromptText) {
-    c += `<div class="v5-gen"><div class="v5-lb" style="font-size:10px;color:var(--dimmer);letter-spacing:0.5px;margin-bottom:6px">🖼️ AI 生图提示词 <span style="color:var(--cyan);font-weight:400">（豆包 · 图生图模式）</span></div>`;
+    c += `<div class="v5-gen"><div class="v5-lb" style="font-size:11px;color:var(--dimmer);letter-spacing:0.3px;margin-bottom:6px">🖼️ AI 生图提示词 <span style="color:var(--cyan);font-weight:400">（豆包 · 图生图模式）</span></div>`;
     c += `<div class="v5-pbox" id="pt${i}">${esc(imgPromptText)}</div>`;
     c += `<div class="v5-pact"><button class="v5-btn copy" onclick="copyPromptV5(${i})">📋 复制提示词</button><button class="v5-btn gen" onclick="genPromptV5(${i})">🖼️ 生图</button></div>`;
 
-    // AI 单独优化提示
-    const aiTips = p.ai_tips || [];
-    if (aiTips.length) {
-      c += `<div style="margin-top:8px;font-size:11px;color:var(--dimmer);line-height:1.6">`;
-      c += `💡 AI 也可单独优化：`;
-      aiTips.forEach(t => { c += `<span style="display:inline-block;margin:2px 4px;padding:2px 8px;background:rgba(6,182,212,0.08);border-radius:10px;color:var(--cyan)">${esc(t)}</span>`; });
+    // 免责声明：AI 额外添加了什么
+    const additions = p.img_additions || [];
+    if (additions.length) {
+      c += `<div class="img-disclaimer">`;
+      c += `⚠️ 为保证效果，AI 在生图提示词中增加了：<br>`;
+      additions.forEach(a => { c += `<span class="add-tag">${esc(a)}</span>`; });
+      c += `<br><span style="font-size:10px;color:var(--dimmer);">一切以现场实际条件为准，AI 生图仅供参考。</span>`;
       c += `</div>`;
     }
     c += `</div>`;

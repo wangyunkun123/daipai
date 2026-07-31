@@ -1211,6 +1211,9 @@ PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可�
 ⑭ img_gen_prompt: 图生图提示词（≤300汉字）。开头「参考上传的照片，保持人物面部特征和场景环境不变。修改如下：」→景别视角→人物动作表情→光线氛围→色调质感→「自然肤质，真实摄影感，无文字水印。」只写跟原片不同的部分。
 ⑮ ai_tips: AI可单独优化的小建议（2-3条字符串数组）
 ⑯ combo_label: "🧪实验性"
+⑰ img_additions: AI在生图提示词中额外添加了照片中不存在的内容（字符串数组，如无则[]）
+  只写"无中生有"的：改变了光线方向、添加了物体、替换了背景、改变了天气/季节、添加了人物。
+  不包括调色/磨皮/去瑕疵/裁剪/增强对比等后期优化。
 
 ## 自检（生成后逐条过）
 ☐ 每条方案引用了素材清单中的 ≥1 个具体元素？
@@ -1236,7 +1239,8 @@ PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可�
       "quick_edit": {{"app":"","goal":"","steps":["","",""]}},
       "img_gen_prompt": "",
       "ai_tips": ["",""],
-      "combo_label": "🧪实验性"
+      "combo_label": "🧪实验性",
+      "img_additions": []
     }}
   ]
 }}"""
@@ -3102,7 +3106,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
 
         plans_json, plans_error = parse_json_safe(
             plans_content,
-            retry_prompt="你上次输出的拍摄方案JSON格式有误。请重新输出，只输出包含 plans 数组的纯JSON对象。注意：这是摄影拍摄方案，不是旅行攻略。每条方案包含 name/prep/subject/shooter/gear/enhance/result/why/shot_size/angle/quick_edit/img_gen_prompt/ai_tips/combo_label 字段。",
+            retry_prompt="你上次输出的拍摄方案JSON格式有误。请重新输出，只输出包含 plans 数组的纯JSON对象。注意：这是摄影拍摄方案，不是旅行攻略。每条方案包含 name/prep/subject/shooter/gear/enhance/result/why/shot_size/angle/quick_edit/img_gen_prompt/ai_tips/combo_label/img_additions 字段。",
             original_prompt=plans_prompt  # 重试时带上完整场景上下文，防止胡编
         )
 
