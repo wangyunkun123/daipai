@@ -2585,7 +2585,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
                         {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{vision_b64}"}},
                         {"type": "text", "text": VISION_PROMPT}
                     ]}
-                ], max_tokens=2000, call_type='vision', session_id=trace_id)
+                ], max_tokens=2000, call_type='vision', session_id=trace_id, model=DOUBAO_FAST_MODEL)  # 视觉用 Lite——实测快3倍、质量持平
                 print(f"[SSE] Vision API done: {usage.get('total_tokens','?')} tokens", file=sys.stderr, flush=True)
                 vision_result = {"content": result, "usage": usage}
             except Exception as e:
