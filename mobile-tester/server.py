@@ -579,10 +579,10 @@ DIRECTIONS_PROMPT = """你是摄影美学专家。你的知识覆盖摄影史、
 最有记忆点的方向——社媒话题性、或这张照片最独特的视觉锚点。必须有高辨识度的实质内容。
 🔥 放在数组第一位。如果这个场景确实没有高辨识度方向 → style/kb_status/style_promise/reason 全部留空字符串 ""，后续会自动降级。
 
-### 🟢 现在就拍 — 必有
+### 🟢 最简单 — 必有
 最简单易上手的拍法。利用场景已有的光线/色彩/空间优势。每个场景都能出。
 
-### ✨ 脑洞大开 — 有则放
+### ✨ 最大胆 — 有则放
 跨媒介、小众、非典型的视角。必须有至少一个具体视觉锚点支撑。没有就全填空。
 
 ---
@@ -656,7 +656,7 @@ fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风文案...\\n\\n灵
   "discovery_note": "🆕 如果发现了知识库没有的新风格，在这里简要说明",
   "directions": [
     {{
-      "id": "best", "emoji": "🔥", "label": "最出片", "subtitle": "发出去会被赞的那种",
+      "id": "best", "emoji": "🔥", "label": "最出片", "subtitle": "最有辨识度的拍法",
       "style": "风格名（中文）——没有高辨识度方向时留空字符串",
       "kb_status": "📚已有记录 或 🆕新发现——没有时留空",
       "style_promise": "1句话说出拍出来什么效果",
@@ -668,7 +668,7 @@ fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风文案...\\n\\n灵
       "plans": []
     }},
     {{
-      "id": "now", "emoji": "🟢", "label": "现在就拍", "subtitle": "零门槛，站在这就能拍",
+      "id": "now", "emoji": "🟢", "label": "最简单", "subtitle": "零门槛，站在这就能拍",
       "style": "风格名（中文）",
       "kb_status": "📚已有记录 或 🆕新发现",
       "style_promise": "1句话说出拍出来什么效果",
@@ -679,7 +679,7 @@ fold_details: {{ "now": "▼ 为什么选这个\\n\\n社媒风文案...\\n\\n灵
       "photo_guide": "🆕新发现时填写（格式见上文photo_guide模板）；📚已有记录填空字符串",
       "plans": []
     }},
-    {{"id":"creative","emoji":"✨","label":"脑洞大开","subtitle":"不像游客照的视角","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"photo_guide":"","plans":[]}}
+    {{"id":"creative","emoji":"✨","label":"最大胆","subtitle":"不像游客照的视角","style":"","kb_status":"","style_promise":"","reason":"","fit_rationale":"","light_annotation":"","device_annotation":"","style_brief":{{"essence":"","color":"","composition":"","light":"","mood":""}},"photo_guide":"","plans":[]}}
   ],
   "fold_details": {{ "best": "▼ 为什么选这个\\n\\n...", "now": "▼ 为什么选这个\\n\\n...", "creative": "..." }}
 }}
@@ -1812,9 +1812,9 @@ def normalize_creative_output(data):
 
     # v2 object 格式 → 转换为 array
     if isinstance(directions, dict):
-        dir_ids = {'now': {'emoji': '🟢', 'label': '现在就拍', 'subtitle': '零门槛，站在这就能拍'},
-                    'best': {'emoji': '🔥', 'label': '最出片', 'subtitle': '发出去会被赞的那种'},
-                    'creative': {'emoji': '✨', 'label': '脑洞大开', 'subtitle': '不像游客照的视角'}}
+        dir_ids = {'now': {'emoji': '🟢', 'label': '最简单', 'subtitle': '零门槛，站在这就能拍'},
+                    'best': {'emoji': '🔥', 'label': '最出片', 'subtitle': '最有辨识度的拍法'},
+                    'creative': {'emoji': '✨', 'label': '最大胆', 'subtitle': '不像游客照的视角'}}
         array_dirs = []
         for key, defaults in dir_ids.items():
             d = directions.get(key, {})

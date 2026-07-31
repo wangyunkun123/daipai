@@ -203,7 +203,7 @@
 
   /* ====== Carousel (方向卡片 + 方案卡片) ====== */
   .carousel-track {
-    display: flex; overflow-x: auto; scroll-snap-type: x proximity;
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; -ms-overflow-style: none;
   }
@@ -270,15 +270,6 @@
   .dir-card-single .style-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
   .dir-card-single .style-promise { font-size: 13px; color: var(--dim); margin-bottom: 8px; }
   .dir-card-single .reason { font-size: 13px; color: var(--dim); line-height: 1.75; margin-bottom: 10px; }
-  .dir-meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; }
-  .dir-meta span { padding: 2px 8px; border-radius: 8px; }
-  .meta-fit { background: rgba(34,211,238,0.08); color: var(--cyan); }
-  .meta-light { background: rgba(74,222,128,0.08); color: var(--green); }
-  .meta-device { background: rgba(245,158,11,0.08); color: var(--fire); }
-  .meta-source { background: rgba(167,139,250,0.08); color: var(--purple); }
-  .ai-badge { font-size: 11px; font-weight: 500; background: rgba(251,191,36,0.15); color: #f59e0b; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
-
-  .dir-actions { display: flex; gap: 10px; margin-top: 4px; }
   .btn-select {
     flex: 1; padding: 14px; border-radius: 14px;
     font-size: 15px; font-weight: 600; cursor: pointer; text-align: center;
@@ -295,23 +286,29 @@
   .btn-select.secondary:active { border-color: var(--dim); color: var(--text); }
   .btn-select:disabled { opacity: 0.3; pointer-events: none; }
 
-  /* 方向导航行 */
-  .dir-nav-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 12px 0 4px;
+  /* 卡片内嵌出方案按钮 */
+  .btn-select-dir {
+    display: block; width: 100%; margin-top: 16px; padding: 12px;
+    border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+    text-align: center; transition: all 0.15s;
+    background: linear-gradient(135deg, rgba(74,222,128,0.15), rgba(34,211,238,0.1));
+    color: var(--green); border: 1px solid rgba(74,222,128,0.3);
   }
-  .btn-nav-arrow {
-    padding: 10px 12px; border-radius: 12px;
-    font-size: 13px; font-weight: 500; cursor: pointer;
-    background: var(--card); color: var(--dim);
-    border: 1px solid var(--border);
-    white-space: nowrap; flex-shrink: 0;
+  .btn-select-dir:active { background: rgba(74,222,128,0.25); transform: scale(0.98); }
+
+  /* 🆕新风格 badge */
+  .new-style-badge {
+    font-size: 11px; font-weight: 600; background: rgba(251,191,36,0.15);
+    color: #f59e0b; padding: 2px 8px; border-radius: 10px;
+    margin-left: 6px; vertical-align: middle;
   }
-  .btn-nav-arrow:active { border-color: var(--dim); color: var(--text); }
-  .btn-nav-arrow:disabled { opacity: 0.25; pointer-events: none; }
-  .dir-counter {
-    font-size: 13px; font-weight: 600; color: var(--cyan);
-    white-space: nowrap; flex-shrink: 0; min-width: 36px; text-align: center;
+
+  /* 警告标签（光线/设备不满足时） */
+  .dir-warnings { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .warn-tag {
+    font-size: 11px; padding: 3px 10px; border-radius: 10px;
+    background: rgba(239,68,68,0.1); color: var(--red);
+    border: 1px solid rgba(239,68,68,0.2);
   }
 
   /* ====== Plans ====== */
@@ -761,14 +758,6 @@ function esc(s) {
   const div = document.createElement('div');
   div.textContent = s;
   return div.innerHTML;
-}
-const SOURCE_LABELS = {community:'👥 社区验证', tutorial:'📚 专业教程', portfolio:'🎨 作品集', inference:'🤖 AI推理'};
-function sourceLabel(st) { return SOURCE_LABELS[st] || st || ''; }
-// name_source 标注：只在非 discovered（非空）时显示
-function nameSourceBadge(ns) {
-  if (ns === 'translated') return ' <span class="ai-badge">🤖 AI翻译</span>';
-  if (ns === 'generated') return ' <span class="ai-badge">🤖 AI总结</span>';
-  return '';  // discovered 或空 → 不显示标签
 }
 
 // State
@@ -1385,7 +1374,7 @@ function showDirectionsResult(data) {
 
 function renderDirectionCarousel() {
   const total = allDirs.length;
-  
+
   // ── 顶部风格名 Pill 标签栏 ──
   let pillsHtml = '';
   allDirs.forEach((d, i) => {
@@ -1401,7 +1390,6 @@ function renderDirectionCarousel() {
       activeDirIdx = idx;
       scrollCarouselTo('dirCarouselTrack', idx);
       updateDirPills(idx);
-      updateDirNavRow(idx, total);
     });
   });
 
@@ -1409,40 +1397,48 @@ function renderDirectionCarousel() {
   let cardsHtml = '';
   allDirs.forEach((d, i) => {
     const cls = d.id==='now'?'badge-now':d.id==='best'?'badge-best':'badge-creative';
-    let meta = '';
-    if (d.fit_rationale) meta += `<span class="meta-fit">${esc(d.fit_rationale)}</span>`;
-    if (d.light_annotation) meta += `<span class="meta-light">光线 ${esc(d.light_annotation)}</span>`;
-    if (d.device_annotation) meta += `<span class="meta-device">设备 ${esc(d.device_annotation)}</span>`;
-    if (sourceTags[d.id]) meta += `<span class="meta-source">${esc(sourceTags[d.id])}</span>`;
-    if (d.source_type === 'inference' && d.name_source && d.name_source !== 'discovered') meta += `<span class="meta-source">🤖 AI推理</span>`;
+    // 🆕新风格 badge
+    const kb = (d.kb_status||'').trim();
+    const newBadge = kb.includes('🆕') ? ' <span class="new-style-badge">🆕 新风格</span>' : '';
+    // 光线/设备：仅警告时显示
+    let warnings = '';
+    const la = (d.light_annotation||'').trim();
+    const da = (d.device_annotation||'').trim();
+    if (la && la.includes('🔴')) warnings += `<span class="warn-tag">⚠️ ${esc(la)}</span>`;
+    if (da && (da.includes('🟠')||da.includes('🔴'))) warnings += `<span class="warn-tag">⚠️ ${esc(da)}</span>`;
     cardsHtml += `
       <div class="carousel-card">
         <div class="dir-card-single">
           <span class="badge ${cls}">${esc(d.emoji)} ${esc(d.label)}</span>
-          <div class="style-name">${esc((d.style&&!/^[a-z_]+$/.test(d.style))?d.style:(d.style_promise||'未命名风格'))}${nameSourceBadge(d.name_source)}</div>
+          <div class="style-name">${esc((d.style&&!/^[a-z_]+$/.test(d.style))?d.style:(d.style_promise||'未命名风格'))}${newBadge}</div>
           ${d.style_promise?`<div class="style-promise">✨ ${esc(d.style_promise)}</div>`:''}
           <div class="reason">${esc(d.reason||'')}</div>
-          ${meta?`<div class="dir-meta">${meta}</div>`:''}
+          ${warnings?`<div class="dir-warnings">${warnings}</div>`:''}
+          <button class="btn-select-dir" data-idx="${i}">出方案</button>
         </div>
       </div>`;
   });
   $('#dirCarouselTrack').innerHTML = cardsHtml;
 
-  // 滚动监听 → 同步 pill 高亮 + 底部导航
+  // 卡片内"出方案"按钮事件
+  $('#dirCarouselTrack').querySelectorAll('.btn-select-dir').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      loadPlans(allDirs[idx]);
+    });
+  });
+
+  // 滚动监听 → 同步 pill 高亮
   const track2 = $('#dirCarouselTrack');
   track2.onscroll = () => updateCarouselActive('dirCarouselTrack', null, idx => {
     if (idx !== activeDirIdx) {
       activeDirIdx = idx;
       updateDirPills(idx);
-      updateDirNavRow(idx, total);
     }
   });
 
   // 滚动到当前 active
   scrollCarouselTo('dirCarouselTrack', activeDirIdx);
-
-  // ── 底部导航行：上一个 | 计数器 | 出方案 ──
-  renderDirNavRow();
 }
 
 function updateDirPills(idx) {
@@ -1453,35 +1449,6 @@ function updateDirPills(idx) {
 function updatePlanPills(idx) {
   const pills = $('#planPillBar').querySelectorAll('.pill-tab');
   pills.forEach((p, i) => p.classList.toggle('active', i === idx));
-}
-
-function renderDirNavRow() {
-  const total = allDirs.length;
-  const idx = activeDirIdx;
-  $('#dirActions').innerHTML = `
-    <div class="dir-nav-row">
-      <button class="btn-nav-arrow" id="btnDirPrev"${idx===0?' disabled':''}>← 上一个</button>
-      <span class="dir-counter">${idx+1} / ${total}</span>
-      <button class="btn-select primary" id="btnSelectDir">📸 就这个，出方案 →</button>
-    </div>`;
-  $('#btnSelectDir').addEventListener('click', ()=>{ loadPlans(allDirs[activeDirIdx]); });
-  if (idx > 0) {
-    $('#btnDirPrev').addEventListener('click', ()=>{
-      if (activeDirIdx > 0) {
-        activeDirIdx--;
-        scrollCarouselTo('dirCarouselTrack', activeDirIdx);
-        updateDirNavRow(activeDirIdx, total);
-        updateDirPills(activeDirIdx);
-      }
-    });
-  }
-}
-
-function updateDirNavRow(idx, total) {
-  const prevBtn = $('#btnDirPrev');
-  if (prevBtn) prevBtn.disabled = idx === 0;
-  const counter = document.querySelector('.dir-counter');
-  if (counter) counter.textContent = `${idx+1} / ${total}`;
 }
 
 
@@ -1496,8 +1463,7 @@ function scrollCarouselTo(trackId, idx) {
 
 function updateCarouselActive(trackId, dotsId, onUpdate) {
   const track = document.getElementById(trackId);
-  const dotsContainer = document.getElementById(dotsId);
-  if (!track || !dotsContainer) return;
+  if (!track) return;
   const cards = track.querySelectorAll('.carousel-card');
   if (cards.length === 0) return;
   const center = track.scrollLeft + track.clientWidth / 2;
@@ -1507,9 +1473,14 @@ function updateCarouselActive(trackId, dotsId, onUpdate) {
     const dist = Math.abs(center - cardCenter);
     if (dist < minDist) { minDist = dist; activeIdx = i; }
   });
-  // 更新 dots
-  const dots = dotsContainer.querySelectorAll('.carousel-dot');
-  dots.forEach((d, i) => { d.classList.toggle('active', i === activeIdx); });
+  // dots 更新（可选——dotsId 为 null 时跳过）
+  if (dotsId) {
+    const dotsContainer = document.getElementById(dotsId);
+    if (dotsContainer) {
+      const dots = dotsContainer.querySelectorAll('.carousel-dot');
+      dots.forEach((d, i) => { d.classList.toggle('active', i === activeIdx); });
+    }
+  }
   if (onUpdate) onUpdate(activeIdx);
 }
 
@@ -2169,7 +2140,7 @@ function renderDataSections() {
   // 显示每条方向的折叠详情
   if (foldDetails && Object.keys(foldDetails).length > 0) {
     const dirKeys = ['now', 'best', 'creative'];
-    const labels = {'now':'🟢 现在就拍','best':'🔥 最出片','creative':'✨ 脑洞大开'};
+    const labels = {'now':'🟢 最简单','best':'🔥 最出片','creative':'✨ 最大胆'};
     dirKeys.forEach(key => {
       const detail = foldDetails[key];
       if (detail && detail.trim()) {
