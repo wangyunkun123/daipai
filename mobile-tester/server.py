@@ -23,6 +23,7 @@ load_dotenv()
 from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map, get_knowledge_files_by_quality, load_series_rhythm
+from aesthetic_filter import filter_directions
 from database import accumulate, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, get_api_call_stats, get_failed_api_logs, get_style_technique_panel, get_style_exploration_stats, log_style_exploration, promote_exploration_to_style, delete_exploration, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -2960,6 +2961,30 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
         selfie_mode = detect_selfie_mode(vision_json)
         if selfie_mode:
             print(f"[Selfie] Detected for session {trace_id}", file=sys.stderr, flush=True)
+
+        # ── 审美过滤：程序化筛除明显审美冲突的方向 ──
+        directions, filter_report = filter_directions(
+            directions=directions,
+            vision_json=vision_json,
+            scene_category=scene_category,
+            device_key=final_device_key
+        )
+        if filter_report:
+            for entry in filter_report:
+                print(f"[AestheticFilter] {entry}", file=sys.stderr, flush=True)
+            # 记录被筛除的风格到探索日志
+            for d in directions:
+                reason = d.get('reason', '')
+                if '[审美过滤]' in reason:
+                    try:
+                        log_style_exploration(
+                            session_id=trace_id,
+                            style_name=d.get('style', ''),
+                            decision='rejected',
+                            reason=reason
+                        )
+                    except Exception:
+                        pass
 
         # ── 创建 session（后续方案生成使用）──
         session_id = create_session(

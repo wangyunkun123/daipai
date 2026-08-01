@@ -964,7 +964,7 @@ async function renderThumbnails(th) {
     const time = esc(s.created_at || '');
     const styles = esc((s.styles || []).join(' · ') || '');
     const dirCount = s.direction_count || 0;
-    return `<div class="thumb-card${hiddenCls ? ' hidden-thumb' : ''}" id="thumb-${sid}" onclick="openSession('${sid}')" title="点击查看会话详情">
+    return `<div class="thumb-card${hiddenCls ? ' hidden-thumb' : ''}"${hiddenCls ? ' data-was-hidden="1"' : ''} id="thumb-${sid}" onclick="openSession('${sid}')" title="点击查看会话详情">
       <div class="thumb-img-placeholder" id="thumb-img-${sid}">
         ${s.has_img ? '📷 加载中...' : '📭 无图片'}
       </div>
@@ -1006,14 +1006,17 @@ async function renderThumbnails(th) {
 
 function toggleThumbs(btn) {
   const grid = document.getElementById('thumbGrid');
-  const hiddenCards = grid.querySelectorAll('.hidden-thumb');
-  const isOpen = hiddenCards.length > 0 && hiddenCards[0].style.display !== 'none';
-  if (isOpen) {
-    hiddenCards.forEach(c => c.style.display = 'none');
-    btn.textContent = btn.dataset.expandText || '展开全部 ▼';
-  } else {
-    hiddenCards.forEach(c => c.style.display = '');
+  // 找到所有可切换的卡片（带 data-was-hidden 标记）——用 CSS class 切换而非 style.display
+  const cards = grid.querySelectorAll('.thumb-card[data-was-hidden="1"]');
+  if (cards.length === 0) return;
+  // 检查当前是否被隐藏（hidden-thumb class 是否存在）
+  const isHidden = cards[0].classList.contains('hidden-thumb');
+  if (isHidden) {
+    cards.forEach(c => c.classList.remove('hidden-thumb'));
     btn.textContent = '收起 ▲';
+  } else {
+    cards.forEach(c => c.classList.add('hidden-thumb'));
+    btn.textContent = btn.dataset.expandText || '展开全部 ▼';
   }
 }
 
