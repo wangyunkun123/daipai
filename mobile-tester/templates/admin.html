@@ -133,6 +133,7 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 .thumb-card .thumb-info .scene { font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .thumb-card .thumb-info .time { font-size: 9px; color: var(--dimmer); }
 .thumb-card .thumb-info .styles { font-size: 9px; color: var(--purple); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.hidden-thumb { display: none; }
 </style>
 </head>
 <body>
@@ -144,14 +145,6 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 <!-- 🔄 运行中的任务 -->
 <h2>🔄 运行中的后台任务 <span style="font-size:11px;color:var(--dimmer);font-weight:400" id="taskCount"></span></h2>
 <div id="runningTasks"><div class="empty">暂无运行中的任务</div></div>
-
-<!-- ❌ 失败日志 -->
-<h2>❌ 失败日志 <span style="font-size:11px;color:var(--dimmer);font-weight:400" id="failCount"></span></h2>
-<div id="failedLogs"><div class="empty">加载中...</div></div>
-
-<!-- 🖼️ 最近分析缩略图 -->
-<h2>🖼️ 最近分析缩略图 <span style="font-size:11px;color:var(--dimmer);font-weight:400">（用户高频场景）</span></h2>
-<div class="thumb-grid" id="thumbGrid"><div class="empty" style="grid-column:1/-1">加载中...</div></div>
 
 <!-- ⏳ 待审批申请 -->
 <h2>⏳ 待审批申请</h2>
@@ -253,6 +246,14 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
   </table>
   </div>
 </div>
+
+<!-- ❌ 失败日志 -->
+<h2>❌ 失败日志 <span style="font-size:11px;color:var(--dimmer);font-weight:400" id="failCount"></span></h2>
+<div id="failedLogs"><div class="empty">加载中...</div></div>
+
+<!-- 🖼️ 最近分析缩略图 -->
+<h2>🖼️ 最近分析缩略图 <span style="font-size:11px;color:var(--dimmer);font-weight:400">（用户高频场景）</span></h2>
+<div class="thumb-grid" id="thumbGrid"><div class="empty" style="grid-column:1/-1">加载中...</div></div>
 
 
 <script>
@@ -838,6 +839,19 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── 通用折叠/展开 ──
+function toggleHidden(hiddenId, btn) {
+  const el = document.getElementById(hiddenId);
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = '';
+    btn.textContent = '收起 ▲';
+  } else {
+    el.style.display = 'none';
+    btn.textContent = btn.dataset.expandText || '展开全部 ▼';
+  }
+}
+
 // ── v4.3: 搜索发现审核 ──
 
 // ── 知识库文件下钻 ──
@@ -903,7 +917,11 @@ function renderFailedLogs(fl) {
   const typeLabel = {vision:'👁 视觉识别', directions:'🎬 方向生成', plans:'📋 方案生成'};
   const typeCls = {vision:'fail-vision', directions:'fail-directions', plans:'fail-plans'};
 
-  div.innerHTML = recent.map(r => {
+  const DEFAULT_SHOW = 10;
+  const visible = recent.slice(0, DEFAULT_SHOW);
+  const hidden = recent.slice(DEFAULT_SHOW);
+
+  const renderCard = (r) => {
     const time = toLocal(r.created_at);
     const sid = (r.session_id || '').slice(0, 10);
     const badge = typeCls[r.call_type] || 'stage-loading';
@@ -914,11 +932,19 @@ function renderFailedLogs(fl) {
         <div class="meta">${time.datetime} · ${r.duration_ms||0}ms · model: ${esc(r.model||'?')}</div>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html = visible.map(renderCard).join('');
+  if (hidden.length > 0) {
+    html += `<div id="failHidden" style="display:none">${hidden.map(renderCard).join('')}</div>`;
+    html += `<button class="collapse-btn" onclick="toggleHidden('failHidden', this)" data-expand-text="展开全部 (${recent.length}条) ▼">展开全部 (${recent.length}条) ▼</button>`;
+  }
+  div.innerHTML = html;
 }
 
 // ── 🖼️ 缩略图渲染 ──
 let _thumbCache = {};  // session_id → thumbnail_b64
+const THUMB_DEFAULT_SHOW = 10;
 
 async function renderThumbnails(th) {
   const grid = document.getElementById('thumbGrid');
@@ -929,14 +955,16 @@ async function renderThumbnails(th) {
     return;
   }
 
-  // 先渲染占位卡片
-  grid.innerHTML = sessions.map(s => {
+  const visible = sessions.slice(0, THUMB_DEFAULT_SHOW);
+  const hidden = sessions.slice(THUMB_DEFAULT_SHOW);
+
+  const renderCard = (s, hiddenCls) => {
     const sid = esc(s.session_id);
     const scene = esc(s.scene_info || s.scene_tier || '未知场景');
     const time = esc(s.created_at || '');
     const styles = esc((s.styles || []).join(' · ') || '');
     const dirCount = s.direction_count || 0;
-    return `<div class="thumb-card" id="thumb-${sid}" onclick="openSession('${sid}')" title="点击查看会话详情">
+    return `<div class="thumb-card${hiddenCls ? ' hidden-thumb' : ''}" id="thumb-${sid}" onclick="openSession('${sid}')" title="点击查看会话详情">
       <div class="thumb-img-placeholder" id="thumb-img-${sid}">
         ${s.has_img ? '📷 加载中...' : '📭 无图片'}
       </div>
@@ -946,7 +974,14 @@ async function renderThumbnails(th) {
         <div class="time">${time}</div>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html = visible.map(s => renderCard(s, false)).join('');
+  if (hidden.length > 0) {
+    html += hidden.map(s => renderCard(s, true)).join('');
+    html += `<button class="collapse-btn" style="grid-column:1/-1" onclick="toggleThumbs(this)" data-expand-text="展开全部 (${sessions.length}张) ▼">展开全部 (${sessions.length}张) ▼</button>`;
+  }
+  grid.innerHTML = html;
 
   // 异步加载缩略图（不阻塞页面）
   for (const s of sessions) {
@@ -966,6 +1001,19 @@ async function renderThumbnails(th) {
     } catch(e) {
       // 缩略图加载失败，保持占位
     }
+  }
+}
+
+function toggleThumbs(btn) {
+  const grid = document.getElementById('thumbGrid');
+  const hiddenCards = grid.querySelectorAll('.hidden-thumb');
+  const isOpen = hiddenCards.length > 0 && hiddenCards[0].style.display !== 'none';
+  if (isOpen) {
+    hiddenCards.forEach(c => c.style.display = 'none');
+    btn.textContent = btn.dataset.expandText || '展开全部 ▼';
+  } else {
+    hiddenCards.forEach(c => c.style.display = '');
+    btn.textContent = '收起 ▲';
   }
 }
 
