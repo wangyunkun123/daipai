@@ -23,7 +23,7 @@ load_dotenv()
 from PIL import Image, ImageOps
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 from knowledge_base import get_all_knowledge_for_prompt, get_style_detail, get_device_adaptation, get_source_quality_map, get_knowledge_files_by_quality, load_series_rhythm
-from database import accumulate, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, get_api_call_stats, get_style_technique_panel, get_style_exploration_stats, log_style_exploration, promote_exploration_to_style, delete_exploration, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques
+from database import accumulate, query_scene_techniques_for_plans, get_db_stats, migrate_from_json, export_for_claude, import_from_claude, apply_pending_sync, check_and_increment_usage, get_daily_usage, submit_quota_request, get_quota_request_status, get_pending_quota_requests, approve_quota_request, save_usage_session, update_usage_session, save_feedback, get_feedback_stats, export_feedback_markdown, DISLIKE_REASONS, DB_PATH, log_api_call, get_api_call_stats, get_failed_api_logs, get_style_technique_panel, get_style_exploration_stats, log_style_exploration, promote_exploration_to_style, delete_exploration, extract_scene_category, seed_from_knowledge_base, seed_practical_techniques, seed_posing_techniques
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
@@ -3850,6 +3850,132 @@ def admin_cancel_task():
             })
         else:
             return jsonify({"success": False, "error": "无法获取取消事件"}), 500
+
+
+# ── 失败日志监控 ──
+@app.route('/admin/failed-logs')
+@login_required
+def admin_failed_logs():
+    """返回最近失败的 API 调用日志 + 统计"""
+    try:
+        logs = get_failed_api_logs(limit=30)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify(logs)
+
+
+# ── 最近分析缩略图 ──
+@app.route('/admin/recent-thumbnails')
+@login_required
+def admin_recent_thumbnails():
+    """返回最近分析的会话缩略图——用于监控用户高频场景"""
+    limit = request.args.get('limit', 20, type=int)
+    try:
+        sessions = []
+        if not os.path.isdir(_SESSIONS_DIR):
+            return jsonify({"sessions": [], "count": 0})
+
+        # 收集所有 session JSON 文件，按 mtime 排序
+        session_files = []
+        for fn in os.listdir(_SESSIONS_DIR):
+            if fn.endswith('.json'):
+                sid = fn[:-5]
+                fpath = os.path.join(_SESSIONS_DIR, fn)
+                try:
+                    mtime = os.path.getmtime(fpath)
+                    session_files.append((sid, fpath, mtime))
+                except OSError:
+                    continue
+
+        # 按修改时间降序，取最近的
+        session_files.sort(key=lambda x: x[2], reverse=True)
+        session_files = session_files[:limit]
+
+        for sid, fpath, _mtime in session_files:
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+
+            # 检查是否有图片
+            img_path = _img_path(sid)
+            has_img = os.path.exists(img_path)
+
+            # 提取场景信息
+            scene_info = data.get('scene_category', '') or ''
+            scene_tier = data.get('scene_tier', '')
+            directions = data.get('directions', [])
+            style_names = [d.get('style', '') for d in (directions or [])[:3] if d.get('style')]
+            direction_count = len(directions)
+
+            # 创建时间
+            created_at = data.get('created_at', 0)
+            try:
+                from datetime import datetime as dt
+                created_str = dt.fromtimestamp(created_at).strftime('%m-%d %H:%M')
+            except Exception:
+                created_str = ''
+
+            sessions.append({
+                "session_id": sid,
+                "created_at": created_str,
+                "has_img": has_img,
+                "scene_info": scene_info[:30],
+                "scene_tier": scene_tier,
+                "styles": style_names,
+                "direction_count": direction_count,
+            })
+
+        return jsonify({"sessions": sessions, "count": len(sessions)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/admin/thumbnail/<session_id>')
+@login_required
+def admin_thumbnail(session_id):
+    """返回指定 session 的缩略图（base64, 最大 200px 宽）"""
+    # 安全检查：session_id 只能包含合法字符
+    if not re.match(r'^[a-f0-9]+$', session_id):
+        return jsonify({"error": "invalid session_id"}), 400
+
+    img_path = _img_path(session_id)
+    if not os.path.exists(img_path):
+        return jsonify({"error": "no image"}), 404
+
+    try:
+        with open(img_path, 'r', encoding='utf-8') as f:
+            img_b64 = f.read().strip()
+        if not img_b64:
+            return jsonify({"error": "empty image"}), 404
+
+        # 解码 → 缩放 → 重新编码
+        img_data = base64.b64decode(img_b64)
+        img = Image.open(io.BytesIO(img_data))
+        img = ImageOps.exif_transpose(img)
+        if img.mode in ('RGBA', 'P', 'LA'):
+            img = img.convert('RGB')
+
+        # 缩放到 200px 宽
+        w, h = img.size
+        target_w = 200
+        ratio = target_w / w
+        target_h = int(h * ratio)
+        thumb = img.resize((target_w, target_h), Image.LANCZOS)
+
+        buf = io.BytesIO()
+        thumb.save(buf, format='JPEG', quality=70)
+        thumb_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        return jsonify({
+            "session_id": session_id,
+            "thumbnail_b64": thumb_b64,
+            "orig_size": f"{w}x{h}",
+            "thumb_size": f"{target_w}x{target_h}",
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ── AI 风格探索日志 ──

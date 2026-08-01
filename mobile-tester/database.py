@@ -823,6 +823,39 @@ def get_api_call_stats():
         conn.close()
 
 
+def get_failed_api_logs(limit=20):
+    """获取最近失败的 API 调用日志，含今日/总计统计"""
+    conn = get_db()
+    try:
+        now = datetime.utcnow()
+        today = now.strftime('%Y-%m-%d')
+        today_start = f"{today} 00:00:00"
+        today_end = f"{today} 23:59:59"
+
+        recent = [dict(r) for r in conn.execute("""
+            SELECT id, session_id, call_type, model, total_tokens, duration_ms, created_at
+            FROM api_call_log WHERE success = 0
+            ORDER BY id DESC LIMIT ?
+        """, (limit,)).fetchall()]
+
+        today_fails = conn.execute("""
+            SELECT COUNT(*) FROM api_call_log
+            WHERE success = 0 AND created_at >= ? AND created_at <= ?
+        """, (today_start, today_end)).fetchone()[0]
+
+        total_fails = conn.execute(
+            "SELECT COUNT(*) FROM api_call_log WHERE success = 0"
+        ).fetchone()[0]
+
+        return {
+            "recent": recent,
+            "today_fails": today_fails,
+            "total_fails": total_fails,
+        }
+    finally:
+        conn.close()
+
+
 def get_search_stats():
     """获取 Web 搜索执行统计数据（用范围查询替代 date() 包裹）"""
     conn = get_db()

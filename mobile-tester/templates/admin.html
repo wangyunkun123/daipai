@@ -112,6 +112,27 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 .d-pill.pose  { background:rgba(34,197,94,0.15); color:#22c55e; }
 .d-pill.loc   { background:rgba(250,204,21,0.15); color:#facc15; }
 .d-pill.dim   { background:rgba(138,138,138,0.1); color:var(--dim); }
+
+/* ── 失败日志 ── */
+.fail-card { background: var(--card); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 6px; border: 1px solid rgba(239,68,68,0.2); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fail-card .fail-info { font-size: 12px; }
+.fail-card .fail-info .fid { font-family: 'SF Mono','Fira Code',monospace; font-size: 10px; color: var(--dimmer); }
+.fail-card .fail-info .meta { font-size: 10px; color: var(--dim); margin-top: 1px; }
+.fail-badge { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+.fail-vision { background: rgba(168,85,247,.15); color: #a855f7; }
+.fail-directions { background: rgba(245,158,11,.15); color: var(--fire); }
+.fail-plans { background: rgba(236,72,153,.15); color: #ec4899; }
+
+/* ── 缩略图网格 ── */
+.thumb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
+.thumb-card { background: var(--card); border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); transition: all .2s; cursor: pointer; }
+.thumb-card:hover { border-color: var(--purple); transform: translateY(-1px); }
+.thumb-card .thumb-img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; background: var(--card2); }
+.thumb-card .thumb-img-placeholder { width: 100%; aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; background: var(--card2); color: var(--dimmer); font-size: 11px; text-align: center; padding: 6px; }
+.thumb-card .thumb-info { padding: 6px 8px; }
+.thumb-card .thumb-info .scene { font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thumb-card .thumb-info .time { font-size: 9px; color: var(--dimmer); }
+.thumb-card .thumb-info .styles { font-size: 9px; color: var(--purple); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -123,6 +144,14 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 <!-- 🔄 运行中的任务 -->
 <h2>🔄 运行中的后台任务 <span style="font-size:11px;color:var(--dimmer);font-weight:400" id="taskCount"></span></h2>
 <div id="runningTasks"><div class="empty">暂无运行中的任务</div></div>
+
+<!-- ❌ 失败日志 -->
+<h2>❌ 失败日志 <span style="font-size:11px;color:var(--dimmer);font-weight:400" id="failCount"></span></h2>
+<div id="failedLogs"><div class="empty">加载中...</div></div>
+
+<!-- 🖼️ 最近分析缩略图 -->
+<h2>🖼️ 最近分析缩略图 <span style="font-size:11px;color:var(--dimmer);font-weight:400">（用户高频场景）</span></h2>
+<div class="thumb-grid" id="thumbGrid"><div class="empty" style="grid-column:1/-1">加载中...</div></div>
 
 <!-- ⏳ 待审批申请 -->
 <h2>⏳ 待审批申请</h2>
@@ -355,9 +384,17 @@ function renderLineChart(containerId, data, color, labelFn) {
 
 async function loadData() {
   try {
-    const r = await fetch('/admin/stats');
-    const d = await r.json();
+    const [statsR, failedR, thumbR] = await Promise.all([
+      fetch('/admin/stats'),
+      fetch('/admin/failed-logs'),
+      fetch('/admin/recent-thumbnails?limit=20')
+    ]);
+    const d = await statsR.json();
+    const fl = await failedR.json();
+    const th = await thumbR.json();
     render(d);
+    renderFailedLogs(fl);
+    renderThumbnails(th);
     document.getElementById('lastUpdate').textContent = '更新于 ' + new Date().toLocaleTimeString();
   } catch(e) {
     document.getElementById('lastUpdate').textContent = '加载失败';
@@ -848,8 +885,103 @@ async function showKnowledgeFiles(quality) {
 function closeKnowledgeDetail() {
   document.getElementById('knowledgeFileDetail').style.display = 'none';
 }
-// 首次加载时也拉取待审核发现
+// ── ❌ 失败日志渲染 ──
+function renderFailedLogs(fl) {
+  const div = document.getElementById('failedLogs');
+  const countSpan = document.getElementById('failCount');
+  const recent = (fl && fl.recent) || [];
+  const today = fl && fl.today_fails || 0;
+  const total = fl && fl.total_fails || 0;
 
+  if (!fl || total === 0) {
+    div.innerHTML = '<div class="empty">✅ 暂无失败记录</div>';
+    countSpan.textContent = '';
+    return;
+  }
+
+  countSpan.textContent = `（今日 ${today} / 总计 ${total}）`;
+  const typeLabel = {vision:'👁 视觉识别', directions:'🎬 方向生成', plans:'📋 方案生成'};
+  const typeCls = {vision:'fail-vision', directions:'fail-directions', plans:'fail-plans'};
+
+  div.innerHTML = recent.map(r => {
+    const time = toLocal(r.created_at);
+    const sid = (r.session_id || '').slice(0, 10);
+    const badge = typeCls[r.call_type] || 'stage-loading';
+    return `<div class="fail-card">
+      <div class="fail-info">
+        <span class="${badge} fail-badge">${typeLabel[r.call_type] || r.call_type}</span>
+        <span class="fid">sid:${esc(sid)}</span>
+        <div class="meta">${time.datetime} · ${r.duration_ms||0}ms · model: ${esc(r.model||'?')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 🖼️ 缩略图渲染 ──
+let _thumbCache = {};  // session_id → thumbnail_b64
+
+async function renderThumbnails(th) {
+  const grid = document.getElementById('thumbGrid');
+  const sessions = (th && th.sessions) || [];
+
+  if (sessions.length === 0) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">暂无分析记录（分析几张照片后这里会出现缩略图）</div>';
+    return;
+  }
+
+  // 先渲染占位卡片
+  grid.innerHTML = sessions.map(s => {
+    const sid = esc(s.session_id);
+    const scene = esc(s.scene_info || s.scene_tier || '未知场景');
+    const time = esc(s.created_at || '');
+    const styles = esc((s.styles || []).join(' · ') || '');
+    const dirCount = s.direction_count || 0;
+    return `<div class="thumb-card" id="thumb-${sid}" onclick="openSession('${sid}')" title="点击查看会话详情">
+      <div class="thumb-img-placeholder" id="thumb-img-${sid}">
+        ${s.has_img ? '📷 加载中...' : '📭 无图片'}
+      </div>
+      <div class="thumb-info">
+        <div class="scene">${scene} · ${dirCount}方向</div>
+        ${styles ? `<div class="styles">${styles}</div>` : ''}
+        <div class="time">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 异步加载缩略图（不阻塞页面）
+  for (const s of sessions) {
+    if (!s.has_img) continue;
+    const sid = s.session_id;
+    if (_thumbCache[sid]) {
+      setThumbImg(sid, _thumbCache[sid]);
+      continue;
+    }
+    try {
+      const r = await fetch('/admin/thumbnail/' + sid);
+      const d = await r.json();
+      if (d.thumbnail_b64) {
+        _thumbCache[sid] = d.thumbnail_b64;
+        setThumbImg(sid, d.thumbnail_b64);
+      }
+    } catch(e) {
+      // 缩略图加载失败，保持占位
+    }
+  }
+}
+
+function setThumbImg(sid, b64) {
+  const el = document.getElementById('thumb-img-' + sid);
+  if (el) {
+    el.outerHTML = `<img class="thumb-img" src="data:image/jpeg;base64,${b64}" alt="缩略图" loading="lazy">`;
+  }
+}
+
+function openSession(sid) {
+  // 打开该 session 的分析结果页面
+  window.open('/?session=' + sid, '_blank');
+}
+
+// 首次加载
 loadData();
 setInterval(loadData, 30000);
 </script>
