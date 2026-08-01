@@ -2963,7 +2963,7 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             print(f"[Selfie] Detected for session {trace_id}", file=sys.stderr, flush=True)
 
         # ── 审美过滤：程序化筛除明显审美冲突的方向 ──
-        directions, filter_report = filter_directions(
+        directions, filter_report, filtered_entries = filter_directions(
             directions=directions,
             vision_json=vision_json,
             scene_category=scene_category,
@@ -2973,18 +2973,16 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             for entry in filter_report:
                 print(f"[AestheticFilter] {entry}", file=sys.stderr, flush=True)
             # 记录被筛除的风格到探索日志
-            for d in directions:
-                reason = d.get('reason', '')
-                if '[审美过滤]' in reason:
-                    try:
-                        log_style_exploration(
-                            session_id=trace_id,
-                            style_name=d.get('style', ''),
-                            decision='rejected',
-                            reason=reason
-                        )
-                    except Exception:
-                        pass
+            for old_style, reason in filtered_entries:
+                try:
+                    log_style_exploration(
+                        session_id=trace_id,
+                        style_name=old_style,
+                        decision='rejected',
+                        reason=reason
+                    )
+                except Exception:
+                    pass
 
         # ── 创建 session（后续方案生成使用）──
         session_id = create_session(

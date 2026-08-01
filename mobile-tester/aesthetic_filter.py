@@ -668,23 +668,48 @@ def _get_fallback_style(scene_category, device_key=None):
     return dict(fallback)  # 返回副本
 
 
-def _replace_direction(direction, features, device_key):
-    """替换被筛除方向的风格内容。保留 light_annotation 和 device_annotation。"""
+def _replace_or_clear_direction(direction, features, device_key, used_styles):
+    """
+    替换被筛除方向的风格内容，或重复时清空。
+
+    Args:
+        direction: 要修改的方向 dict（原地修改）
+        features: 场景特征 dict
+        device_key: 设备标识
+        used_styles: set of style names 已被其他方向占用
+
+    Returns:
+        (old_style, was_cleared)
+        - old_style: 被筛除的原始风格名（用于日志）
+        - was_cleared: True 表示因重复而清空，False 表示成功替换
+    """
     old_style = direction.get("style", "").strip()
     fallback = _get_fallback_style(features.get("category", ""), device_key)
+    fallback_name = fallback["style"]
 
-    direction["style"] = fallback["style"]
+    # —— 去重检查：如果替代风格已被其他方向使用，清空当前方向 ——
+    if fallback_name in used_styles:
+        # 清空所有内容字段，让前端自动过滤（与 DIRECTIONS_PROMPT 的留空约定一致）
+        direction["style"] = ""
+        direction["kb_status"] = ""
+        direction["style_promise"] = ""
+        direction["reason"] = ""
+        direction["fit_rationale"] = ""
+        direction["style_brief"] = {}
+        direction["photo_guide"] = ""
+        return old_style, True
+
+    # —— 替换为安全风格（自然语言，不暴露后台逻辑） ——
+    direction["style"] = fallback_name
     direction["style_promise"] = fallback["style_promise"]
-    direction["reason"] = (
-        f"[审美过滤] 原推荐 '{old_style}' 与当前场景存在审美冲突，"
-        f"已替换为 '{fallback['style']}' —— 该风格在本场景中安全可行"
-    )
+    direction["reason"] = fallback["fit_rationale"]
     direction["fit_rationale"] = fallback["fit_rationale"]
     direction["kb_status"] = "📚 已有记录"
     direction["style_brief"] = fallback.get("style_brief", {})
-    direction["photo_guide"] = ""  # 已知风格，不需要 photo_guide
+    direction["photo_guide"] = ""
 
-    return direction
+    used_styles.add(fallback_name)
+    return old_style, False
 
 
 # ============================================================
@@ -693,7 +718,7 @@ def _replace_direction(direction, features, device_key):
 
 def filter_directions(directions, vision_json, scene_category, device_key):
     """
-    程序化筛除审美冲突的方向，用安全替代风格替换。
+    程序化筛除审美冲突的方向。优先替换为安全替代风格，替代风格重复时清空。
 
     Args:
         directions: list of direction dicts (id, style, emoji, label, ...)
@@ -702,18 +727,29 @@ def filter_directions(directions, vision_json, scene_category, device_key):
         device_key: string device identifier
 
     Returns:
-        (filtered_directions, report_lines)
-        - filtered_directions: 修改后的 directions 列表（始终3条）
-        - report_lines: 人类可读的过滤日志
+        (filtered_directions, report_lines, filtered_entries)
+        - filtered_directions: 修改后的 directions 列表
+        - report_lines: 人类可读的过滤日志（仅 stderr，不发给用户）
+        - filtered_entries: [(old_style, filter_reason), ...] 用于 DB 日志
     """
     if not isinstance(directions, list) or not isinstance(vision_json, dict):
-        return list(directions or []), []
+        return list(directions or []), [], []
 
     features = _extract_scene_features(vision_json, scene_category)
     report = []
+    filtered_entries = []
     modified = [dict(d) for d in directions]  # 浅拷贝每个方向
-    filtered_ids = set()
 
+    # 先收集未被筛除的风格名（用于去重）
+    used_styles = set()
+    for d in modified:
+        sn = (d.get("style") or "").strip()
+        if sn:
+            conflict_type, _ = _evaluate_direction(sn, features, device_key)
+            if not conflict_type:
+                used_styles.add(sn)  # 正常通过的方向，标记为已用
+
+    # 筛除审美冲突的方向
     for i, d in enumerate(modified):
         style_name = (d.get("style") or "").strip()
         if not style_name:
@@ -721,13 +757,25 @@ def filter_directions(directions, vision_json, scene_category, device_key):
 
         conflict_type, reason = _evaluate_direction(style_name, features, device_key)
         if conflict_type:
-            report.append(
-                f"FILTERED [{d['id']}] '{style_name}' -> {conflict_type}: {reason}"
+            old_style, was_cleared = _replace_or_clear_direction(
+                d, features, device_key, used_styles
             )
-            modified[i] = _replace_direction(d, features, device_key)
-            filtered_ids.add(d["id"])
+            filtered_entries.append((old_style, reason))
 
-    # 兜底：如果所有方向都被筛除（极端情况），在 🟢 槽位注入安全风格
+            if was_cleared:
+                report.append(
+                    f"CLEARED [{d['id']}] '{style_name}' ({conflict_type}): "
+                    f"fallback '{_get_fallback_style(features.get('category', ''), device_key)['style']}' "
+                    f"已被其他方向占用，清空此槽位"
+                )
+            else:
+                new_style = d.get("style", "")
+                report.append(
+                    f"REPLACED [{d['id']}] '{style_name}' -> '{new_style}' "
+                    f"({conflict_type})"
+                )
+
+    # 兜底：如果所有方向都为空（极端情况），在 🟢 槽位注入安全风格
     non_empty = [d for d in modified if (d.get("style") or "").strip()]
     if not non_empty and modified:
         fallback = _get_fallback_style(scene_category, device_key)
@@ -735,11 +783,11 @@ def filter_directions(directions, vision_json, scene_category, device_key):
         now_idx = next((i for i, d in enumerate(modified) if d.get("id") == "now"), 1)
         modified[now_idx]["style"] = fallback["style"]
         modified[now_idx]["style_promise"] = fallback["style_promise"]
-        modified[now_idx]["reason"] = "[审美过滤] 所有方向均被过滤，使用通用安全风格"
+        modified[now_idx]["reason"] = fallback["fit_rationale"]
         modified[now_idx]["kb_status"] = "📚 已有记录"
         modified[now_idx]["fit_rationale"] = fallback["fit_rationale"]
         modified[now_idx]["style_brief"] = fallback.get("style_brief", {})
         modified[now_idx]["photo_guide"] = ""
-        report.append("SAFETY: 所有方向被过滤，注入默认安全风格到🟢槽位")
+        report.append("SAFETY: 所有方向被过滤或清空，注入默认安全风格到🟢槽位")
 
-    return modified, report
+    return modified, report, filtered_entries
