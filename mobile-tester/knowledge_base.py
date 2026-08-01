@@ -784,6 +784,23 @@ def validate_search_results(search_text, scene_type=""):
     }
 
 
+def _load_promoted_db_styles():
+    """从 DB styles 表加载管理员入库的 AI 发现风格"""
+    try:
+        from database import get_db
+        conn = get_db()
+        try:
+            rows = conn.execute(
+                "SELECT name, fit_rationale, one_liner, verify_count FROM styles "
+                "WHERE source_type = 'ai_exploration' ORDER BY verify_count DESC"
+            ).fetchall()
+            return [(r['name'], (r['fit_rationale'] or r['one_liner'] or '').strip(), r['verify_count']) for r in rows]
+        finally:
+            conn.close()
+    except Exception:
+        return []
+
+
 def get_knowledge_context(scene_type="", device_key="", light_condition="", fallback_level="medium"):
     """
     返回注入 DIRECTIONS_PROMPT 的知识上下文。
@@ -800,6 +817,10 @@ def get_knowledge_context(scene_type="", device_key="", light_condition="", fall
         parts.append("## 📚 知识库风格名索引（仅用于校验搜索结果的风格名，非推荐）\n")
         all_styles = _all_styles()
         parts.append(f"> 可用风格名：{' / '.join(all_styles.keys())}\n")
+        # 追加入库风格
+        promoted = _load_promoted_db_styles()
+        if promoted:
+            parts.append(f"> 🆕 管理员入库风格：{' / '.join(p[0] for p in promoted)}\n")
         parts.append("> ⚠️ 搜索中出现的风格名若不在上述列表中，需谨慎评估其质量。\n")
         parts.append("> ⚠️ 若搜索结果有高赞信号（万赞/万收藏/刷屏），即使与知识库冲突也可采纳。\n")
     elif fallback_level == "medium":
@@ -815,6 +836,10 @@ def get_knowledge_context(scene_type="", device_key="", light_condition="", fall
         other_styles = [n for n in all_styles if n not in relevant_styles]
         if other_styles:
             parts.append(f"\n> 其他可用风格：{' / '.join(other_styles)}")
+        # 入库风格
+        promoted = _load_promoted_db_styles()
+        if promoted:
+            parts.append(f"\n> 🆕 管理员入库（可优先采用）：{' / '.join(f'{p[0]}（{p[1][:60]}）' for p in promoted)}")
         parts.append("")
     else:
         # 搜索空 → 完整输出（知识库当主力）
@@ -828,6 +853,12 @@ def get_knowledge_context(scene_type="", device_key="", light_condition="", fall
         other_styles = [n for n in all_styles if n not in relevant_styles]
         if other_styles:
             parts.append(f"\n> 其他可用风格（按需引用，无需展开）：{' / '.join(other_styles)}")
+        # 入库风格（完整展示）
+        promoted = _load_promoted_db_styles()
+        if promoted:
+            parts.append("\n### 🆕 管理员审核入库风格（已验证可用，优先匹配）\n")
+            for name, desc, cnt in promoted:
+                parts.append(f"- **{name}**：{desc}（已验证 {cnt} 次）")
         parts.append("")
 
     # ── 后续章节仅在 not high 时输出 ──
@@ -1044,6 +1075,11 @@ def get_style_detail(style_name):
 - 手机拍不出来的（如精确光圈控制/移轴/大画幅）→ 写替代方案或不写
 - 优先引用社区搜索中的真实姿势/机位/技法"""
 
+    # ── 管理员入库的 AI 发现风格（从 DB styles 表查询）──
+    db_detail = _lookup_db_style(style_name_clean)
+    if db_detail:
+        return db_detail
+
     # ── 社区发现的新风格（完全不在 KB 中）──
     return f"""**{style_name_clean}**（社区发现的新风格）
 🚨 这是一个新风格——基于你的视觉文化知识，翻译成可执行的摄影方案：
@@ -1057,6 +1093,44 @@ def get_style_detail(style_name):
 - 每个技法必须有来源标注（社区搜索/知识库类比/摄影原理）
 - 社区搜索无支撑 → 用知识库最接近的风格技法类比，标注"类比自（某某风格）"
 - 两者都无支撑 → 只写已验证的通用摄影原理，不创造新技法"""
+
+
+def _lookup_db_style(style_name):
+    """从 DB styles 表查询管理员入库的 AI 发现风格——入库闭环的最后一步"""
+    try:
+        from database import get_db
+        conn = get_db()
+        try:
+            row = conn.execute(
+                "SELECT name, one_liner, fit_rationale, verify_count FROM styles "
+                "WHERE source_type = 'ai_exploration' AND name = ?",
+                (style_name,)
+            ).fetchone()
+            if not row:
+                # 模糊匹配
+                row = conn.execute(
+                    "SELECT name, one_liner, fit_rationale, verify_count FROM styles "
+                    "WHERE source_type = 'ai_exploration' AND ? LIKE '%' || name || '%'",
+                    (style_name,)
+                ).fetchone()
+                if not row:
+                    # 反向模糊
+                    row = conn.execute(
+                        "SELECT name, one_liner, fit_rationale, verify_count FROM styles "
+                        "WHERE source_type = 'ai_exploration' AND name LIKE '%' || ? || '%'",
+                        (style_name,)
+                    ).fetchone()
+            if row:
+                desc = (row['fit_rationale'] or row['one_liner'] or '').strip()
+                verify = row['verify_count'] or 1
+                return f"""**{row['name']}**：{desc}
+（来源：管理员审核入库——已验证 {verify} 次，含可执行摄影参数，直接用于方案）
+⛔ 铁律：入库风格已经过人工审核，描述中的拍摄手法可直接写入方案的 subject/shooter/enhance 字段。"""
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    return None
 
 
 def _find_related_kb_style(cross_media_name):
