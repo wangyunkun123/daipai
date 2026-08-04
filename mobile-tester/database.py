@@ -277,7 +277,9 @@ SCENE_CATEGORY_RULES = [
     ("waterside", ["海边", "海滩", "河滨", "湖岸", "泳池边", "水库", "江边", "海岸", "湖畔", "河岸", "码头", "河流"]),
     ("urban_street", ["商业街", "马路", "街道", "巷弄", "霓虹街道", "路边", "街区", "街景", "老城", "夜市", "步行街", "胡同"]),
     ("cultural_site", ["博物馆", "寺庙", "园林", "图书馆", "美术馆", "古建筑", "祠堂", "古迹", "教堂", "故居", "遗址"]),
-    ("residential", ["客厅", "卧室", "阳台", "小区", "居家", "住宅", "书房", "公寓", "宿舍", "晾衣"]),
+    # 注意：不含"小区""住宅"——它们是室外描述（小区花园/住宅楼外观），
+    # 不应触发室内居家分类。分类由具体房间名（客厅/卧室等）驱动。
+    ("residential", ["客厅", "卧室", "阳台", "居家", "书房", "公寓", "宿舍", "晾衣", "厨房", "浴室", "玄关"]),
     ("industrial_ruins", ["废弃工厂", "拆迁", "工地", "废墟", "旧厂房", "废弃", "烂尾楼"]),
     ("campus", ["学校", "操场", "教室", "大学", "教学楼", "校园"]),
     ("night_scene", ["夜景", "夜间", "夜晚", "夜", "霓虹", "灯会"]),
@@ -310,6 +312,10 @@ def extract_scene_category(scene_type, location_clues=''):
             best_category = category
 
     if best_score >= 4:  # 至少匹配到2字关键词
+        # 安全网：residential 语义是"居家室内"，室外场景即使匹配到
+        # 残留关键词（如建筑描述中的"阳台"）也不应归类为 residential
+        if best_category == "residential" and "室外" in scene_type:
+            return "outdoor_generic"
         return best_category
     # fallback: 根据室内/室外做粗分类
     if "室内" in scene_type:
