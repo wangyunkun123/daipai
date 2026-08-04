@@ -219,185 +219,245 @@ _STYLE_PROFILES = {
 # 场景类别 → 安全替代风格
 # ============================================================
 
+# ── 共享 style_brief 模板，避免重复定义 ──
+_BRIEF_安静真实 = {
+    "essence": "生活刚好被看见", "color": "中性偏暖",
+    "composition": "自然视角", "light": "场景自然光", "mood": "安静日常",
+}
+_BRIEF_日系清新 = {
+    "essence": "空气感的画面", "color": "低饱和蓝绿偏移",
+    "composition": "留白+自然视角", "light": "柔光过曝倾向", "mood": "清新治愈",
+}
+_BRIEF_胶片复古 = {
+    "essence": "有温度的旧照片", "color": "暖色偏移+褪色",
+    "composition": "自然抓拍", "light": "场景光+暖调", "mood": "怀旧温暖",
+}
+_BRIEF_纪实粗粝 = {
+    "essence": "真实的力量", "color": "黑白倾向+高对比",
+    "composition": "直接正面", "light": "硬光+深阴影", "mood": "粗粝真实",
+}
+_BRIEF_电影感 = {
+    "essence": "电影里的一帧", "color": "色彩分级冷暖对比",
+    "composition": "宽画幅叙事构图", "light": "方向性光+暗部", "mood": "故事感张力",
+}
+_BRIEF_极简高级 = {
+    "essence": "少即是多", "color": "低饱和克制",
+    "composition": "几何秩序+留白", "light": "均匀柔光", "mood": "冷静高级",
+}
+
 _FALLBACK_BY_CATEGORY = {
+    # 格式：primary（首选）+ secondary（去重碰撞时备用）
+    # v1.1: 每个分类有二级兜底，避免方向被清空
     "commercial": {
-        "style": "胶片复古",
-        "style_promise": "给商业空间一点旧时光的温度",
-        "fit_rationale": "胶片复古的暖色调让商业空间少一点冷峻，多一点人情味——任何商业场景的安全选择",
-        "style_brief": {
-            "essence": "有温度的旧照片",
-            "color": "暖色偏移+褪色",
-            "composition": "自然抓拍",
-            "light": "场景光+暖调",
-            "mood": "怀旧温暖",
+        "primary": {
+            "style": "胶片复古",
+            "style_promise": "给商业空间一点旧时光的温度",
+            "fit_rationale": "胶片复古的暖色调让商业空间少一点冷峻，多一点人情味——任何商业场景的安全选择",
+            "style_brief": _BRIEF_胶片复古,
+        },
+        "secondary": {
+            "style": "安静真实",
+            "style_promise": "如实记录这个空间的氛围",
+            "fit_rationale": "安静真实不加修饰——让商业空间自身的氛围说话",
+            "style_brief": _BRIEF_安静真实,
         },
     },
+    # v1.1: urban_street 从"安静真实"改为"纪实粗粝"——街头摄影天然是纪实
     "urban_street": {
-        "style": "安静真实",
-        "style_promise": "如实记录街头这一刻的样子",
-        "fit_rationale": "安静真实是街头摄影的安全选择——不改变场景，只如实呈现街头的生活感",
-        "style_brief": {
-            "essence": "生活刚好被看见",
-            "color": "中性偏暖",
-            "composition": "自然视角",
-            "light": "场景自然光",
-            "mood": "安静日常",
+        "primary": {
+            "style": "纪实粗粝",
+            "style_promise": "捕捉街头真实的瞬间",
+            "fit_rationale": "纪实粗粝的高对比+真实感是街头摄影的经典语言——街头的纹理和光影就是最好的素材",
+            "style_brief": _BRIEF_纪实粗粝,
+        },
+        "secondary": {
+            "style": "安静真实",
+            "style_promise": "如实记录街头这一刻的样子",
+            "fit_rationale": "安静真实是街头摄影的安全选择——不改变场景，只如实呈现街头的生活感",
+            "style_brief": _BRIEF_安静真实,
         },
     },
     "park_nature": {
-        "style": "日系清新",
-        "style_promise": "让自然的光和空气充满画面",
-        "fit_rationale": "日系清新的高调+低饱和天然适合户外自然场景——光线和绿色就是最好的素材",
-        "style_brief": {
-            "essence": "空气感的画面",
-            "color": "低饱和蓝绿偏移",
-            "composition": "留白+自然视角",
-            "light": "柔光过曝倾向",
-            "mood": "清新治愈",
+        "primary": {
+            "style": "日系清新",
+            "style_promise": "让自然的光和空气充满画面",
+            "fit_rationale": "日系清新的高调+低饱和天然适合户外自然场景——光线和绿色就是最好的素材",
+            "style_brief": _BRIEF_日系清新,
+        },
+        "secondary": {
+            "style": "安静真实",
+            "style_promise": "让自然自己说话",
+            "fit_rationale": "安静真实不加滤镜——自然场景本身的光影和色彩已经足够好",
+            "style_brief": _BRIEF_安静真实,
         },
     },
     "waterside": {
-        "style": "日系清新",
-        "style_promise": "让水面和天空一起呼吸",
-        "fit_rationale": "水边的开阔+天空+自然光天然匹配日系清新的空气感——拍出来干净通透",
-        "style_brief": {
-            "essence": "空气感的画面",
-            "color": "低饱和蓝绿偏移",
-            "composition": "留白+自然视角",
-            "light": "柔光过曝倾向",
-            "mood": "清新治愈",
+        "primary": {
+            "style": "日系清新",
+            "style_promise": "让水面和天空一起呼吸",
+            "fit_rationale": "水边的开阔+天空+自然光天然匹配日系清新的空气感——拍出来干净通透",
+            "style_brief": _BRIEF_日系清新,
+        },
+        "secondary": {
+            "style": "极简高级",
+            "style_promise": "让水面成为纯粹的画布",
+            "fit_rationale": "水面的开阔+水平线天然适合极简高级——用几何秩序组织水天一色",
+            "style_brief": _BRIEF_极简高级,
         },
     },
     "night_scene": {
-        "style": "电影感",
-        "style_promise": "让夜晚的灯光讲一个故事",
-        "fit_rationale": "电影感的叙事性+色彩分级天然适合夜景——每一盏灯都是一个故事的开头",
-        "style_brief": {
-            "essence": "电影里的一帧",
-            "color": "色彩分级冷暖对比",
-            "composition": "宽画幅叙事构图",
-            "light": "方向性光+暗部",
-            "mood": "故事感张力",
+        "primary": {
+            "style": "电影感",
+            "style_promise": "让夜晚的灯光讲一个故事",
+            "fit_rationale": "电影感的叙事性+色彩分级天然适合夜景——每一盏灯都是一个故事的开头",
+            "style_brief": _BRIEF_电影感,
+        },
+        "secondary": {
+            "style": "纪实粗粝",
+            "style_promise": "捕捉夜晚的真实质感",
+            "fit_rationale": "纪实粗粝的高对比黑白在夜景中反而纯粹——去掉色彩干扰，只留光影结构",
+            "style_brief": _BRIEF_纪实粗粝,
         },
     },
     "f_and_b": {
-        "style": "胶片复古",
-        "style_promise": "给这个空间一点胶片温度",
-        "fit_rationale": "咖啡厅/餐厅的暖光+木质+食物天然适合胶片复古的暖调——像旧照片里的美好日常",
-        "style_brief": {
-            "essence": "有温度的旧照片",
-            "color": "暖色偏移+褪色",
-            "composition": "自然抓拍",
-            "light": "场景光+暖调",
-            "mood": "怀旧温暖",
+        "primary": {
+            "style": "胶片复古",
+            "style_promise": "给这个空间一点胶片温度",
+            "fit_rationale": "咖啡厅/餐厅的暖光+木质+食物天然适合胶片复古的暖调——像旧照片里的美好日常",
+            "style_brief": _BRIEF_胶片复古,
+        },
+        "secondary": {
+            "style": "安静真实",
+            "style_promise": "记录这个空间的日常氛围",
+            "fit_rationale": "安静真实让咖啡厅/餐厅的氛围自己说话——不添加多余修饰",
+            "style_brief": _BRIEF_安静真实,
         },
     },
     "industrial_ruins": {
-        "style": "纪实粗粝",
-        "style_promise": "让废墟的纹理自己说话",
-        "fit_rationale": "纪实粗粝的高对比+粗颗粒天然适合废墟/工厂——纹理和光影就是最好的素材",
-        "style_brief": {
-            "essence": "真实的力量",
-            "color": "黑白倾向+高对比",
-            "composition": "直接正面",
-            "light": "硬光+深阴影",
-            "mood": "粗粝真实",
+        "primary": {
+            "style": "纪实粗粝",
+            "style_promise": "让废墟的纹理自己说话",
+            "fit_rationale": "纪实粗粝的高对比+粗颗粒天然适合废墟/工厂——纹理和光影就是最好的素材",
+            "style_brief": _BRIEF_纪实粗粝,
+        },
+        "secondary": {
+            "style": "电影感",
+            "style_promise": "把废墟变成电影场景",
+            "fit_rationale": "电影感的叙事构图+色彩分级可以把废墟拍成末世电影里的一个画面",
+            "style_brief": _BRIEF_电影感,
         },
     },
+    # v1.1: cultural_site 从"安静真实"改为"极简高级"——文化遗产的建筑秩序需要克制的视觉语言
     "cultural_site": {
-        "style": "安静真实",
-        "style_promise": "让建筑和光影安静地对话",
-        "fit_rationale": "安静真实不添加多余的风格滤镜——让文化遗产用自己的光影和纹理说话",
-        "style_brief": {
-            "essence": "生活刚好被看见",
-            "color": "中性偏暖",
-            "composition": "自然视角",
-            "light": "场景自然光",
-            "mood": "安静日常",
+        "primary": {
+            "style": "极简高级",
+            "style_promise": "让建筑和光影安静地对话",
+            "fit_rationale": "极简高级的几何秩序+克制色彩最配文化遗产的建筑美学——不抢镜，只呈现",
+            "style_brief": _BRIEF_极简高级,
+        },
+        "secondary": {
+            "style": "安静真实",
+            "style_promise": "让文化遗产自己讲述历史",
+            "fit_rationale": "安静真实不添加多余的风格滤镜——让文化遗产用自己的光影和纹理说话",
+            "style_brief": _BRIEF_安静真实,
         },
     },
     "residential": {
-        "style": "安静真实",
-        "style_promise": "让家的样子就是家的样子",
-        "fit_rationale": "安静真实天然适合居家场景——不需要摆拍，家的日常就是最好的素材",
-        "style_brief": {
-            "essence": "生活刚好被看见",
-            "color": "中性偏暖",
-            "composition": "自然视角",
-            "light": "场景自然光",
-            "mood": "安静日常",
+        "primary": {
+            "style": "安静真实",
+            "style_promise": "让家的样子就是家的样子",
+            "fit_rationale": "安静真实天然适合居家场景——不需要摆拍，家的日常就是最好的素材",
+            "style_brief": _BRIEF_安静真实,
+        },
+        "secondary": {
+            "style": "胶片复古",
+            "style_promise": "给家的日常一点胶片温度",
+            "fit_rationale": "胶片复古的暖调让居家日常更有温度——像家庭相册里的老照片",
+            "style_brief": _BRIEF_胶片复古,
         },
     },
     "transit_station": {
-        "style": "纪实粗粝",
-        "style_promise": "捕捉流动人群中的静止瞬间",
-        "fit_rationale": "交通枢纽的人流+建筑结构天然适合纪实粗粝——在混乱中找到秩序",
-        "style_brief": {
-            "essence": "真实的力量",
-            "color": "黑白倾向+高对比",
-            "composition": "直接正面",
-            "light": "硬光+深阴影",
-            "mood": "粗粝真实",
+        "primary": {
+            "style": "纪实粗粝",
+            "style_promise": "捕捉流动人群中的静止瞬间",
+            "fit_rationale": "交通枢纽的人流+建筑结构天然适合纪实粗粝——在混乱中找到秩序",
+            "style_brief": _BRIEF_纪实粗粝,
+        },
+        "secondary": {
+            "style": "电影感",
+            "style_promise": "把通勤变成电影开场",
+            "fit_rationale": "电影感的宽画幅+色彩分级让交通枢纽变成都市电影的场景——人流就是最好的演员",
+            "style_brief": _BRIEF_电影感,
         },
     },
     "campus": {
-        "style": "日系清新",
-        "style_promise": "让校园的光和青春感充满画面",
-        "fit_rationale": "校园的开阔+绿化+建筑天然适合日系清新的明亮调性——像青春电影里的一帧",
-        "style_brief": {
-            "essence": "空气感的画面",
-            "color": "低饱和蓝绿偏移",
-            "composition": "留白+自然视角",
-            "light": "柔光过曝倾向",
-            "mood": "清新治愈",
+        "primary": {
+            "style": "日系清新",
+            "style_promise": "让校园的光和青春感充满画面",
+            "fit_rationale": "校园的开阔+绿化+建筑天然适合日系清新的明亮调性——像青春电影里的一帧",
+            "style_brief": _BRIEF_日系清新,
+        },
+        "secondary": {
+            "style": "胶片复古",
+            "style_promise": "给校园时光一点怀旧温度",
+            "fit_rationale": "胶片复古的褪色暖调天然适合校园——像毕业很多年后翻看的老照片",
+            "style_brief": _BRIEF_胶片复古,
         },
     },
     "sports_venue": {
-        "style": "纪实粗粝",
-        "style_promise": "捕捉运动中的力量感和瞬间",
-        "fit_rationale": "运动场景的动态+张力天然适合纪实粗粝——高对比让动作更有力量",
-        "style_brief": {
-            "essence": "真实的力量",
-            "color": "黑白倾向+高对比",
-            "composition": "动态构图",
-            "light": "硬光+深阴影",
-            "mood": "粗粝真实",
+        "primary": {
+            "style": "纪实粗粝",
+            "style_promise": "捕捉运动中的力量感和瞬间",
+            "fit_rationale": "运动场景的动态+张力天然适合纪实粗粝——高对比让动作更有力量",
+            "style_brief": _BRIEF_纪实粗粝,
+        },
+        "secondary": {
+            "style": "电影感",
+            "style_promise": "把运动拍成热血电影",
+            "fit_rationale": "电影感的叙事构图+色彩分级让运动瞬间更有戏剧张力",
+            "style_brief": _BRIEF_电影感,
         },
     },
     "outdoor_generic": {
-        "style": "日系清新",
-        "style_promise": "让户外的光和空气充满画面",
-        "fit_rationale": "户外场景的开阔+自然光天然适合日系清新的明亮通透——不容易出错",
-        "style_brief": {
-            "essence": "空气感的画面",
-            "color": "低饱和蓝绿偏移",
-            "composition": "留白+自然视角",
-            "light": "柔光过曝倾向",
-            "mood": "清新治愈",
+        "primary": {
+            "style": "日系清新",
+            "style_promise": "让户外的光和空气充满画面",
+            "fit_rationale": "户外场景的开阔+自然光天然适合日系清新的明亮通透——不容易出错",
+            "style_brief": _BRIEF_日系清新,
+        },
+        "secondary": {
+            "style": "安静真实",
+            "style_promise": "如实记录户外的这一刻",
+            "fit_rationale": "安静真实在户外同样适用——不加修饰，只呈现户外的光和空间",
+            "style_brief": _BRIEF_安静真实,
         },
     },
     "indoor_generic": {
-        "style": "安静真实",
-        "style_promise": "如实记录室内的这一刻",
-        "fit_rationale": "室内场景天然适合安静真实——不改变光线和布局，只如实呈现",
-        "style_brief": {
-            "essence": "生活刚好被看见",
-            "color": "中性偏暖",
-            "composition": "自然视角",
-            "light": "场景自然光",
-            "mood": "安静日常",
+        "primary": {
+            "style": "安静真实",
+            "style_promise": "如实记录室内的这一刻",
+            "fit_rationale": "室内场景天然适合安静真实——不改变光线和布局，只如实呈现",
+            "style_brief": _BRIEF_安静真实,
+        },
+        "secondary": {
+            "style": "胶片复古",
+            "style_promise": "给室内空间一点胶片温度",
+            "fit_rationale": "胶片复古的暖调让任何室内空间多一层怀旧氛围",
+            "style_brief": _BRIEF_胶片复古,
         },
     },
     "_default": {
-        "style": "安静真实",
-        "style_promise": "如实记录眼前的这一刻",
-        "fit_rationale": "安静真实是万能的安全选择——不改变场景，只如实呈现。任何场景都能拍",
-        "style_brief": {
-            "essence": "生活刚好被看见",
-            "color": "中性偏暖",
-            "composition": "自然视角",
-            "light": "场景自然光",
-            "mood": "安静日常",
+        "primary": {
+            "style": "安静真实",
+            "style_promise": "如实记录眼前的这一刻",
+            "fit_rationale": "安静真实是万能的安全选择——不改变场景，只如实呈现。任何场景都能拍",
+            "style_brief": _BRIEF_安静真实,
+        },
+        "secondary": {
+            "style": "日系清新",
+            "style_promise": "让画面明亮通透",
+            "fit_rationale": "日系清新的明亮调性是不确定场景的通用安全牌——画面干净不容易出错",
+            "style_brief": _BRIEF_日系清新,
         },
     },
 }
@@ -661,55 +721,67 @@ def _evaluate_direction(style_name, features, device_key):
 # 替代策略
 # ============================================================
 
-def _get_fallback_style(scene_category, device_key=None):
-    """按场景类别返回安全替代风格。"""
+def _get_fallback_style(scene_category, device_key=None, tier="primary"):
+    """按场景类别返回安全替代风格。
+    tier: "primary" 首选, "secondary" 备用（去重碰撞时使用）。
+    """
     cat = scene_category or ""
-    fallback = _FALLBACK_BY_CATEGORY.get(cat, _FALLBACK_BY_CATEGORY["_default"])
-    return dict(fallback)  # 返回副本
+    config = _FALLBACK_BY_CATEGORY.get(cat, _FALLBACK_BY_CATEGORY["_default"])
+    # v1.1: 支持二级兜底；若未配置 secondary 则回退到 primary
+    entry = config.get(tier) if isinstance(config.get(tier), dict) else config.get("primary", config)
+    return dict(entry)  # 返回副本
+
+
+def _apply_fallback(direction, fallback_config):
+    """将 fallback 配置写入 direction（原地修改）。"""
+    direction["style"] = fallback_config["style"]
+    direction["style_promise"] = fallback_config["style_promise"]
+    direction["reason"] = fallback_config["fit_rationale"]
+    direction["fit_rationale"] = fallback_config["fit_rationale"]
+    direction["kb_status"] = "📚 已有记录"
+    direction["style_brief"] = fallback_config.get("style_brief", {})
+    direction["photo_guide"] = ""
 
 
 def _replace_or_clear_direction(direction, features, device_key, used_styles):
     """
-    替换被筛除方向的风格内容，或重复时清空。
-
-    Args:
-        direction: 要修改的方向 dict（原地修改）
-        features: 场景特征 dict
-        device_key: 设备标识
-        used_styles: set of style names 已被其他方向占用
+    替换被筛除方向的风格内容。先试 primary fallback，碰撞或冲突时试 secondary，
+    都不行才清空。
 
     Returns:
         (old_style, was_cleared)
-        - old_style: 被筛除的原始风格名（用于日志）
-        - was_cleared: True 表示因重复而清空，False 表示成功替换
     """
     old_style = direction.get("style", "").strip()
-    fallback = _get_fallback_style(features.get("category", ""), device_key)
-    fallback_name = fallback["style"]
+    cat = features.get("category", "")
 
-    # —— 去重检查：如果替代风格已被其他方向使用，清空当前方向 ——
-    if fallback_name in used_styles:
-        # 清空所有内容字段，让前端自动过滤（与 DIRECTIONS_PROMPT 的留空约定一致）
-        direction["style"] = ""
-        direction["kb_status"] = ""
-        direction["style_promise"] = ""
-        direction["reason"] = ""
-        direction["fit_rationale"] = ""
-        direction["style_brief"] = {}
-        direction["photo_guide"] = ""
-        return old_style, True
+    # 尝试顺序：primary → secondary → 清空
+    for tier in ("primary", "secondary"):
+        fallback = _get_fallback_style(cat, device_key, tier=tier)
+        fb_name = fallback["style"]
 
-    # —— 替换为安全风格（自然语言，不暴露后台逻辑） ——
-    direction["style"] = fallback_name
-    direction["style_promise"] = fallback["style_promise"]
-    direction["reason"] = fallback["fit_rationale"]
-    direction["fit_rationale"] = fallback["fit_rationale"]
-    direction["kb_status"] = "📚 已有记录"
-    direction["style_brief"] = fallback.get("style_brief", {})
+        # 去重检查
+        if fb_name in used_styles:
+            continue
+
+        # v1.1: 兜底验证——确保 fallback 自身不会与场景冲突
+        conflict, _ = _evaluate_direction(fb_name, features, device_key)
+        if conflict:
+            continue
+
+        # 通过：应用 fallback
+        _apply_fallback(direction, fallback)
+        used_styles.add(fb_name)
+        return old_style, False
+
+    # 两级兜底都失败——清空方向
+    direction["style"] = ""
+    direction["kb_status"] = ""
+    direction["style_promise"] = ""
+    direction["reason"] = ""
+    direction["fit_rationale"] = ""
+    direction["style_brief"] = {}
     direction["photo_guide"] = ""
-
-    used_styles.add(fallback_name)
-    return old_style, False
+    return old_style, True
 
 
 # ============================================================
@@ -718,13 +790,8 @@ def _replace_or_clear_direction(direction, features, device_key, used_styles):
 
 def filter_directions(directions, vision_json, scene_category, device_key):
     """
-    程序化筛除审美冲突的方向。优先替换为安全替代风格，替代风格重复时清空。
-
-    Args:
-        directions: list of direction dicts (id, style, emoji, label, ...)
-        vision_json: dict from vision analysis
-        scene_category: string from extract_scene_category()
-        device_key: string device identifier
+    程序化筛除审美冲突的方向。优先替换为安全替代风格（primary→secondary 两级兜底），
+    两级都不可用时清空。
 
     Returns:
         (filtered_directions, report_lines, filtered_entries)
@@ -765,8 +832,7 @@ def filter_directions(directions, vision_json, scene_category, device_key):
             if was_cleared:
                 report.append(
                     f"CLEARED [{d['id']}] '{style_name}' ({conflict_type}): "
-                    f"fallback '{_get_fallback_style(features.get('category', ''), device_key)['style']}' "
-                    f"已被其他方向占用，清空此槽位"
+                    f"两级兜底均已被占用或冲突，清空此槽位"
                 )
             else:
                 new_style = d.get("style", "")
@@ -778,16 +844,10 @@ def filter_directions(directions, vision_json, scene_category, device_key):
     # 兜底：如果所有方向都为空（极端情况），在 🟢 槽位注入安全风格
     non_empty = [d for d in modified if (d.get("style") or "").strip()]
     if not non_empty and modified:
-        fallback = _get_fallback_style(scene_category, device_key)
+        fallback = _get_fallback_style(scene_category, device_key, tier="primary")
         # 找到 🟢 槽位（通常是 index 1，id="now"）
         now_idx = next((i for i, d in enumerate(modified) if d.get("id") == "now"), 1)
-        modified[now_idx]["style"] = fallback["style"]
-        modified[now_idx]["style_promise"] = fallback["style_promise"]
-        modified[now_idx]["reason"] = fallback["fit_rationale"]
-        modified[now_idx]["kb_status"] = "📚 已有记录"
-        modified[now_idx]["fit_rationale"] = fallback["fit_rationale"]
-        modified[now_idx]["style_brief"] = fallback.get("style_brief", {})
-        modified[now_idx]["photo_guide"] = ""
+        _apply_fallback(modified[now_idx], fallback)
         report.append("SAFETY: 所有方向被过滤或清空，注入默认安全风格到🟢槽位")
 
     return modified, report, filtered_entries
