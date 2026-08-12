@@ -1,97 +1,45 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 带拍 APP（Daipai）
 
-# Getting Started
+AI 拍照灵感指南。v0.1 技术原型：iOS 真机跑通"拍 → AI 分析 → 三方向 → 方案"闭环。
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 技术栈
 
-## Step 1: Start Metro
+- React Native 0.86（New Architecture），iOS 优先
+- react-native-vision-camera 4.7 —— 原生相机
+- @shopify/react-native-skia 2.11 —— 叠加层/标注/后期（后期 v0.3）
+- react-native-sse —— 流式 AI 事件
+- react-native-quick-sqlite —— 会话缓存
+- zustand —— 状态
+- 后端：`../mobile-tester/`（Flask，零改造，新增 `/app/analyze`）
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 运行
 
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+```bash
+npm install
+cd ios && pod install && cd ..
+cp .env.example .env   # 填 API_BASE_URL
+npm run ios -- --device   # 相机需真机
 ```
 
-## Step 2: Build and run your app
+本地开发若后端在 Mac 上跑（`mobile-tester/server.py`，监听 0.0.0.0:8888），
+把 `.env` 的 `API_BASE_URL` 改成 Mac 局域网 IP。
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## 测试
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```bash
+npm test          # 单测（SSE 解析 / token / 契约）
+npx tsc --noEmit  # 类型检查
 ```
 
-### iOS
+## 路线图
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+- v0.1（当前）：拍→AI→方向→方案闭环（真机验证中）
+- v0.2：方案叠加进取景器（构图框/EV/焦段吸附）+ 手动控制
+- v0.3：非破坏性后期编辑 + ProRAW
+- v1.0：鉴权/反馈同步/上架
+- 安卓在 v1.0 后启动（代码已用跨端库）
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+## 设计系统
 
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+奶油胶片杂志：奶油米 `#FAF6F0` + 焙茶褐 `#B5673E` + 暖金箔 `#C9A063`。
+Token 见 `src/theme/tokens.ts`，组件禁止硬编码颜色。
