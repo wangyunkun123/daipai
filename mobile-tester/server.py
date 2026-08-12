@@ -3452,6 +3452,68 @@ def analyze():
     )
 
 
+@app.route('/app/analyze', methods=['POST'])
+def app_analyze():
+    """APP 端专用入口：接收 base64 照片，走与 /analyze 相同的流式管线。
+    与 /analyze 的唯一区别是请求体为 JSON（base64），而非 multipart——
+    react-native-sse 对 multipart 支持不可靠。
+    v0.1 用静态 APP_TOKEN 做最简单的接入控制；v1.0 换成 JWT。
+    """
+    if not DOUBAO_API_KEY:
+        return jsonify({"success": False, "error": "API Key 未配置"}), 500
+
+    data = request.get_json(silent=True) or {}
+    expected_token = os.environ.get("APP_TOKEN", "daipai-ios-v0.1-dev")
+    if data.get("app_token") != expected_token:
+        return jsonify({"error": "unauthorized"}), 401
+
+    photo_b64 = data.get("photo")
+    if not photo_b64:
+        return jsonify({"success": False, "error": "未收到照片"}), 400
+
+    # 去掉可能存在的 data URI 前缀
+    if photo_b64.startswith("data:"):
+        photo_b64 = photo_b64.split(",", 1)[1]
+
+    try:
+        img_bytes = base64.b64decode(photo_b64)
+    except Exception:
+        return jsonify({"success": False, "error": "base64 解码失败"}), 400
+
+    if len(img_bytes) > MAX_FILE_SIZE:
+        return jsonify({"success": False, "error": f"照片太大（{len(img_bytes)//1024//1024}MB），限制 {MAX_FILE_SIZE//1024//1024}MB"}), 400
+
+    # 用文件头判断格式，与 /analyze 一样走临时文件路径
+    fext = ".heic" if img_bytes[:4] == b"ftyp" and b"heic" in img_bytes[:16].lower() else ".jpg"
+    tmp_path = f"/tmp/daipai_app_{int(time.time())}_{os.getpid()}{fext}"
+    with open(tmp_path, "wb") as f:
+        f.write(img_bytes)
+
+    device_override = data.get("device") or None
+    lens_key = data.get("lens") or None
+    client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or request.remote_addr or "app"
+
+    def cleanup_and_generate():
+        try:
+            yield from analyze_photo_stream(tmp_path, device_override, lens_key, client_ip)
+        finally:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+
+    return Response(
+        stream_with_context(cleanup_and_generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
 @app.route('/analyze/plans', methods=['POST'])
 def analyze_plans():
     """按需生成方案——用户选方向后调用。
