@@ -921,6 +921,7 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
     reader.readAsDataURL(file);
 
     // Reset
+    if (activeAnalyzeAbort) { activeAnalyzeAbort.abort(); activeAnalyzeAbort = null; }  // 取消上一次未完成的分析
     sessionId = null; allDirs = []; activeDirIdx = 0; activePlanIdx = 0;
     planCache = {}; currentDeviceKey = null; currentDeviceName = ''; currentDeviceLenses = '';
     currentLightInfo = null; currentColorInfo = null; currentLightPeriod = null;
@@ -942,13 +943,15 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
     if (lens) fd.append('lens', lens);
 
     // v3.5: 提交分析（支持排队和限额处理）
+    const abortCtrl = new AbortController();
+    activeAnalyzeAbort = abortCtrl;
     let queueTimer = null;
     let queueCount = 0;
     const MAX_QUEUE_RETRIES = 60; // 最多等 5 分钟 (60 × 5s)
 
     async function doAnalyze() {
       try {
-        const resp = await fetch('/analyze', { method:'POST', body:fd });
+        const resp = await fetch('/analyze', { method:'POST', body:fd, signal: abortCtrl.signal });
         if (!resp.ok) {
           const err = await resp.json().catch(()=>({}));
           // 排队中
@@ -971,6 +974,7 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
         const reader2 = resp.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '', eventType = '';
+        sseTerminated = false;  // 本次分析重置终态标记
         while (true) {
           const { done, value } = await reader2.read();
           if (done) break;
@@ -985,12 +989,16 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
               if (!ds || ds === 'null') continue;
               const t = ds.trim();
               if (!t.startsWith('{') || !t.endsWith('}')) continue;
-              try { const d = JSON.parse(t); handleSSE(eventType, d); eventType = ''; }
+              const et = eventType; eventType = '';  // 取走即清空——防止 JSON 解析失败后 eventType 泄漏到下一行 data
+              try { const d = JSON.parse(t); handleSSE(et, d); }
               catch(er) { console.error('SSE parse:', er.message); }
             }
           }
         }
+        // 流正常结束但没收到终态事件（complete/error/cancelled）→ 判定中断
+        if (!sseTerminated) showError('分析中断：连接意外结束，请重新上传');
       } catch(err) {
+        if (err && err.name === 'AbortError') return;  // 用户重新上传/重置，主动取消，不报错
         showError('网络错误：'+err.message);
       }
     }
@@ -1140,6 +1148,11 @@ $('#lensSelect').addEventListener('change', () => { planCache = {}; });
   });
 });
 
+// 终态标记：SSE 流读到 complete/error/cancelled 时置位，读取循环据此判断"流意外结束"
+let sseTerminated = false;
+// 当前活跃的分析请求 AbortController——重新上传/重置时取消，避免旧请求污染页面
+let activeAnalyzeAbort = null;
+
 function handleSSE(event, data) {
   try {
     switch (event) {
@@ -1159,10 +1172,16 @@ function handleSSE(event, data) {
         showDirectionsResult(data);
         break;
       case 'complete':
+        sseTerminated = true;
         if (data.session_id) sessionId = data.session_id;
         $('#metaBar').innerHTML = `⏱ ${data.elapsed}s · 🪙 ${data.tokens} tokens`;
         break;
+      case 'cancelled':
+        sseTerminated = true;
+        showError((data && data.message) || '分析已被取消，请重新上传');
+        break;
       case 'error':
+        sseTerminated = true;
         showError(data.message || '分析过程出错');
         break;
     }
@@ -1224,10 +1243,6 @@ function showDeviceBar(data) {
   else { $('#lensRow').classList.remove('show'); $('#lensSelect').value = ''; }
 
   $('#deviceBar').classList.add('show');
-}
-
-function toggleDeviceSwitcher() {
-  // 已移除二级菜单，保留空函数避免旧引用报错
 }
 
 function showExifInfo(data) {
@@ -1808,11 +1823,6 @@ function renderPlans(plans, direction) {
     });
     if (issues.length > 0) {
       console.warn('🔴 溢出诊断:', issues);
-      // 在页面顶部显示红色警告
-      const banner = document.createElement('div');
-      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(239,68,68,0.95);color:#fff;padding:8px 12px;font-size:10px;line-height:1.4';
-      banner.innerHTML = '🔴 溢出诊断: ' + issues.join('<br>');
-      document.body.prepend(banner);
     } else {
       console.log('🟢 无溢出，所有元素在屏幕宽度内');
     }
@@ -1902,16 +1912,38 @@ function renderContactCard(plans, direction) {
   return c;
 }
 
+// 通用复制——兼容 HTTP 局域网（非 HTTPS 下 navigator.clipboard 不存在，走 execCommand 兜底）
+// 返回 Promise<boolean>：是否复制成功。成功/失败分别触发 okMsg/failMsg toast。
+function copyText(txt, okMsg, failMsg) {
+  const ok = () => { if (okMsg) showToast(okMsg); return true; };
+  const no = () => { if (failMsg) showToast(failMsg); return false; };
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select(); ta.setSelectionRange(0, txt.length);
+      const r = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return r ? ok() : no();
+    } catch(e) { return no(); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(txt).then(ok, fallback);
+  }
+  return Promise.resolve(fallback());
+}
+
 // 组图提示词操作
 function copyContactPrompt() {
   const el = document.getElementById('pt_contact');
   if (!el) return;
-  navigator.clipboard.writeText(el.textContent).then(() => showToast('✅ 组图提示词已复制，打开豆包粘贴即可生图'));
+  copyText(el.textContent, '✅ 组图提示词已复制，打开豆包粘贴即可生图');
 }
 function genContactPrompt() {
   const el = document.getElementById('pt_contact');
   if (!el) return;
-  navigator.clipboard.writeText(el.textContent).then(() => showToast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成'));
+  copyText(el.textContent, '🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成');
 }
 
 function renderPlanCard(p, i, direction) {
@@ -2047,224 +2079,29 @@ function copyPromptV5(i) {
   const el = document.getElementById('pt'+i);
   if (!el) return;
   const btn = el.parentElement.querySelector('.v5-btn.copy');
-  navigator.clipboard.writeText(el.textContent).then(()=>{
-    if (btn) {
-      const orig = btn.textContent;
-      btn.textContent = '✅ 已复制';
-      btn.style.background = 'rgba(74,222,128,0.15)';
-      btn.style.color = 'var(--green)';
-      setTimeout(()=>{
-        btn.textContent = orig;
-        btn.style.background = 'rgba(138,138,138,0.15)';
-        btn.style.color = 'var(--dim)';
-      }, 2000);
-    }
-    showToast('✅ 提示词已复制，打开豆包粘贴即可生图');
-  }).catch(()=>{
-    showToast('⚠️ 复制失败，请手动长按选择文字');
+  copyText(el.textContent, '✅ 提示词已复制，打开豆包粘贴即可生图', '⚠️ 复制失败，请手动长按选择文字').then(ok=>{
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = ok ? '✅ 已复制' : '⚠️ 复制失败';
+    btn.style.background = ok ? 'rgba(74,222,128,0.15)' : 'rgba(255,120,120,0.15)';
+    btn.style.color = ok ? 'var(--green)' : 'var(--fire)';
+    setTimeout(()=>{
+      btn.textContent = orig;
+      btn.style.background = 'rgba(138,138,138,0.15)';
+      btn.style.color = 'var(--dim)';
+    }, 2000);
   });
 }
 function genPromptV5(i) {
   const el = document.getElementById('pt'+i);
   if (!el) return;
-  navigator.clipboard.writeText(el.textContent).then(()=>{
-    showToast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成');
-  }).catch(()=>{
-    showToast('⚠️ 复制失败，请手动长按选择文字');
-  });
+  copyText(el.textContent, '🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成');
 }
 function showToast(msg) {
   let t = document.getElementById('v5toast');
   if (!t) { t = document.createElement('div'); t.id='v5toast'; t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.9);color:#fff;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:9999'; document.body.appendChild(t); }
   t.textContent=msg; t.classList.add('show'); t.style.opacity='1';
   setTimeout(()=>{t.style.opacity='0';},2500);
-}
-
-function buildLightDesc() {
-  // 组合天气光照时段 + Vision 光线方向/光质
-  const parts = [];
-  if (currentLightPeriod && currentLightPeriod.label) {
-    const label = currentLightPeriod.label;
-    if (label.includes('黄金')) parts.push('黄金时刻暖光');
-    else if (label.includes('蓝调')) parts.push('蓝调时刻柔光');
-    else if (label.includes('夜间')) parts.push('夜间灯光');
-    else if (label.includes('正午')) parts.push('正午自然光');
-    else if (label.includes('暮光')) parts.push('暮光时分');
-  }
-  if (currentLightInfo) {
-    if (currentLightInfo.direction && !currentLightInfo.direction.includes('不确定')) parts.push(currentLightInfo.direction);
-    if (currentLightInfo.quality && !currentLightInfo.quality.includes('不确定')) parts.push(currentLightInfo.quality);
-  }
-  return parts.join('，');
-}
-
-function buildDeviceDesc() {
-  // 当前选中的设备 key（手动切换优先）
-  const selVal = $('#deviceSelect').value;
-  const devKey = selVal || currentDeviceKey || '';
-  const lensKey = $('#lensSelect').value || '';
-
-  // 设备描述映射
-  const deviceDescs = {
-    'iphone-17-pro': 'iPhone 17 Pro 主摄（24mm等效）拍摄',
-    'iphone-17': 'iPhone 17 主摄（26mm等效）拍摄',
-    'iphone-pro-13-16': 'iPhone Pro 主摄（24mm等效）拍摄',
-    'iphone-standard-13-16': 'iPhone 主摄（26mm等效）拍摄',
-    'android-flagship': '安卓旗舰手机 主摄拍摄',
-    'sony-a7m4': 'Sony A7M4 全画幅相机拍摄',
-    'sony-a7c2': 'Sony A7C2 全画幅相机拍摄',
-    'sony-a6400': 'Sony A6400 APS-C相机拍摄',
-    'fujifilm-xt5': 'Fujifilm X-T5 相机拍摄',
-    'fujifilm-xt50': 'Fujifilm X-T50 相机拍摄',
-    'fujifilm-x100vi': 'Fujifilm X100VI（35mm定焦）拍摄',
-    'ricoh-gr3': 'Ricoh GR III（28mm定焦）拍摄',
-    'canon-r6ii': 'Canon EOS R6 II 全画幅相机拍摄',
-    'other-camera': '相机拍摄',
-  };
-  let txt = deviceDescs[devKey] || (currentDeviceName ? currentDeviceName + ' 拍摄' : '');
-
-  // 如果选了具体镜头，追加镜头信息
-  if (lensKey) {
-    const lensNames = {
-      '24-70-f2.8': '24-70mm f/2.8', '70-200-f2.8': '70-200mm f/2.8',
-      '16-35-f2.8': '16-35mm f/2.8', '24-105-f4': '24-105mm f/4',
-      '50-f1.8': '50mm f/1.8', '50-f1.2': '50mm f/1.2',
-      '85-f1.4': '85mm f/1.4', '85-f1.8': '85mm f/1.8',
-      '35-f1.4': '35mm f/1.4', '28-f2.8': '28mm f/2.8',
-      'kit-lens': '变焦镜头',
-    };
-    if (lensNames[lensKey]) {
-      txt = txt.replace('拍摄', `+ ${lensNames[lensKey]} 镜头拍摄`);
-    }
-  }
-  return txt || '';
-}
-
-function genImgPrompt(plan, direction) {
-  // ── 图生图格式：参考原图 + 保留不变 + 逐项调整 ──
-  const parts = [];
-
-  // 开头：声明参考原图
-  parts.push('参考上传的照片，保持人物外貌、服装和场景环境不变。\n\n做以下调整：');
-
-  // 1. 人物姿势
-  const postureOrSubject = plan.posture || plan.subject || '';
-  if (postureOrSubject) parts.push(`- 人物：${postureOrSubject}`);
-
-  // 2. 机位
-  const shooterOrWhere = plan.shooter || plan.where || '';
-  if (shooterOrWhere) parts.push(`- 机位：${shooterOrWhere}`);
-
-  // 3. 光线
-  const lightDesc = buildLightDesc();
-  if (lightDesc) {
-    let lightText = `- 光线：${lightDesc}`;
-    // 融入 enhance 中的打光建议
-    if (plan.enhance && /反光|补光|柔光|遮光|打光/.test(plan.enhance)) {
-      lightText += `，${plan.enhance}`;
-    }
-    parts.push(lightText);
-  } else if (plan.enhance && /反光|补光|柔光|遮光|打光/.test(plan.enhance)) {
-    parts.push(`- 光线：${plan.enhance}`);
-  }
-
-  // 4. 画面风格
-  let style = (direction.style_promise || '');
-  style = style.replace(/[，,。.][^，,。.]*[感觉得像][^，,。.]*/g, '');
-  style = style.replace(/发出去.*?评论/g, '');
-  style = style.replace(/发圈.*?评论/g, '');
-  style = style.trim();
-  if (style) parts.push(`\n画面风格：${style}`);
-
-  // 5. 景别与空间（gear 字段用视觉语言）
-  if (plan.gear) {
-    let gearVis = plan.gear
-      .replace(/2×裁切.*?mm\)/, '中等焦距视角')
-      .replace(/1×主摄/, '接近人眼视角')
-      .replace(/0\.5×超广角/, '超广角透视')
-      .replace(/3×长焦.*?mm\)/, '远距离压缩视角')
-      .replace(/全自动就行/, '')
-      .replace(/对焦点在.*?[，,]/g, '')
-      .replace(/曝光补偿.*?[，,]/g, '')
-      .trim();
-    if (gearVis) parts.push(`景别与空间：${gearVis}`);
-  }
-
-  // 6. 画面效果
-  if (plan.result) parts.push(`\n画面效果：${plan.result}`);
-
-  // 7. 约束词
-  parts.push('\n无文字，无水印，无签名，自然肤质，真实摄影感');
-
-  const prompt = parts.filter(Boolean).join('\n');
-
-  // ── 智能标注（保持不变）──
-  const operational = [plan.subject||'', plan.shooter||'', plan.gear||'', plan.do||'', plan.where||'', plan.prep||'', plan.result||'', plan.posture||'', plan.perspective||''].join(' ');
-
-  const notes = [];
-
-  // 后期处理检测
-  const postPatterns = [
-    {re: /后期|修图|调色/, label: '后期调色'},
-    {re: /滤镜/, label: '使用滤镜'},
-    {re: /HDR/, label: 'HDR合成'},
-    {re: /降噪/, label: '降噪处理'},
-    {re: /锐化/, label: '锐化处理'},
-    {re: /堆栈/, label: '堆栈合成'},
-    {re: /曲线|HSL|色阶/, label: '曲线/色阶调整'},
-    {re: /蒙版/, label: '蒙版合成'},
-    {re: /加深|减淡/, label: '加深/减淡'},
-    {re: /液化/, label: '液化处理'},
-    {re: /暗房|暗角/, label: '暗角效果'},
-    {re: /去雾|除雾/, label: '去雾处理'},
-    {re: /黑白|单色转换|去色/, label: '黑白转换'},
-    {re: /颗粒|噪点/, label: '胶片颗粒'},
-  ];
-  const foundPost = [];
-  postPatterns.forEach(({re, label}) => { if (re.test(operational)) foundPost.push(label); });
-  if (foundPost.length > 0) notes.push(`🖥️ 后期：${foundPost.join('、')}`);
-
-  // 道具/器材检测
-  const propPatterns = [
-    {re: /反光板|柔光板|补光灯|LED灯|常亮灯/, label: '补光设备'},
-    {re: /三脚架|独脚架|稳定器|手持稳定/, label: '支撑/稳定设备'},
-    {re: /闪光灯|离机闪|机顶闪/, label: '闪光灯'},
-    {re: /滤镜|ND镜|CPL|偏振|渐变镜|UV镜/, label: '镜头滤镜'},
-    {re: /烟雾|烟饼|造雾/, label: '烟雾效果'},
-    {re: /泡泡|气泡/, label: '泡泡道具'},
-    {re: /花瓣|花束|鲜花|花环/, label: '花束/花瓣'},
-    {re: /纱巾|薄纱|纱帘|纱布/, label: '纱巾/纱布'},
-    {re: /镜子|反光/, label: '镜面/反光物'},
-    {re: /灯串|灯带|小灯|蜡烛|灯光/, label: '灯光/灯饰'},
-    {re: /椅子|凳子|沙发/, label: '座椅道具'},
-    {re: /雨伞|伞|遮阳伞/, label: '伞具'},
-    {re: /帽子|围巾|手套|墨镜|眼镜/, label: '配饰道具'},
-    {re: /书|报纸|杂志|杯子|玻璃杯/, label: '手持小道具'},
-  ];
-  const foundProps = [];
-  propPatterns.forEach(({re, label}) => { if (re.test(operational)) foundProps.push(label); });
-  const prepText = plan.prep || '';
-  const needsPrep = prepText && !/什么都不用|不需要|不用准备|无需准备|没有特殊/.test(prepText) && prepText.length > 5;
-  if (foundProps.length > 0) notes.push(`📦 需准备：${foundProps.join('、')}`);
-  else if (needsPrep) notes.push(`📋 准备：${prepText.slice(0, 40)}${prepText.length>40?'...':''}`);
-
-  // AI/合成检测
-  const aiPatterns = [
-    {re: /AI生成|AI 生成|人工智能生成/, label: 'AI生成内容'},
-    {re: /替换背景|换背景|抠图换/, label: '背景替换'},
-    {re: /合成|多张合成|多图合成/, label: '多图合成'},
-    {re: /双重曝光|多重曝光/, label: '双重/多重曝光'},
-    {re: /超现实|不可能|虚幻/, label: '超现实效果'},
-    {re: /添加.{0,3}元素|加上.{0,3}元素|植入/, label: '添加画面元素'},
-  ];
-  const foundAI = [];
-  aiPatterns.forEach(({re, label}) => { if (re.test(operational)) foundAI.push(label); });
-  if (foundAI.length > 0) notes.push(`🤖 AI/合成：${foundAI.join('、')}`);
-
-  // 参考图提示
-  notes.push('📎 图生图模式：上传原图作为参考图，豆包会保持人物和场景不变');
-
-  return {prompt, notes};
 }
 
 function showDirections() {
@@ -2302,6 +2139,7 @@ function tf(header) { header.classList.toggle('open'); const b=header.nextElemen
 // Reset
 // ============================================================
 function resetAll() {
+  if (activeAnalyzeAbort) { activeAnalyzeAbort.abort(); activeAnalyzeAbort = null; }  // 取消进行中的分析请求
   sessionId=null; allDirs=[]; activeDirIdx=0; activePlanIdx=0; photoDataUrl=null;
   planCache={}; currentDeviceKey=null; currentDeviceName=''; currentDeviceLenses='';
   currentLightInfo=null; currentColorInfo=null; currentLightPeriod=null;
