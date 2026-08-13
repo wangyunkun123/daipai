@@ -182,7 +182,7 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 </table>
 </div>
 
-<!-- 🧭 v4.0: AI 自由探索风格名 -->
+<!-- 🧭 v3.7: AI 自由探索风格名 -->
 	<h2>🧭 AI 自由探索风格名</h2>
 	<div class="stats-grid" id="explorationStatsGrid"></div>
 	<div style="overflow-x:auto;margin-top:8px">
@@ -224,7 +224,7 @@ h2 { font-size: 15px; color: var(--dim); margin: 20px 0 10px; }
 </table>
 </div>
 
-<!-- 📊 v3.8: 数据真实性 & 知识库质量 -->
+<!-- 📊 v3.7: 数据真实性 & 知识库质量 -->
 <h2>📊 数据真实性</h2>
 <div class="stats-grid" id="knowledgeQualityGrid"></div>
 <div style="overflow-x:auto">
@@ -525,7 +525,7 @@ function render(d) {
   renderKnowledgeQuality(d.knowledge_quality);
 }
 
-// ── v4.0: AI 自由探索风格名渲染 ──
+// ── v3.7: AI 自由探索风格名渲染 ──
 function renderStyleExploration(se) {
   if (!se || !se.total) {
     document.getElementById('explorationStatsGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">暂无探索记录（AI 生成方案时自动积累）</div>';
@@ -771,7 +771,7 @@ function renderStylePanel(sp) {
   }
 }
 
-// ── v3.8: 知识库来源质量渲染 ──
+// ── v3.7: 知识库来源质量渲染 ──
 function renderKnowledgeQuality(kq) {
   const grid = document.getElementById('knowledgeQualityGrid');
   const body = document.getElementById('knowledgeQualityBody');

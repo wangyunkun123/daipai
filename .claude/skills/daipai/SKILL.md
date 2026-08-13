@@ -85,11 +85,11 @@ description: 带拍 v3.7——AI 驱动的摄影知识引擎。帮你完成摄�
 | | 大师风格 | `masters/` | 32 位 × 8 流派——五维拆解 |
 | **🔧 设备** | 设备适配 | `device-adaptation/` | 5 设备档案（17 Pro/17/13-16 Pro/13-16标准/安卓旗舰） + 知识→操作翻译总表 + 用户能力模型 |
 | 🆕 | 方向选择 | `matching/direction-selector.md` | 🟢现在就拍 / 🔥最出片 / ✨脑洞大开 三方向选择逻辑 + 题材切换 |
-| 🆕 | 审美主张 | `matching/aesthetic-assertion.md` | 洞察驱动的创作方向生长 + 场景生态描述（v2.1）|
+| 🆕 | 审美主张 | `matching/aesthetic-assertion.md` | 洞察驱动的创作方向生长 + 场景生态描述 |
 | 🆕 | 审美张力 | `matching/creative-tension.md` | 跨维度冲突规则表——意外但合理的张力生成 |
-| 🆕 | 风格路由 | `matching/style-router.md` | AI 驱动发现 + one_liner 标识 + mood-lexicon 完整翻译 + 知识缓存加速 + 自动沉淀（v2.2） |
-| 🆕 | 情绪路由 | `matching/mood-router.md` | 情绪→视觉参数翻译 + one_liner 风格引用（v2.1）|
-| 🆕 | 技法路由 | `matching/technique-router.md` | AI 自由搜索前期拍摄技巧（构图/视角/前景/景别/姿势引导/元素排除）→ 自然融入方案 + 缓存积累（v1.0）|
+| 🆕 | 风格路由 | `matching/style-router.md` | AI 驱动发现 + one_liner 标识 + mood-lexicon 完整翻译 + 知识缓存加速 + 自动沉淀 |
+| 🆕 | 情绪路由 | `matching/mood-router.md` | 情绪→视觉参数翻译 + one_liner 风格引用 |
+| 🆕 | 技法路由 | `matching/technique-router.md` | AI 自由搜索前期拍摄技巧（构图/视角/前景/景别/姿势引导/元素排除）→ 自然融入方案 + 缓存积累 |
 | | 匹配路由 | `matching/` | 分析结果→知识条目的映射规则（13 个路由器） |
 | 🔧 | 外部脚本 | `scripts/` | EXIF提取/太阳位置/地点识别/时域调度——被SKILL.md工作流调用 |
 
@@ -102,6 +102,8 @@ description: 带拍 v3.7——AI 驱动的摄影知识引擎。帮你完成摄�
 > **v2.0→v2.1 的关键变化：规则从"匹配前过滤器"变为"匹配后翻译官"。AI 在开放世界自由搜索全局最优——规则不再预过滤，而是对每个发现诚实地标注：🟢完美 / 🟡可模拟(效果约X%) / 🔴需等待。**
 >
 > **静默分析 → AI 自由搜索 → 规则诚实标注 → 洞察驱动 → 三方向选择 → 完整交付。**
+>
+> ⚠️ **版本说明（v3.7）**：本 skill 当前版本 v3.7。阶段 1C 与 1C.5 已于 v3.5 合并为「1C 统一推理」（见 §1C 正文）；下图中残留的内部引擎版本号（v2.1/v2.0/v5/v4.0）不再使用。知识文件参考版本已统一移除，以 `knowledge/` 内文件 frontmatter 为准。
 
 ```
 用户拍一张照片
@@ -515,7 +517,7 @@ with open(image_path, 'rb') as f:
 
 ---
 
-#### 1C. AI 引擎 v5：搜索发现 → 洞察生长 → 方向输出（统一推理）🆕 v3.5
+#### 1C. AI 引擎：搜索发现 → 洞察生长 → 方向输出（统一推理）🆕 v3.5
 
 > **v3.5 核心变更：合并原"AI 综合判断"和"审美主张引擎"为一次完整的 LLM 推理过程。不再分两步分别产出 `scene_insight` 和 `insight`——从搜索到洞察到方向生长，一次完成。**
 
@@ -713,9 +715,9 @@ with open(image_path, 'rb') as f:
   }
 ```
 
-> → 参考：`matching/style-router.md` v2.4 + `matching/aesthetic-assertion.md` v2.1 + `matching/technique-router.md` v1.1
+> → 参考：`matching/style-router.md` + `matching/aesthetic-assertion.md` + `matching/technique-router.md`（知识文件内部版本以 `knowledge/` 内 frontmatter 为准）
 
-#### 1C-Post. 风格探索日志 🆕 v4.0
+#### 1C-Post. 风格探索日志
 
 > 🚨 硬约束：1C 输出完成后必须立即执行此步骤——不能跳过。
 > 每次风格探索的选取/舍弃决定必须记录到 guidepic.cn，用于知识库积累和管理面板审核。
@@ -749,7 +751,7 @@ rm /tmp/daipai-1c-output.json
 
 #### 1D. 方向预选（基于全局最优 + 诚实标注 + 三级协调）🆕 v2.3
 
-> 参考：`matching/direction-selector.md` v2.3 + `matching/aesthetic-assertion.md` v2.3
+> 参考：`matching/direction-selector.md` + `matching/aesthetic-assertion.md`
 
 **🔄 v2.3 三级协调协议**：
 
@@ -976,13 +978,13 @@ rm /tmp/daipai-1c-output.json
 </details>
 ```
 
-#### 2B. 题材切换行为
+#### 2C. 题材切换行为
 
 - 用户点击题材切换标签 → 立即展示新题材的方向卡片（预计算，0 延迟）
 - 不重新调用视觉 API，不重新分析场景
 - 题材标签只展示场景中实际存在条件的
 
-#### 2C. 默认行为
+#### 2D. 默认行为
 
 如用户 15 秒内未选择 → 默认走「🟢 现在就拍」方向，生成方案。
 用户随时可以说「换最出片的」「脑洞大开」「我要大师视角」「拍静物」来切换。
@@ -1272,7 +1274,7 @@ rm /tmp/daipai-1c-output.json
   > 💡 这次拍摄发现了一个新的风格方向「清冷森系」——已记录。下次有类似场景会直接推荐。
 - 🆕 如果发现了新的拍摄技法 → 静默注册，不打断用户。积累到一定量后自然提升技法缓存命中率
 
-> → 参考：`matching/style-router.md` v2.0 §五（自动知识沉淀完整流程）
+> → 参考：`matching/style-router.md` §五（自动知识沉淀完整流程）
 
 ---
 
