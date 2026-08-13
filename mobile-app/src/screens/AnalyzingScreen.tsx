@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, fontSizes, spacing, radii } from '../theme/tokens';
@@ -81,10 +81,9 @@ export function AnalyzingScreen() {
                 // directions_ready 已导航；complete 兜底
                 break;
               case 'error':
+                // 内联展示失败（下方 failed 视图 + 点击返回），不再弹 Alert——
+                // 否则 analyzeStream 会 reject，外层 catch 再弹一次，双弹窗。
                 setFailed(e.data.message);
-                Alert.alert('分析失败', e.data.message, [
-                  { text: '返回', onPress: () => navigation.goBack() },
-                ]);
                 break;
               default:
                 break;
@@ -94,9 +93,6 @@ export function AnalyzingScreen() {
       } catch (e: any) {
         if (!cancelled) {
           setFailed(e?.message ?? '网络错误');
-          Alert.alert('网络错误', e?.message ?? '请重试', [
-            { text: '返回', onPress: () => navigation.goBack() },
-          ]);
         }
       }
     })();

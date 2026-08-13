@@ -40,8 +40,9 @@ export function analyzeStream(
         lens: params.lens ?? undefined,
         app_token: config.appToken,
       }),
-      // react-native-sse：建立连接超时（毫秒），-1 为不限制
-      timeoutBeforeConnection: 30000,
+      // react-native-sse：无活动超时（毫秒）。后端 30-90s 无响应属正常，
+      // 3 分钟兜底；不要用 timeoutBeforeConnection（那是"连接前空等"）。
+      timeout: 180000,
     });
 
     let settled = false;
