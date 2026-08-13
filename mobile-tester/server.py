@@ -33,7 +33,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 # 配置
 # ============================================================
 DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "daipai2026")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")  # fail-closed：未配置时拒绝登录，禁用弱口令默认值
 DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
 
 # ── httpx 共享客户端（连接复用，减少 API 延迟）──
@@ -64,6 +64,7 @@ EXIF_SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".claude/skills/daip
 STYLE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "style_cache.json")  # 已弃用，保留变量以防旧引用
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "10"))  # 每人每天免费次数
+AUTO_PREWARM = os.environ.get("AUTO_PREWARM", "").strip().lower() in ("1", "true", "yes", "on")  # 服务端无条件预热开关，默认关（每张照片多烧 1 次 DeepSeek，且客户端断连后后台线程无法中止）
 MAX_IMAGE_DIM = 2048  # 上传前压缩到最长边2048px，加快上传
 VISION_IMAGE_DIM = 1024  # 给豆包视觉用的更小尺寸——场景分析不需要高分辨率，省一半时间
 REQUEST_TIMEOUT = 180  # LLM 调用超时——方案生成 prompt 长需要 2 分钟左右
@@ -117,6 +118,10 @@ _SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "sessions")
 # 本地分析留存目录——每次分析完存一份，方便代码改动后对比
 _RECENT_DIR = os.path.join(os.path.dirname(__file__), "recent_analyses")
 
+def _valid_session_id(session_id):
+    """session_id 必须是纯 hex（服务端 uuid4().hex[:12] 生成）——防止路径穿越读任意 .json"""
+    return bool(session_id) and isinstance(session_id, str) and re.fullmatch(r"[0-9a-f]+", session_id) is not None
+
 def _session_path(session_id):
     return os.path.join(_SESSIONS_DIR, f"{session_id}.json")
 
@@ -166,6 +171,8 @@ def _save_session(session_id):
         print(f"[Session] Save failed {session_id}: {e}", file=sys.stderr, flush=True)
 
 def _load_session_from_disk(session_id):
+    if not _valid_session_id(session_id):
+        return None
     try:
         path = _session_path(session_id)
         if not os.path.exists(path):
@@ -1230,7 +1237,12 @@ PLANS_PROMPT = """你是摄影指导——把一条风格方向变成具体可�
 ⑦ result: 画面视觉预览。2-3句。
    ✅ "侧光在球衣褶皱上切出利落阴影，海面化成淡蓝色块"
 ⑧ why: 为什么好看——摄影原理（2-3句）
-⑨ annotations: 视觉标注（最多3个）——subject/shooter坐标
+⑨ annotations: 视觉标注（最多3个）。必须是JSON数组，每个元素格式：
+   {{"type":"subject"或"shooter","x":0到1,"y":0到1,"label":"主体名（2-5字）"}}
+   x=画面水平位置（0最左→1最右），y=画面垂直位置（0最上→1最下），按整张照片归一化。
+   subject标注被摄主体在哪，shooter标注拍摄者应站的位置。
+   示例：[{{"type":"subject","x":0.35,"y":0.55,"label":"平板"}},{{"type":"shooter","x":0.5,"y":0.75,"label":"站位"}}]
+   无法确定位置时输出空数组[]，不要输出文字描述。
 ⑩ perspective: 换个思路（可选）——同风格不同维度的替代方案
 ⑪ shot_size: 景别（远景/全景/中景/近景/特写）
 ⑫ angle: 角度（平视/俯拍/仰拍/侧面/背面）
@@ -1667,6 +1679,8 @@ def create_session(vision_json, exif_summary, device_key, device_context, direct
 
 def get_session(session_id):
     """获取会话，自动清理过期，内存缺失时尝试从磁盘恢复"""
+    if not _valid_session_id(session_id):
+        return None
     sess = _sessions.get(session_id)
     if not sess:
         # 部署重启后内存清空，尝试从磁盘恢复
@@ -1881,6 +1895,60 @@ def call_deepseek(messages, max_tokens=4000, call_type='unknown', session_id=Non
     return content, usage
 
 
+def sanitize_annotations(anns):
+    """把方案标注归一化为 [{type,x,y,label}] 坐标对象数组。
+
+    支持三种输入：
+    - 已是对象数组 [{type,x,y,label}] → 校验 type/坐标并夹取到 0-1
+    - 字符串数组（模型旧格式文字描述）→ 尝试解析前/中/背景与左/右/上/下映射坐标
+    - 其他/None → 空数组
+    解析不出可靠坐标的项直接丢弃（宁缺毋滥，避免画错位置）。
+    """
+    if not isinstance(anns, list):
+        return []
+    out = []
+    for a in anns:
+        if isinstance(a, dict):
+            t = a.get('type')
+            x, y = a.get('x'), a.get('y')
+            if t in ('subject', 'shooter') and isinstance(x, (int, float)) and isinstance(y, (int, float)):
+                out.append({'type': t, 'x': max(0.0, min(1.0, float(x))), 'y': max(0.0, min(1.0, float(y))),
+                            'label': str(a.get('label', ''))[:20]})
+        elif isinstance(a, str):
+            box = _parse_anno_text(a)
+            if box:
+                out.append(box)
+    return out[:3]
+
+
+def _parse_anno_text(s):
+    """把'前景-左下-明暗交界线上'这类文字描述解析成 {type,x,y,label}。不可靠则返回 None。"""
+    s = (s or '').strip()
+    if not s:
+        return None
+    t = 'subject'
+    if any(k in s for k in ('拍者', '站位', '摄影师', '拍摄者', 'shooter')):
+        t = 'shooter'
+    x, y, has_x, has_y = 0.5, 0.5, False, False
+    if '左' in s:
+        x = 0.25; has_x = True
+    elif '右' in s:
+        x = 0.75; has_x = True
+    if '上' in s:
+        y = 0.22; has_y = True
+    elif '下' in s:
+        y = 0.78; has_y = True
+    if '前景' in s or '近景' in s:
+        y = 0.78; has_y = True
+    elif '背景' in s or '远景' in s:
+        y = 0.22; has_y = True
+    elif '中景' in s:
+        y = 0.5; has_y = True
+    if not has_x and not has_y:
+        return None
+    return {'type': t, 'x': x, 'y': y, 'label': s[:20]}
+
+
 def normalize_creative_output(data):
     """修复输出格式：v2 object → v3 array，处理各种边缘情况"""
     if not isinstance(data, dict):
@@ -1921,7 +1989,7 @@ def normalize_creative_output(data):
                     p.setdefault('shooter', '')
                     p.setdefault('gear', '')
                     p.setdefault('enhance', '')
-                    p.setdefault('annotations', [])
+                    p['annotations'] = sanitize_annotations(p.get('annotations'))
                     p.setdefault('perspective', '')
                     p.setdefault('img_gen_prompt', '')
         return data
@@ -1952,7 +2020,7 @@ def normalize_creative_output(data):
                 for p in d.get('plans', []):
                     if isinstance(p, dict):
                         p.setdefault('posture', '')
-                        p.setdefault('annotations', [])
+                        p['annotations'] = sanitize_annotations(p.get('annotations'))
                 array_dirs.append(d)
         if array_dirs:
             data['directions'] = array_dirs
@@ -1979,7 +2047,7 @@ def normalize_creative_output(data):
                 for p in d.get('plans', []):
                     if isinstance(p, dict):
                         p.setdefault('posture', '')
-                        p.setdefault('annotations', [])
+                        p['annotations'] = sanitize_annotations(p.get('annotations'))
                 array_dirs.append(d)
         if array_dirs:
             data['directions'] = array_dirs
@@ -3043,26 +3111,31 @@ def analyze_photo_stream(image_path, device_override=None, lens_key=None, client
             sess['scene_mode'] = scene_mode  # 记住场景模式，方案生成时复用
             _save_session(session_id)  # 立即持久化到磁盘，防止重启丢图片
 
-        # ── 🔥 服务端自动预热：后台生成第一张方向（🔥 最出片）的方案 ──
-        # 利用用户查看风格卡片的 5-10 秒时间窗口进行预热
-        # 只预热一张——不做级联（用户点击才触发生成，避免并发冲突）
-        _prewarm_device = device_override
-        _prewarm_lens = lens_key
-        _prewarm_sid = session_id
-        _prewarm_scene = scene_mode
-        def _auto_prewarm_first():
-            try:
-                plans, err = generate_plans_for_direction(
-                    _prewarm_sid, "best", _prewarm_device, _prewarm_lens, scene_mode=_prewarm_scene
-                )
-                if err:
-                    print(f"[AutoPreheat] 🔥 best plans failed: {err}", file=sys.stderr, flush=True)
-                else:
-                    print(f"[AutoPreheat] 🔥 best plans ready: {len(plans) if plans else 0} plans", file=sys.stderr, flush=True)
-            except Exception as e:
-                print(f"[AutoPreheat] 🔥 best plans error: {e}", file=sys.stderr, flush=True)
-        threading.Thread(target=_auto_prewarm_first, daemon=True).start()
-        print(f"[AutoPreheat] 🔥 best started in background for session={_prewarm_sid}", file=sys.stderr, flush=True)
+        # ── 🔥 服务端自动预热（可选）：后台生成第一张方向（🔥 最出片）的方案 ──
+        # 利用用户查看风格卡片的 5-10 秒时间窗口进行预热。
+        # ⚠️ 默认关闭（AUTO_PREWARM=1 才开启）：每张照片都多烧 1 次 DeepSeek 调用，
+        # 且客户端断连后后台线程无法中止——属纯成本无收益场景。
+        # 前端仍可主动调 /analyze/plans?prewarm=true 做按需预热，不受此开关影响。
+        if AUTO_PREWARM:
+            _prewarm_device = device_override
+            _prewarm_lens = lens_key
+            _prewarm_sid = session_id
+            _prewarm_scene = scene_mode
+            def _auto_prewarm_first():
+                try:
+                    plans, err = generate_plans_for_direction(
+                        _prewarm_sid, "best", _prewarm_device, _prewarm_lens, scene_mode=_prewarm_scene
+                    )
+                    if err:
+                        print(f"[AutoPreheat] 🔥 best plans failed: {err}", file=sys.stderr, flush=True)
+                    else:
+                        print(f"[AutoPreheat] 🔥 best plans ready: {len(plans) if plans else 0} plans", file=sys.stderr, flush=True)
+                except Exception as e:
+                    print(f"[AutoPreheat] 🔥 best plans error: {e}", file=sys.stderr, flush=True)
+            threading.Thread(target=_auto_prewarm_first, daemon=True).start()
+            print(f"[AutoPreheat] 🔥 best started in background for session={_prewarm_sid}", file=sys.stderr, flush=True)
+        else:
+            print(f"[AutoPreheat] 🔥 跳过无条件预热（AUTO_PREWARM 未开启）session={session_id}", file=sys.stderr, flush=True)
 
         # ── 📋 本地分析留存：每次分析完保存视觉数据，方便代码改动后对比 ──
         try:
@@ -3335,7 +3408,7 @@ def generate_plans_for_direction(session_id, direction_id, device_override=None,
                 p.setdefault('shooter', '')
                 p.setdefault('gear', '')
                 p.setdefault('enhance', '')
-                p.setdefault('annotations', [])
+                p['annotations'] = sanitize_annotations(p.get('annotations'))
                 p.setdefault('perspective', '')
                 p.setdefault('shot_size', '')
                 p.setdefault('angle', '')
@@ -3463,7 +3536,9 @@ def app_analyze():
         return jsonify({"success": False, "error": "API Key 未配置"}), 500
 
     data = request.get_json(silent=True) or {}
-    expected_token = os.environ.get("APP_TOKEN", "daipai-ios-v0.1-dev")
+    expected_token = os.environ.get("APP_TOKEN", "")
+    if not expected_token:
+        return jsonify({"success": False, "error": "APP_TOKEN 未配置，服务未启用"}), 503
     if data.get("app_token") != expected_token:
         return jsonify({"error": "unauthorized"}), 401
 
@@ -3492,6 +3567,17 @@ def app_analyze():
     device_override = data.get("device") or None
     lens_key = data.get("lens") or None
     client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or request.remote_addr or "app"
+
+    # ── 每日使用限制检查（与 /analyze 一致，防止被猜中 token 无限烧 API）──
+    allowed, used, limit = check_and_increment_usage(client_ip, DAILY_LIMIT)
+    if not allowed:
+        return jsonify({
+            "success": False,
+            "error": "limit_reached",
+            "used": used,
+            "limit": limit,
+            "message": f"今日免费次数已用完（{used}/{limit}）",
+        }), 429
 
     def cleanup_and_generate():
         try:
@@ -3615,11 +3701,12 @@ def deploy_webhook():
     import hashlib
 
     secret = os.environ.get("DEPLOY_SECRET", "")
-    if secret:
-        signature = request.headers.get("X-Hub-Signature-256", "")
-        expected = "sha256=" + hmac.new(secret.encode(), request.data, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(signature, expected):
-            return jsonify({"success": False, "error": "签名验证失败"}), 403
+    if not secret:
+        return jsonify({"success": False, "error": "DEPLOY_SECRET 未配置，已拒绝部署"}), 403
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    expected = "sha256=" + hmac.new(secret.encode(), request.data, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        return jsonify({"success": False, "error": "签名验证失败"}), 403
 
     # 异步执行部署（不阻塞 webhook 响应）
     def do_deploy():
@@ -3784,10 +3871,13 @@ def admin_login():
     error = ''
     if request.method == 'POST':
         pw = (request.form.get('password') or '').strip()
-        if pw == ADMIN_PASSWORD:
+        if not ADMIN_PASSWORD:
+            error = '服务器未配置管理密码，请联系管理员'
+        elif pw == ADMIN_PASSWORD:
             session['admin_logged_in'] = True
             return redirect(url_for('admin_panel'))
-        error = '密码错误'
+        else:
+            error = '密码错误'
         # 避免暴力破解：延迟一下
         time.sleep(1)
     # 已登录就直接进面板
