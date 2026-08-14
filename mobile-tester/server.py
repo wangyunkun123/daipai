@@ -1776,7 +1776,7 @@ def call_doubao(messages, max_tokens=2000, call_type='unknown', session_id=None,
         log_api_call(
             session_id=session_id or '',
             call_type=call_type,
-            model=DOUBAO_MODEL,
+            model=model,  # 记录实际传入模型（修复硬编码 DOUBAO_MODEL 的 bug——视觉传 mini 却记成 pro）
             prompt_tokens=usage.get('prompt_tokens', 0),
             completion_tokens=usage.get('completion_tokens', 0),
             total_tokens=usage.get('total_tokens', 0),
