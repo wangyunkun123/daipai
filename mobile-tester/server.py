@@ -34,7 +34,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 # ============================================================
 DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")  # fail-closed：未配置时拒绝登录，禁用弱口令默认值
-DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
+DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"  # v3按量付费路径（plan订阅到期后改用）
 
 # ── httpx 共享客户端（连接复用，减少 API 延迟）──
 _httpx_client = None
@@ -52,8 +52,8 @@ def _get_httpx_client():
                     http2=True  # HTTP/2 多路复用
                 )
     return _httpx_client
-DOUBAO_MODEL = "doubao-seed-2.0-pro"
-DOUBAO_FAST_MODEL = "doubao-seed-2.0-lite"  # 方案生成用快速模型——结构化JSON不需要最强推理
+DOUBAO_MODEL = "doubao-seed-2-1-pro-260628"  # 默认豆包（视觉解析retry兜底）——2.1-pro 已开通
+DOUBAO_FAST_MODEL = "doubao-seed-2-0-mini-260215"  # 视觉识别用 mini——实测9s，比lite快1倍+质量持平
 
 # ── DeepSeek（方向/方案生成）──
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
