@@ -69,6 +69,7 @@ def _init_tables(conn):
         style_id INTEGER REFERENCES styles(id),
         technique_id INTEGER REFERENCES techniques(id),
         match_type TEXT NOT NULL CHECK(match_type IN ('style', 'technique')),
+        scene_category TEXT DEFAULT '',
         created_at TEXT DEFAULT (datetime('now')),
         use_count INTEGER DEFAULT 1
     );
@@ -86,7 +87,6 @@ def _init_tables(conn):
 
     CREATE INDEX IF NOT EXISTS idx_scene_matches_scene ON scene_matches(scene_type);
     CREATE INDEX IF NOT EXISTS idx_scene_matches_style ON scene_matches(style_id);
-    CREATE INDEX IF NOT EXISTS idx_scene_matches_category ON scene_matches(scene_category);
     CREATE INDEX IF NOT EXISTS idx_scene_matches_tech ON scene_matches(technique_id);
     CREATE INDEX IF NOT EXISTS idx_techniques_verify ON techniques(verify_count);
     CREATE INDEX IF NOT EXISTS idx_styles_source ON styles(source_type);
