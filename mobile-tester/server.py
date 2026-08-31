@@ -4517,7 +4517,6 @@ def restore_session(session_id):
         "fold_details": sess.get('fold_details', {}),
         "source_tags": source_tags,
         "techniques_used": sess.get('techniques_used', []),
-        "search_quality": sess.get('search_quality'),
         "device_key": sess.get('device_key', ''),
         "device_context": sess.get('device_context', {}),
         "plan_cache": sess.get('plan_cache', {}),
