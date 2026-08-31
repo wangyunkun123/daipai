@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>带拍 GuidePic · Logo v6 — 温暖可爱风</title>
+<style>
+  :root {
+    --peach: #FF8C5A;
+    --coral: #FF7B6B;
+    --blush: #FFB8A8;
+    --cream: #FFF8F5;
+    --warm-white: #FFFBFA;
+    --dark: #3D2C28;
+    --soft-brown: #6B5248;
+    --honey: #FFC6A0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:linear-gradient(180deg,#FFF8F5,#FFF0EB);font-family:-apple-system,"SF Pro Text","PingFang SC","Noto Sans SC",sans-serif;color:var(--dark);}
+
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 24px 80px;}
+
+  .hero{text-align:center;margin-bottom:48px;}
+  .hero .icon{font-size:3rem;margin-bottom:8px;}
+  .hero h1{font-size:2.2rem;font-weight:800;letter-spacing:-0.5px;
+    background:linear-gradient(135deg,#FF7B6B,#FF8C5A,#FFB088);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero .lead{color:var(--soft-brown);font-size:1rem;margin-top:8px;max-width:560px;margin-inline:auto;line-height:1.7;}
+
+  .insight{background:white;border-radius:24px;padding:24px 28px;margin-bottom:48px;text-align:center;box-shadow:0 2px 16px rgba(255,140,90,.08);}
+  .insight .big{font-size:1.3rem;font-weight:700;color:#FF7B6B;line-height:1.6;}
+  .insight .sub{font-size:.82rem;color:var(--soft-brown);margin-top:6px;}
+
+  .section{margin-bottom:72px;}
+  .section h2{font-size:1.15rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+  .section .sub{color:var(--soft-brown);font-size:.82rem;margin-bottom:24px;line-height:1.6;}
+
+  .showcase{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:24px;}
+
+  .card{background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 2px 12px rgba(107,82,72,.04),0 4px 20px rgba(255,140,90,.05);transition:all .3s;}
+  .card:hover{box-shadow:0 4px 16px rgba(255,123,107,.12),0 8px 32px rgba(255,140,90,.08);transform:translateY(-3px);}
+
+  .stage{min-height:280px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:24px;}
+
+  .card-body{padding:16px 20px 20px;}
+  .card-body .num{font-size:.62rem;font-weight:800;color:var(--coral);margin-bottom:4px;letter-spacing:1.5px;text-transform:uppercase;}
+  .card-body h3{font-size:.95rem;font-weight:700;margin-bottom:6px;}
+  .card-body .meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+  .card-body .meta span{font-size:.64rem;font-weight:700;padding:3px 8px;border-radius:8px;}
+  .meta.a{background:#FFF0EB;color:#FF7B6B;}
+  .meta.b{background:#FFF5F0;color:#FF8C5A;}
+  .meta.c{background:#FFF8F5;color:#E87A5A;}
+  .card-body p{font-size:.76rem;color:var(--soft-brown);line-height:1.55;}
+
+  .wide{grid-column:1/-1;}
+
+  .rec{background:linear-gradient(135deg,#FFF0EB,#FFE5DA);border-radius:24px;padding:28px 32px;margin-top:48px;border:1.5px solid rgba(255,140,90,.12);}
+  .rec h3{font-size:1rem;font-weight:700;margin-bottom:8px;color:#D46540;}
+  .rec p{font-size:.82rem;color:var(--soft-brown);line-height:1.7;}
+
+  @media(max-width:640px){
+    .showcase{grid-template-columns:1fr;}
+    .hero h1{font-size:1.6rem;}
+  }
+
+  /* Soft float animation */
+  @keyframes softFloat {
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-3px);}
+  }
+  @keyframes blink1 {
+    0%,90%,100%{transform:scaleY(1);}
+    95%{transform:scaleY(.15);}
+  }
+  @keyframes blink2 {
+    0%,92%,100%{transform:scaleY(1);}
+    96%{transform:scaleY(.15);}
+  }
+  .blink-l{animation:blink1 4s ease-in-out infinite;transform-origin:center;}
+  .blink-r{animation:blink2 4s ease-in-out infinite;transform-origin:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <div class="icon">💝</div>
+  <h1>带拍 GuidePic · Logo v6</h1>
+  <p class="lead">新定位：<strong>女朋友会想分享给男朋友的拍照神器</strong><br>不是冷冰冰的工具，是一个温暖可爱的小陪伴</p>
+</div>
+
+<div class="insight">
+  <div class="big">"宝贝，你用这个App嘛～<br>它能帮你把我拍得更好看"</div>
+  <div class="sub">—— 这个Logo要让女朋友看到就想转发，让男朋友看到就觉得温暖</div>
+</div>
+
+<!-- ═══════════ 方向 1：微笑小脸 dp ═══════════ -->
+<div class="section">
+  <h2>1. 微笑小脸 <span style="font-size:.68rem;background:#FFF0EB;color:#FF7B6B;padding:3px 10px;border-radius:10px;">💕 主推</span></h2>
+  <p class="sub">dp 双眼 + 一抹微笑 = 一张温暖的小脸。看到它会不自觉微笑。没有攻击性，没有距离感，就是一个小可爱。</p>
+  <div class="showcase">
+    <!-- 1A: dp eyes + smile -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF8F5,#FFEDE4);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- dp eyes - round, friendly -->
+          <!-- Left eye (d) -->
+          <ellipse cx="88" cy="95" rx="22" ry="24" fill="white" stroke="#FF7B6B" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="88" cy="97" r="9" fill="#3D2C28"/>
+          <circle cx="85" cy="93" r="3.5" fill="white"/>
+          <circle cx="91" cy="100" r="1.5" fill="white" opacity=".6"/>
+          <!-- d stem = soft eyebrow -->
+          <path d="M68 60 Q88 50, 110 64" fill="none" stroke="#FF7B6B" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Right eye (p) -->
+          <ellipse cx="152" cy="95" rx="22" ry="24" fill="white" stroke="#FF7B6B" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="152" cy="97" r="9" fill="#3D2C28"/>
+          <circle cx="149" cy="93" r="3.5" fill="white"/>
+          <circle cx="155" cy="100" r="1.5" fill="white" opacity=".6"/>
+          <!-- p stem = soft eyebrow -->
+          <path d="M130 60 Q152 50, 172 64" fill="none" stroke="#FF7B6B" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- p descender as a cute curl -->
+          <path d="M132 64 Q130 80, 132 100 C134 128, 128 148, 124 158" fill="none" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Smile! -->
+          <path d="M100 138 Q108 148, 120 150 Q132 148, 140 138" fill="none" stroke="#FF7B6B" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Rosy cheeks! -->
+          <ellipse cx="66" cy="125" rx="14" ry="9" fill="#FFB8A8" opacity=".5"/>
+          <ellipse cx="174" cy="125" rx="14" ry="9" fill="#FFB8A8" opacity=".5"/>
+
+          <!-- Nose bridge connection -->
+          <path d="M110 100 Q120 112, 130 100" fill="none" stroke="#FFB8A8" stroke-width="2" opacity=".5"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">1A · 微笑dp</div>
+        <h3>dp 小笑脸</h3>
+        <div class="meta"><span class="meta a">治愈</span><span class="meta b">可爱</span></div>
+        <p>dp双眼+弯弯微笑+粉色腮红。看到它心情就好。女生会截图发闺蜜群：「快看这个App的Logo好可爱！」</p>
+      </div>
+    </div>
+
+    <!-- 1B: blush heavy -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFFBFA,#FFF0EB);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- Even softer, more blush -->
+          <defs>
+            <radialGradient id="blush1" cx="50%" cy="50%">
+              <stop offset="0%" stop-color="#FFB8A8" stop-opacity=".7"/>
+              <stop offset="100%" stop-color="#FFB8A8" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Blush background circles -->
+          <circle cx="64" cy="125" r="28" fill="url(#blush1)"/>
+          <circle cx="176" cy="125" r="28" fill="url(#blush1)"/>
+
+          <!-- Left eye (d) -->
+          <ellipse cx="86" cy="95" rx="20" ry="22" fill="white" stroke="#FF8C5A" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="86" cy="97" r="8" fill="#3D2C28"/>
+          <circle cx="83" cy="93" r="3.2" fill="white"/>
+          <!-- d stem -->
+          <path d="M72 62 Q86 54, 106 64" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Right eye (p) -->
+          <ellipse cx="154" cy="95" rx="20" ry="22" fill="white" stroke="#FF8C5A" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="154" cy="97" r="8" fill="#3D2C28"/>
+          <circle cx="151" cy="93" r="3.2" fill="white"/>
+          <!-- p stem -->
+          <path d="M134 62 Q154 54, 168 64" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- p descender -->
+          <path d="M130 64 Q128 82, 130 106 C132 130, 126 148, 122 156" fill="none" stroke="#FF8C5A" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Sweeter smile -->
+          <path d="M102 135 Q114 148, 120 148 Q126 148, 138 135" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">1B · 腮红dp</div>
+        <h3>腮红小脸</h3>
+        <div class="meta"><span class="meta a">软萌</span><span class="meta b">少女心</span></div>
+        <p>加重腮红，线条更细更柔。像化了淡妆的小脸蛋。女生会想捏一下的那种。适合做App图标贴纸。</p>
+      </div>
+    </div>
+
+    <!-- 1C: wink version -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF5F0,#FFE8DB);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- Wink! One eye open, one winking -->
+          <defs>
+            <radialGradient id="blushW" cx="50%" cy="50%">
+              <stop offset="0%" stop-color="#FFB8A8" stop-opacity=".6"/>
+              <stop offset="100%" stop-color="#FFB8A8" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <circle cx="68" cy="125" r="26" fill="url(#blushW)"/>
+          <circle cx="172" cy="125" r="26" fill="url(#blushW)"/>
+
+          <!-- Left eye (d) - OPEN -->
+          <ellipse cx="88" cy="95" rx="20" ry="22" fill="white" stroke="#FF7B6B" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="88" cy="97" r="8" fill="#3D2C28"/>
+          <circle cx="85" cy="93" r="3.2" fill="white"/>
+          <path d="M72 62 Q88 54, 108 64" fill="none" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Right eye (p) - WINKING! -->
+          <path d="M138 88 Q150 78, 166 88" fill="none" stroke="#FF7B6B" stroke-width="4" stroke-linecap="round"/>
+          <path d="M138 100 Q150 108, 166 100" fill="none" stroke="#FF7B6B" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+          <path d="M134 64 Q150 56, 168 64" fill="none" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+          <!-- p descender -->
+          <path d="M130 66 Q128 84, 130 108 C132 132, 126 148, 122 158" fill="none" stroke="#FF7B6B" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Smile -->
+          <path d="M100 136 Q110 146, 120 148 Q130 146, 140 136" fill="none" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Wink sparkle! -->
+          <g transform="translate(168,60)">
+            <path d="M0,-12 L3,-4 L12,0 L3,4 L0,12 L-3,4 L-12,0 L-3,-4 Z" fill="#FFB088" opacity=".7"/>
+          </g>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">1C · 眨眼dp</div>
+        <h3>眨眼小调皮</h3>
+        <div class="meta"><span class="meta a">俏皮</span><span class="meta b">wink</span></div>
+        <p>一只眼睁一只眼眨，加一颗小星星✨。有点小调皮，像在说「悄悄告诉你，这个App超级好用～」</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 2：陪伴小物 ═══════════ -->
+<div class="section">
+  <h2>2. 陪伴小物 <span style="font-size:.68rem;background:#FFF5F0;color:#FF8C5A;padding:3px 10px;border-radius:10px;">🎀 礼品感</span></h2>
+  <p class="sub">Logo 不只是一个符号，更像一个小挂件、小礼物。当女朋友分享App时，感觉像递出一个小礼物：「喏，送你～」</p>
+  <div class="showcase">
+    <!-- 2A: gift tag -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF8F5,#FFE8DB);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- A warm gift-tag style -->
+          <!-- Tag shape -->
+          <path d="M60 30 L180 30 Q190 30, 190 40 L190 160 Q190 170, 180 170 L130 170 L120 190 L110 170 L60 170 Q50 170, 50 160 L50 40 Q50 30, 60 30 Z"
+                fill="white" stroke="#FF8C5A" stroke-width="3.5" stroke-linejoin="round"/>
+
+          <!-- String loop -->
+          <circle cx="120" cy="30" r="8" fill="none" stroke="#FF8C5A" stroke-width="2.5"/>
+          <path d="M115 22 Q105 10, 100 18" fill="none" stroke="#FF8C5A" stroke-width="2" stroke-linecap="round"/>
+          <path d="M125 22 Q135 10, 140 18" fill="none" stroke="#FF8C5A" stroke-width="2" stroke-linecap="round"/>
+
+          <!-- dp eyes inside tag -->
+          <ellipse cx="92" cy="105" rx="16" ry="18" fill="white" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="92" cy="107" r="6.5" fill="#3D2C28"/>
+          <circle cx="89" cy="103" r="2.5" fill="white"/>
+          <path d="M76 76 Q92 70, 108 78" fill="none" stroke="#FF7B6B" stroke-width="3" stroke-linecap="round"/>
+
+          <ellipse cx="148" cy="105" rx="16" ry="18" fill="white" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="148" cy="107" r="6.5" fill="#3D2C28"/>
+          <circle cx="145" cy="103" r="2.5" fill="white"/>
+          <path d="M132 76 Q148 70, 164 78" fill="none" stroke="#FF7B6B" stroke-width="3" stroke-linecap="round"/>
+          <path d="M128 78 Q126 96, 128 116 C130 136, 126 148, 124 156" fill="none" stroke="#FF7B6B" stroke-width="2.5" stroke-linecap="round"/>
+
+          <!-- Smile -->
+          <path d="M104 140 Q112 146, 120 148 Q128 146, 136 140" fill="none" stroke="#FF7B6B" stroke-width="3" stroke-linecap="round"/>
+          <!-- Blush -->
+          <ellipse cx="74" cy="128" rx="10" ry="7" fill="#FFB8A8" opacity=".5"/>
+          <ellipse cx="166" cy="128" rx="10" ry="7" fill="#FFB8A8" opacity=".5"/>
+
+          <!-- 带拍 text -->
+          <text x="120" y="70" font-family="system-ui,serif" font-size="14" font-weight="700" fill="#FF7B6B" text-anchor="middle" letter-spacing="4">带拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">2A · 礼品签</div>
+        <h3>礼物标签</h3>
+        <div class="meta"><span class="meta a">礼物感</span><span class="meta b">标签卡</span></div>
+        <p>做成一个礼物标签的形状，顶部有小绳子。像女朋友在礼物盒上贴的便签卡：「打开看看～」</p>
+      </div>
+    </div>
+
+    <!-- 2B: enamel pin -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF5F0,#FFF0EB);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- Enamel pin / badge style - metallic rim, soft colors -->
+          <defs>
+            <radialGradient id="enamelGlow" cx="40%" cy="35%">
+              <stop offset="0%" stop-color="white" stop-opacity=".8"/>
+              <stop offset="100%" stop-color="white" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Pin shadow -->
+          <ellipse cx="122" cy="208" rx="55" ry="8" fill="#E8D5CB" opacity=".4"/>
+
+          <!-- Pin body -->
+          <circle cx="120" cy="115" r="75" fill="#FFF8F5" stroke="#FF8C5A" stroke-width="5"/>
+          <circle cx="120" cy="115" r="68" fill="none" stroke="#FFB8A8" stroke-width="1.5"/>
+
+          <!-- Enamel gloss -->
+          <circle cx="120" cy="115" r="70" fill="url(#enamelGlow)"/>
+
+          <!-- dp eyes -->
+          <ellipse cx="90" cy="108" rx="18" ry="20" fill="white" stroke="#FF7B6B" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="90" cy="110" r="7" fill="#3D2C28"/>
+          <circle cx="87" cy="106" r="2.8" fill="white"/>
+          <path d="M76 76 Q90 70, 108 80" fill="none" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+
+          <ellipse cx="150" cy="108" rx="18" ry="20" fill="white" stroke="#FF7B6B" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="150" cy="110" r="7" fill="#3D2C28"/>
+          <circle cx="147" cy="106" r="2.8" fill="white"/>
+          <path d="M132 76 Q150 70, 164 80" fill="none" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M128 78 Q126 96, 128 118 C130 138, 126 152, 124 160" fill="none" stroke="#FF7B6B" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Smile -->
+          <path d="M104 142 Q112 148, 120 150 Q128 148, 136 142" fill="none" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+          <!-- Blush -->
+          <ellipse cx="70" cy="130" rx="12" ry="8" fill="#FFB8A8" opacity=".5"/>
+          <ellipse cx="170" cy="130" rx="12" ry="8" fill="#FFB8A8" opacity=".5"/>
+
+          <!-- Metal pin clasp hint on top -->
+          <rect x="110" y="32" width="20" height="11" rx="3" fill="#FF8C5A" opacity=".4"/>
+
+          <!-- Text -->
+          <text x="120" y="188" font-family="system-ui,serif" font-size="13" font-weight="700" fill="#FF7B6B" text-anchor="middle" letter-spacing="3">带拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">2B · 珐琅徽</div>
+        <h3>珐琅小徽章</h3>
+        <div class="meta"><span class="meta a">徽章</span><span class="meta b">珐琅质感</span></div>
+        <p>模拟珐琅胸针/徽章的质感。金属边+珐琅光泽+小别针。像是可以别在帆布包上的可爱小物。</p>
+      </div>
+    </div>
+
+    <!-- 2C: candy -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFFBFA,#FFF0EB);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- Candy / sweet treatment -->
+          <defs>
+            <radialGradient id="candyShine" cx="35%" cy="30%">
+              <stop offset="0%" stop-color="white" stop-opacity=".7"/>
+              <stop offset="100%" stop-color="white" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Soft candy pill shape - dp eyes like candy -->
+          <!-- Left candy eye -->
+          <ellipse cx="88" cy="105" rx="24" ry="26" fill="#FFF0EB" stroke="#FF8C5A" stroke-width="4"/>
+          <ellipse cx="88" cy="105" rx="24" ry="26" fill="url(#candyShine)"/>
+          <circle cx="88" cy="107" r="8" fill="#3D2C28"/>
+          <circle cx="85" cy="103" r="3" fill="white"/>
+
+          <!-- Right candy eye -->
+          <ellipse cx="152" cy="105" rx="24" ry="26" fill="#FFF0EB" stroke="#FF8C5A" stroke-width="4"/>
+          <ellipse cx="152" cy="105" rx="24" ry="26" fill="url(#candyShine)"/>
+          <circle cx="152" cy="107" r="8" fill="#3D2C28"/>
+          <circle cx="149" cy="103" r="3" fill="white"/>
+
+          <!-- d stem like licorice -->
+          <path d="M74 68 Q88 60, 112 72" fill="none" stroke="#FF8C5A" stroke-width="4" stroke-linecap="round"/>
+          <!-- p stem -->
+          <path d="M128 68 Q152 60, 166 72" fill="none" stroke="#FF8C5A" stroke-width="4" stroke-linecap="round"/>
+          <path d="M126 68 Q124 90, 126 114 C128 138, 124 152, 122 162" fill="none" stroke="#FF8C5A" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Smile like candy cane -->
+          <path d="M104 142 Q114 150, 120 152 Q126 150, 136 142" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Sparkles -->
+          <g transform="translate(198,60)" opacity=".5">
+            <path d="M0,-10 L2,-3 L10,0 L2,3 L0,10 L-2,3 L-10,0 L-2,-3 Z" fill="#FFB088"/>
+          </g>
+          <g transform="translate(44,160) scale(0.7)" opacity=".4">
+            <path d="M0,-10 L2,-3 L10,0 L2,3 L0,10 L-2,3 L-10,0 L-2,-3 Z" fill="#FFB088"/>
+          </g>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">2C · 糖果眼</div>
+        <h3>糖果小甜心</h3>
+        <div class="meta"><span class="meta a">糖果</span><span class="meta b">甜</span></div>
+        <p>像两颗水果硬糖做成的眼睛，有糖霜光泽。甜到想一口吃掉。小星星散落在周围。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 3：毛绒朋友 ═══════════ -->
+<div class="section">
+  <h2>3. 毛绒朋友 <span style="font-size:.68rem;background:#FFF0EB;color:#FF7B6B;padding:3px 10px;border-radius:10px;">🧸 陪伴感</span></h2>
+  <p class="sub">d 和 p 不再是字母，而是变成一个毛绒绒的小角色。像 jellycat 那样让人想抱的治愈感。</p>
+  <div class="showcase">
+    <!-- 3A: plush toy feel -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF5F0,#FFEDE4);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- Plush toy style - soft, textured edges, rounded everything -->
+
+          <!-- Soft body shape - a cloud-like blob -->
+          <path d="M82 55 Q70 60, 66 78 Q58 90, 62 108 Q56 122, 64 138 Q60 155, 72 168 Q76 180, 88 185 Q94 192, 104 192 L136 192 Q146 192, 152 185 Q164 180, 168 168 Q180 155, 176 138 Q184 122, 178 108 Q182 90, 174 78 Q170 60, 158 55 Q150 48, 140 46 L100 46 Q90 48, 82 55 Z"
+                fill="#FFF8F5" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+          <!-- Soft eyes -->
+          <ellipse cx="94" cy="108" rx="16" ry="18" fill="#3D2C28"/>
+          <ellipse cx="146" cy="108" rx="16" ry="18" fill="#3D2C28"/>
+          <!-- Eye shine -->
+          <circle cx="90" cy="102" r="5" fill="white"/>
+          <circle cx="150" cy="102" r="5" fill="white"/>
+          <circle cx="96" cy="112" r="2" fill="white" opacity=".5"/>
+          <circle cx="144" cy="112" r="2" fill="white" opacity=".5"/>
+
+          <!-- d stem as ear/antenna -->
+          <ellipse cx="76" cy="68" rx="12" ry="16" fill="#FFF0EB" stroke="#FF8C5A" stroke-width="3" stroke-linecap="round" transform="rotate(-15,76,68)"/>
+          <!-- p stem as ear/antenna -->
+          <ellipse cx="164" cy="68" rx="12" ry="16" fill="#FFF0EB" stroke="#FF8C5A" stroke-width="3" stroke-linecap="round" transform="rotate(15,164,68)"/>
+
+          <!-- p descender as a tail/curl -->
+          <path d="M152 180 Q156 200, 148 210 Q140 218, 134 210" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Soft small smile -->
+          <path d="M108 144 Q116 150, 120 152 Q124 150, 132 144" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Blush -->
+          <ellipse cx="76" cy="132" rx="11" ry="7" fill="#FFB8A8" opacity=".45"/>
+          <ellipse cx="164" cy="132" rx="11" ry="7" fill="#FFB8A8" opacity=".45"/>
+
+          <!-- Tiny toes/feet -->
+          <ellipse cx="96" cy="188" rx="10" ry="5" fill="#FFF0EB" stroke="#FF8C5A" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="144" cy="188" rx="10" ry="5" fill="#FFF0EB" stroke="#FF8C5A" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">3A · 小毛绒</div>
+        <h3>毛绒小团子</h3>
+        <div class="meta"><span class="meta a">jellycat风</span><span class="meta b">治愈</span></div>
+        <p>一个圆滚滚的毛绒小团子！d和p化作它的耳朵和卷卷尾巴。想捏、想抱、想分享给喜欢的人。</p>
+      </div>
+    </div>
+
+    <!-- 3B: cloud friend -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFFBFA,#FFE8DB);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- Cloud shaped little friend -->
+          <!-- Main cloud body -->
+          <path d="M88 75 Q82 68, 74 72 Q62 68, 60 80 Q48 82, 50 96 Q44 106, 52 114 Q48 126, 56 136 Q52 148, 64 155 L176 155 Q188 148, 184 136 Q192 126, 188 114 Q196 106, 190 96 Q192 82, 180 80 Q178 68, 166 72 Q158 68, 152 75 Q144 70, 136 72 L104 72 Q96 70, 88 75 Z"
+                fill="white" stroke="#FF8C5A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+          <!-- Eyes peeking from cloud -->
+          <ellipse cx="90" cy="108" rx="14" ry="16" fill="white" stroke="#FF7B6B" stroke-width="3.5"/>
+          <circle cx="90" cy="110" r="6" fill="#3D2C28"/>
+          <circle cx="87" cy="106" r="2.5" fill="white"/>
+
+          <ellipse cx="150" cy="108" rx="14" ry="16" fill="white" stroke="#FF7B6B" stroke-width="3.5"/>
+          <circle cx="150" cy="110" r="6" fill="#3D2C28"/>
+          <circle cx="147" cy="106" r="2.5" fill="white"/>
+
+          <!-- d stem as cloud puff -->
+          <path d="M74 80 Q86 68, 100 74" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- p stem as cloud puff -->
+          <path d="M140 74 Q154 66, 166 80" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M136 76 Q134 92, 136 114 Q138 136, 134 154" fill="none" stroke="#FF8C5A" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Smile -->
+          <path d="M108 134 Q116 142, 120 144 Q124 142, 132 134" fill="none" stroke="#FF7B6B" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Blush peeking from cloud -->
+          <ellipse cx="76" cy="128" rx="10" ry="7" fill="#FFB8A8" opacity=".45"/>
+          <ellipse cx="164" cy="128" rx="10" ry="7" fill="#FFB8A8" opacity=".45"/>
+
+          <!-- Small connection lines for cloud feel -->
+          <circle cx="68" cy="90" r="8" fill="white" stroke="none"/>
+          <circle cx="172" cy="92" r="7" fill="white" stroke="none"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">3B · 云朵眼</div>
+        <h3>软云小精灵</h3>
+        <div class="meta"><span class="meta a">云朵</span><span class="meta b">软绵绵</span></div>
+        <p>一朵软绵绵的小云，里面藏着一双眼睛和微笑。d和p是云的耳朵和尾巴。轻飘飘、暖融融。</p>
+      </div>
+    </div>
+
+    <!-- 3C: little chick -->
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF8F5,#FFEDE4);">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <!-- Little bird/chick shaped dp -->
+          <!-- Body -->
+          <ellipse cx="120" cy="125" rx="60" ry="52" fill="#FFF8F5" stroke="#FF8C5A" stroke-width="4"/>
+
+          <!-- d eye - left -->
+          <ellipse cx="92" cy="110" rx="15" ry="17" fill="white" stroke="#FF7B6B" stroke-width="3.5"/>
+          <circle cx="92" cy="112" r="6.5" fill="#3D2C28"/>
+          <circle cx="89" cy="108" r="2.5" fill="white"/>
+
+          <!-- p eye - right -->
+          <ellipse cx="148" cy="110" rx="15" ry="17" fill="white" stroke="#FF7B6B" stroke-width="3.5"/>
+          <circle cx="148" cy="112" r="6.5" fill="#3D2C28"/>
+          <circle cx="145" cy="108" r="2.5" fill="white"/>
+
+          <!-- d crest/tuft on head -->
+          <path d="M80 82 Q86 66, 96 72 Q100 64, 110 68" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- p wing/feather -->
+          <path d="M134 76 Q148 64, 168 72" fill="none" stroke="#FF8C5A" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M130 78 Q128 94, 130 116 Q132 136, 128 155" fill="none" stroke="#FF8C5A" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Little beak -->
+          <path d="M112 126 L120 122 L112 118" fill="#FFB088" stroke="#FF8C5A" stroke-width="1.5" stroke-linejoin="round"/>
+
+          <!-- Blush -->
+          <ellipse cx="76" cy="128" rx="10" ry="7" fill="#FFB8A8" opacity=".45"/>
+          <ellipse cx="164" cy="128" rx="10" ry="7" fill="#FFB8A8" opacity=".45"/>
+
+          <!-- Tiny wings on sides -->
+          <ellipse cx="58" cy="130" rx="16" ry="10" fill="#FFF0EB" stroke="#FF8C5A" stroke-width="2.5" stroke-linecap="round" transform="rotate(-20,58,130)"/>
+          <ellipse cx="182" cy="130" rx="16" ry="10" fill="#FFF0EB" stroke="#FF8C5A" stroke-width="2.5" stroke-linecap="round" transform="rotate(20,182,130)"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">3C · 小鸡dp</div>
+        <h3>小黄啾</h3>
+        <div class="meta"><span class="meta a">小鸟</span><span class="meta b">萌</span></div>
+        <p>一只圆滚滚的小胖啾！d 是它的头冠，p 是它的翅膀和尾巴。小嘴巴+小翅膀，可爱到犯规。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 4：App 图标应用 ═══════════ -->
+<div class="section">
+  <h2>4. App 图标预览 <span style="font-size:.68rem;background:#FFF5F0;color:#FF8C5A;padding:3px 10px;border-radius:10px;">📱</span></h2>
+  <p class="sub">女朋友在 App Store 看到图标时的第一反应——「哇这个好可爱我要下载给我男朋友！」</p>
+  <div class="showcase">
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF0EB,#FFE5DA);flex-direction:column;gap:12px;">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <rect width="120" height="120" rx="26" fill="#FF8C5A"/>
+          <ellipse cx="44" cy="52" rx="12" ry="13.5" fill="white"/>
+          <circle cx="44" cy="54" r="5.5" fill="#FF8C5A"/>
+          <circle cx="41" cy="50" r="2.2" fill="white"/>
+          <ellipse cx="76" cy="52" rx="12" ry="13.5" fill="white"/>
+          <circle cx="76" cy="54" r="5.5" fill="#FF8C5A"/>
+          <circle cx="73" cy="50" r="2.2" fill="white"/>
+          <path d="M50 78 Q56 84, 60 86 Q64 84, 70 78" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          <ellipse cx="32" cy="72" rx="7" ry="5" fill="white" opacity=".3"/>
+          <ellipse cx="88" cy="72" rx="7" ry="5" fill="white" opacity=".3"/>
+        </svg>
+        <span style="font-size:.7rem;color:#FF7B6B;">橘底白面 · 暖甜</span>
+      </div>
+      <div class="card-body">
+        <div class="num">App 1</div>
+        <h3>橘底白面</h3>
+        <p>暖橘圆角方形底+白色眼睛和微笑。干净明亮，在桌面上像一颗橘子糖。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF5F0,#FFEDE4);flex-direction:column;gap:12px;">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <rect width="120" height="120" rx="26" fill="white"/>
+          <ellipse cx="42" cy="54" rx="13" ry="14.5" fill="none" stroke="#FF7B6B" stroke-width="3.5"/>
+          <circle cx="42" cy="56" r="6" fill="#3D2C28"/>
+          <circle cx="39" cy="52" r="2.3" fill="white"/>
+          <ellipse cx="78" cy="54" rx="13" ry="14.5" fill="none" stroke="#FF7B6B" stroke-width="3.5"/>
+          <circle cx="78" cy="56" r="6" fill="#3D2C28"/>
+          <circle cx="75" cy="52" r="2.3" fill="white"/>
+          <path d="M50 80 Q56 86, 60 88 Q64 86, 70 80" fill="none" stroke="#FF7B6B" stroke-width="3" stroke-linecap="round"/>
+          <ellipse cx="30" cy="72" rx="7.5" ry="5.5" fill="#FFB8A8" opacity=".5"/>
+          <ellipse cx="90" cy="72" rx="7.5" ry="5.5" fill="#FFB8A8" opacity=".5"/>
+          <text x="60" y="110" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#FF7B6B" text-anchor="middle">带拍</text>
+        </svg>
+        <span style="font-size:.7rem;color:#FF7B6B;">白底彩面 · 清新</span>
+      </div>
+      <div class="card-body">
+        <div class="num">App 2</div>
+        <h3>白底彩面</h3>
+        <p>白色圆角方形底+珊瑚色五官。清新干净，像文具店里的可爱贴纸。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stage" style="background:linear-gradient(135deg,#FFF8F5,#FFEDE4);flex-direction:column;gap:12px;">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <rect width="120" height="120" rx="26" fill="#3D2C28"/>
+          <ellipse cx="42" cy="52" rx="13" ry="14.5" fill="#FFF8F5" stroke="#FF8C5A" stroke-width="3.5"/>
+          <circle cx="42" cy="54" r="6" fill="#FF8C5A"/>
+          <circle cx="39" cy="50" r="2.3" fill="#3D2C28"/>
+          <ellipse cx="78" cy="52" rx="13" ry="14.5" fill="#FFF8F5" stroke="#FF8C5A" stroke-width="3.5"/>
+          <circle cx="78" cy="54" r="6" fill="#FF8C5A"/>
+          <circle cx="75" cy="50" r="2.3" fill="#3D2C28"/>
+          <path d="M50 80 Q56 86, 60 88 Q64 86, 70 80" fill="none" stroke="#FF8C5A" stroke-width="3" stroke-linecap="round"/>
+          <ellipse cx="30" cy="72" rx="7.5" ry="5.5" fill="#FFB8A8" opacity=".3"/>
+          <ellipse cx="90" cy="72" rx="7.5" ry="5.5" fill="#FFB8A8" opacity=".3"/>
+          <text x="60" y="110" font-family="system-ui,sans-serif" font-size="9" font-weight="600" fill="#A8A29E" text-anchor="middle">GuidePic</text>
+        </svg>
+        <span style="font-size:.7rem;color:#FF7B6B;">深底暖色 · 男友向</span>
+      </div>
+      <div class="card-body">
+        <div class="num">App 3</div>
+        <h3>深底暖色</h3>
+        <p>深棕底+暖色五官。给男朋友的手机桌面用——可爱但不幼稚，男生也不会觉得羞耻。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 推荐 ═══════════ -->
+<div class="rec">
+  <h3>💝 这次认真推荐</h3>
+  <p>
+    <strong>1A「dp 小笑脸」是正解。</strong> 原因很直接：<br><br>
+    ① 女朋友看到会笑——微笑+腮红=写在基因里的治愈反应<br>
+    ② 男朋友不排斥——眼睛+字母dp的结构依然有设计感，不是纯卡通<br>
+    ③ dp仍然可辨——d的左眼+右竖眉，p的右眼+左降笔，字母信息没丢<br>
+    ④ 三层递进——第一眼可爱，第二眼发现dp字母，第三眼理解「带拍=帮你发现美」<br>
+    ⑤ App图标缩放友好——缩小到64px，眼睛+微笑依然清晰<br><br>
+    <strong>如果觉得太像表情包</strong>，看 3B「软云小精灵」——保留了可爱但更抽象、更耐看。<br>
+    你觉得这个方向对了吗？
+  </p>
+</div>
+
+</div>
+</body>
+</html>

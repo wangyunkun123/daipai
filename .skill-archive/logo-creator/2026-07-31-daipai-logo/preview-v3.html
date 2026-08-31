@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>带拍 GuidePic · Logo 概念设计</title>
+<style>
+  :root {
+    --orange: #F97316;
+    --orange-light: #FB923C;
+    --orange-soft: #FED7AA;
+    --cream: #FFF7ED;
+    --dark: #1C1917;
+    --grey: #78716C;
+    --bg: #FAFAF9;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:-apple-system,"SF Pro Text","PingFang SC","Noto Sans SC",sans-serif;color:var(--dark);}
+
+  .wrap{max-width:960px;margin:0 auto;padding:48px 24px 80px;}
+
+  .hero{text-align:center;margin-bottom:56px;}
+  .hero h1{font-size:2.4rem;font-weight:800;letter-spacing:-0.5px;
+    background:linear-gradient(135deg,#EA580C,#F97316,#FB923C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero .lead{color:var(--grey);font-size:1rem;margin-top:8px;max-width:560px;margin-inline:auto;line-height:1.6;}
+  .hero .tags{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+  .hero .tags span{font-size:.7rem;padding:4px 12px;border-radius:16px;font-weight:600;background:var(--orange-soft);color:#C2410C;}
+  .hero .tags span.ban{background:#FEE2E2;color:#991B1B;}
+
+  .brief{background:#fff;border-radius:20px;padding:28px 32px;margin-bottom:48px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .brief h2{font-size:1rem;font-weight:700;margin-bottom:12px;}
+  .brief p{font-size:.82rem;color:var(--grey);line-height:1.7;}
+
+  .section{margin-bottom:56px;}
+  .section h2{font-size:1.15rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px;}
+  .section .sub{color:var(--grey);font-size:.82rem;margin-bottom:20px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px;}
+
+  .card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.03);transition:all .25s;}
+  .card:hover{box-shadow:0 2px 8px rgba(249,115,22,.12),0 8px 28px rgba(0,0,0,.06);transform:translateY(-2px);}
+
+  .stage{height:200px;display:flex;align-items:center;justify-content:center;position:relative;}
+  .stage.light{background:var(--cream);}
+  .stage.white{background:#fff;}
+  .stage.dark{background:var(--dark);}
+  .stage.soft{background:linear-gradient(135deg,#FFF7ED,#FED7AA);}
+
+  .card-body{padding:16px 20px;}
+  .card-body h3{font-size:.92rem;font-weight:700;margin-bottom:4px;}
+  .card-body .tag{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:8px;}
+  .tag.bold{background:#FEF3C7;color:#92400E;}
+  .tag.clean{background:#E0E7FF;color:#3730A3;}
+  .tag.intl{background:#D1FAE5;color:#065F46;}
+  .tag.warm{background:#FEE2E2;color:#991B1B;}
+  .card-body p{font-size:.76rem;color:var(--grey);line-height:1.55;}
+
+  .wide{grid-column:1/-1;}
+  .stage.wide-stage{height:140px;}
+
+  .note{background:#fff;border-radius:20px;padding:24px 28px;margin-top:40px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .note h3{font-size:.95rem;margin-bottom:8px;}
+  .note p{font-size:.8rem;color:var(--grey);line-height:1.7;}
+
+  @media(max-width:640px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>带拍 GuidePic</h1>
+  <p class="lead">Logo 概念设计 · 六方向探索<br>不碰镜头、不画取景框、不做快门叶片</p>
+  <div class="tags">
+    <span>暖橘 #F97316</span><span>引导 + 创造</span><span>抽象符号</span>
+    <span class="ban">禁止相机元素</span>
+  </div>
+</div>
+
+<div class="brief">
+  <h2>设计简报</h2>
+  <p>
+    <strong>品牌：</strong>带拍 GuidePic · AI拍照灵感工具 · "带拍带你拍出好照片"<br>
+    <strong>品牌人格：</strong>一个会拍照的朋友——温暖、可靠、不装。不是老师，不是工具，是「带你去」的向导。<br>
+    <strong>核心动作：</strong>"引导"（带）+ "创造/捕捉"（拍）= 从不知道怎么办 → 拍出好照片的旅程。<br>
+    <strong>约束：</strong>禁止传统相机隐喻（镜头、取景框、快门、光圈均不可用）。寻找更本质的视觉语言。<br>
+    <strong>目标：</strong>一个独特的、跨文化的、能讲故事的超级符号。
+  </p>
+</div>
+
+<!-- ═══════════ 概念 1: 一笔画「带」═══════════ -->
+<div class="section">
+  <h2>1. 一笔画「带」<span style="font-size:.68rem;background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:10px;">One-line Kanji</span></h2>
+  <p class="sub">把「带」字变成一条连续不断的线——既是中文字，又是一条蜿蜒路径。从起点走到终点 = 带你从不会拍到出好片。</p>
+  <div class="grid">
+    <div class="card">
+      <div class="stage white">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- One-line 带 -->
+          <path d="M30 40 L130 40 M80 40 Q70 55 65 72 Q60 90 55 110
+                   M65 72 L110 50 Q130 38 140 50 M55 110 Q70 108 85 105 Q95 103 100 113
+                   M100 113 Q105 125 95 135 Q80 148 50 142"
+                fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>1A · 一笔「带」</h3><span class="tag bold">最独特</span>
+        <p>中文品牌最本质的差异化：品牌名本身就是图形。一笔画成，像签名一样不可复制。暖橘单色，极致简洁。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stage dark">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <path d="M30 38 L130 38 M80 38 Q70 52 65 68 Q60 86 55 106
+                   M65 68 L108 48 Q128 38 138 50 M55 106 Q70 104 85 101 Q95 99 100 109
+                   M100 109 Q105 120 95 130 Q80 142 50 136"
+                fill="none" stroke="#FB923C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="80" y="156" text-anchor="middle" fill="#78716C" font-size="9" font-weight="600" font-family="SF Pro Display,sans-serif" letter-spacing="3">DAIPAI</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>1B · 一笔「带」(暗底)</h3><span class="tag intl">国际版</span>
+        <p>暗色底暖橘线条，附"DAIPAI"字母。适合海外版 GuidePic 品牌使用。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 概念 2: 指南星 ═══════════ -->
+<div class="section">
+  <h2>2. 指南星 <span style="font-size:.68rem;background:#E0E7FF;color:#3730A3;padding:3px 10px;border-radius:10px;">Compass Star</span></h2>
+  <p class="sub">指南针的四角星 + 一个偏移的小星 = "带你去找到那个特别的点"。导航隐喻，不碰任何摄影符号。</p>
+  <div class="grid">
+    <div class="card">
+      <div class="stage white">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Compass star (4-point) -->
+          <polygon points="80,12 86,74 148,80 86,86 80,148 74,86 12,80 74,74"
+                   fill="#F97316" opacity=".15"/>
+          <polygon points="80,24 84,76 136,80 84,84 80,136 76,84 24,80 76,76"
+                   fill="none" stroke="#F97316" stroke-width="2.5"/>
+          <!-- Off-center small star (the "destination") -->
+          <polygon points="118,48 120,54 126,55 121,57 122,63 118,59 114,63 115,57 110,55 116,54"
+                   fill="#F97316"/>
+          <!-- Connecting line -->
+          <line x1="96" y1="66" x2="116" y2="52" stroke="#F97316" stroke-width="1.5" stroke-dasharray="3 4" opacity=".5"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>2A · 指南星标</h3><span class="tag clean">极简几何</span>
+        <p>四角指南星 + 偏移目标小星，一条虚线连接。"从这里到那里"，纯粹的引导叙事。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stage dark">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <polygon points="80,48 83,77 112,80 83,83 80,112 77,83 48,80 77,77"
+                   fill="none" stroke="#FB923C" stroke-width="2.5"/>
+          <circle cx="80" cy="80" r="5" fill="#FB923C"/>
+          <polygon points="120,36 122,42 128,43 123,45 124,51 120,47 116,51 117,45 112,43 118,42"
+                   fill="#FB923C"/>
+          <line x1="94" y1="68" x2="116" y2="42" stroke="#FB923C" stroke-width="1.5" stroke-dasharray="3 4" opacity=".4"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>2B · 指南星 (暗底)</h3><span class="tag intl">极简版</span>
+        <p>更简洁的表达，去掉了填充色，纯线条。适合专业场景。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 概念 3: DP 交织 ═══════════ -->
+<div class="section">
+  <h2>3. dp 交织标 <span style="font-size:.68rem;background:#D1FAE5;color:#065F46;padding:3px 10px;border-radius:10px;">Interwoven Letters</span></h2>
+  <p class="sub">d 和 p 两个字母像丝带一样交织在一起。d = destination（目的地），p = path（路径）。引导 + 到达 = 交织。</p>
+  <div class="grid">
+    <div class="card">
+      <div class="stage white">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Flowing d -->
+          <path d="M50 30 Q45 30 42 45 Q38 65 42 85 Q46 110 55 125 Q65 138 82 130"
+                fill="none" stroke="#F97316" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="72" cy="56" r="26" fill="none" stroke="#F97316" stroke-width="5"/>
+          <!-- Flowing p -->
+          <path d="M95 130 Q95 120 98 100 Q102 70 108 50 Q112 36 118 30 Q125 24 130 30"
+                fill="none" stroke="#1C1917" stroke-width="5" stroke-linecap="round"/>
+          <!-- Accent dot -->
+          <circle cx="130" cy="30" r="4" fill="#F97316"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>3A · dp 丝带交织</h3><span class="tag intl">国际品牌标</span>
+        <p>d 和 p 像两条丝带自然交织。d 形成包裹感（到达），p 向上延伸（探索）。暖橘+深灰双色，优雅现代。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stage dark">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <path d="M48 34 Q43 34 40 48 Q36 68 40 88 Q44 112 53 126 Q63 136 80 128"
+                fill="none" stroke="#FB923C" stroke-width="5.5" stroke-linecap="round"/>
+          <circle cx="70" cy="58" r="24" fill="none" stroke="#FB923C" stroke-width="4.5"/>
+          <path d="M93 128 Q93 118 96 98 Q100 68 106 48 Q110 34 116 28 Q123 22 128 28"
+                fill="none" stroke="#D6D3D1" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="128" cy="28" r="3.5" fill="#FB923C"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>3B · dp 交织 (暗底)</h3><span class="tag intl">GuidePic 版</span>
+        <p>暗色底、暖橘 d + 浅灰 p。高级感更强。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 概念 4: 引路光 ═══════════ -->
+<div class="section">
+  <h2>4. 引路光 <span style="font-size:.68rem;background:#FEE2E2;color:#991B1B;padding:3px 10px;border-radius:10px;">Guiding Light</span></h2>
+  <p class="sub">一束光从左上角洒下来，在地面形成一个亮点。光 = 灵感/AI/指引。不画相机，画光本身。</p>
+  <div class="grid">
+    <div class="card wide">
+      <div class="stage light wide-stage">
+        <svg width="500" height="140" viewBox="0 0 500 140">
+          <!-- Light beam -->
+          <polygon points="60,0 110,0 280,120 180,120" fill="#F97316" opacity=".08"/>
+          <polygon points="70,0 100,0 260,120 200,120" fill="#F97316" opacity=".15"/>
+          <polygon points="80,0 90,0 240,120 220,120" fill="#F97316" opacity=".3"/>
+          <!-- Ground highlight (the destination) -->
+          <ellipse cx="230" cy="120" rx="24" ry="6" fill="#F97316" opacity=".5"/>
+          <circle cx="230" cy="118" r="5" fill="#F97316"/>
+          <!-- Small sparkles in the beam -->
+          <circle cx="130" cy="55" r="2" fill="#F97316" opacity=".5"/>
+          <circle cx="160" cy="70" r="1.5" fill="#F97316" opacity=".4"/>
+          <circle cx="190" cy="90" r="2.5" fill="#F97316" opacity=".6"/>
+          <!-- Text -->
+          <text x="300" y="78" fill="#1C1917" font-size="36" font-weight="700" font-family="PingFang SC,sans-serif" letter-spacing="-1">带拍</text>
+          <text x="380" y="78" fill="#1C1917" font-size="36" font-weight="700" font-family="PingFang SC,sans-serif" letter-spacing="-1" dx="2">GuidePic</text>
+          <text x="300" y="98" fill="#78716C" font-size="11" font-weight="500" font-family="PingFang SC,sans-serif" letter-spacing="2">AI 拍照灵感指南</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>4A · 引路光 + 文字组合</h3><span class="tag warm">品牌完整标</span>
+        <p>一束暖橘光从上方洒下，照亮地面的"最佳位置"。光线中漂浮微小粒子=AI灵感。搭配"带拍 GuidePic"文字和slogan，完整品牌标识。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stage dark">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <polygon points="30,0 50,0 110,110 85,110" fill="#FB923C" opacity=".15"/>
+          <polygon points="36,0 44,0 102,110 93,110" fill="#FB923C" opacity=".35"/>
+          <ellipse cx="96" cy="110" rx="16" ry="4" fill="#FB923C" opacity=".6"/>
+          <circle cx="96" cy="108" r="3.5" fill="#FB923C"/>
+          <circle cx="60" cy="45" r="1.5" fill="#FB923C" opacity=".5"/>
+          <circle cx="74" cy="68" r="1.8" fill="#FB923C" opacity=".4"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>4B · 引路光 (纯图形)</h3><span class="tag warm">独立图标</span>
+        <p>去掉文字，仅保留光束图形。可用作 favicon 或 App 图标简化版。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stage white">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Sun/source -->
+          <circle cx="42" cy="32" r="14" fill="#F97316" opacity=".2"/>
+          <circle cx="42" cy="32" r="7" fill="#F97316"/>
+          <!-- Beam -->
+          <polygon points="42,39 30,120 55,120" fill="#F97316" opacity=".1"/>
+          <!-- Destination glow -->
+          <circle cx="42" cy="116" r="8" fill="#F97316" opacity=".4"/>
+          <circle cx="42" cy="116" r="3" fill="#F97316"/>
+          <!-- Text -->
+          <text x="80" y="66" text-anchor="middle" fill="#F97316" font-size="24" font-weight="700" font-family="PingFang SC,sans-serif">带拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>4C · 光源 + 文字</h3><span class="tag warm">竖版组合</span>
+        <p>上方光源，下方目标点，中间"带拍"文字。纵向叙事：光→引导→到达。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 概念 5: 纸飞机 ═══════════ -->
+<div class="section">
+  <h2>5. 纸飞机标 <span style="font-size:.68rem;background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:10px;">Paper Plane</span></h2>
+  <p class="sub">纸飞机 = 轻盈、指引方向、把灵感"投送"给你。不是相机，但完美表达"AI把拍摄灵感送到你手上"。</p>
+  <div class="grid">
+    <div class="card">
+      <div class="stage soft">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Paper plane -->
+          <polygon points="30,70 100,40 130,46 100,52" fill="#F97316" opacity=".15"/>
+          <polygon points="30,70 130,46 130,70 100,64" fill="#F97316" opacity=".3"/>
+          <polygon points="30,70 100,40 100,64" fill="none" stroke="#F97316" stroke-width="3.5" stroke-linejoin="round"/>
+          <line x1="30" y1="70" x2="100" y2="52" stroke="#F97316" stroke-width="3.5"/>
+          <line x1="100" y1="40" x2="130" y2="46" stroke="#F97316" stroke-width="3.5"/>
+          <line x1="100" y1="64" x2="130" y2="70" stroke="#F97316" stroke-width="3.5"/>
+          <line x1="130" y1="46" x2="130" y2="70" stroke="#F97316" stroke-width="3.5"/>
+          <!-- Trail -->
+          <path d="M20 74 Q16 70 20 66" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" opacity=".4"/>
+          <path d="M14 78 Q8 72 14 66" fill="none" stroke="#F97316" stroke-width="1.5" stroke-linecap="round" opacity=".25"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>5A · 纸飞机</h3><span class="tag bold">最具故事感</span>
+        <p>折纸飞机——"把灵感投送给你"。轻盈、友好、有动感。三笔折线就是整个故事。不碰相机，但完美传达"AI指导拍摄"。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stage dark">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <polygon points="30,68 100,42 126,48 100,54" fill="#FB923C" opacity=".25"/>
+          <polygon points="30,68 126,48 126,70 100,64" fill="#FB923C" opacity=".15"/>
+          <polygon points="30,68 100,42 100,64" fill="none" stroke="#FB923C" stroke-width="3" stroke-linejoin="round"/>
+          <line x1="30" y1="68" x2="100" y2="53" stroke="#FB923C" stroke-width="3"/>
+          <line x1="100" y1="42" x2="126" y2="48" stroke="#FB923C" stroke-width="3"/>
+          <line x1="100" y1="64" x2="126" y2="70" stroke="#FB923C" stroke-width="3"/>
+          <line x1="126" y1="48" x2="126" y2="70" stroke="#FB923C" stroke-width="3"/>
+          <path d="M20 72 Q16 68 20 64" fill="none" stroke="#FB923C" stroke-width="1.8" stroke-linecap="round" opacity=".35"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>5B · 纸飞机 (暗底)</h3><span class="tag intl">国际版</span>
+        <p>暗底单色版本，更紧凑、更专业。纸飞机这个符号全球通用。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 概念 6: 回声/涟漪 ═══════════ -->
+<div class="section">
+  <h2>6. 灵感涟漪 <span style="font-size:.68rem;background:#E5E7EB;color:#374151;padding:3px 10px;border-radius:10px;">Ripple / Echo</span></h2>
+  <p class="sub">一个中心点向外扩散的涟漪——AI给你一个灵感（中心点），你拍出好照片（涟漪扩散）。声音/光/水波的通感隐喻。</p>
+  <div class="grid">
+    <div class="card">
+      <div class="stage white">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Ripple rings -->
+          <circle cx="62" cy="68" r="6" fill="#F97316"/>
+          <circle cx="62" cy="68" r="18" fill="none" stroke="#F97316" stroke-width="2.5" opacity=".7"/>
+          <circle cx="62" cy="68" r="32" fill="none" stroke="#F97316" stroke-width="2" opacity=".45"/>
+          <circle cx="62" cy="68" r="48" fill="none" stroke="#F97316" stroke-width="1.5" opacity=".2"/>
+          <circle cx="62" cy="68" r="64" fill="none" stroke="#F97316" stroke-width="1" opacity=".08"/>
+          <!-- Subtle guide dot on 3rd ring -->
+          <circle cx="98" cy="86" r="3.5" fill="#F97316" opacity=".8"/>
+          <!-- Connection -->
+          <line x1="68" y1="74" x2="96" y2="84" stroke="#F97316" stroke-width="1.2" stroke-dasharray="2 4" opacity=".35"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>6A · 灵感涟漪</h3><span class="tag clean">抽象符号</span>
+        <p>一个灵感中心向外扩散。"AI 给你一个点（灵感），你展开整个画面"。第三个涟漪上有一个偏移标记=拍摄点。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stage dark">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle cx="60" cy="66" r="5" fill="#FB923C"/>
+          <circle cx="60" cy="66" r="16" fill="none" stroke="#FB923C" stroke-width="2.2" opacity=".7"/>
+          <circle cx="60" cy="66" r="28" fill="none" stroke="#FB923C" stroke-width="1.8" opacity=".45"/>
+          <circle cx="60" cy="66" r="42" fill="none" stroke="#FB923C" stroke-width="1.2" opacity=".2"/>
+          <circle cx="60" cy="66" r="56" fill="none" stroke="#FB923C" stroke-width="1" opacity=".08"/>
+          <circle cx="96" cy="84" r="3.2" fill="#FB923C" opacity=".8"/>
+          <text x="80" y="150" text-anchor="middle" fill="#78716C" font-size="9" font-weight="600" font-family="SF Pro Display,sans-serif" letter-spacing="3">DAIPAI</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>6B · 涟漪 (暗底)</h3><span class="tag intl">国际科技版</span>
+        <p>暗底涟漪，像声呐或雷达。"在茫茫场景中找到最佳拍摄点"。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="note">
+  <h3>六方向对比</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+    <thead><tr style="color:var(--grey);"><th style="padding:8px 12px;text-align:left;">方向</th><th style="padding:8px 12px;text-align:left;">核心隐喻</th><th style="padding:8px 12px;text-align:left;">独特性</th><th style="padding:8px 12px;text-align:left;">国际化</th><th style="padding:8px 12px;text-align:left;">App图标</th></tr></thead>
+    <tbody>
+      <tr><td style="padding:8px 12px;font-weight:700;">1. 一笔画「带」</td><td style="padding:8px 12px;">中文即路径</td><td style="padding:8px 12px;color:#F97316;">★★★★★</td><td style="padding:8px 12px;">★★</td><td style="padding:8px 12px;">★★★★</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:700;">2. 指南星</td><td style="padding:8px 12px;">导航+发现</td><td style="padding:8px 12px;color:#F97316;">★★★★</td><td style="padding:8px 12px;">★★★★★</td><td style="padding:8px 12px;">★★★★★</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:700;">3. dp 交织</td><td style="padding:8px 12px;">路径+到达</td><td style="padding:8px 12px;color:#F97316;">★★★★</td><td style="padding:8px 12px;">★★★★★</td><td style="padding:8px 12px;">★★★★</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:700;">4. 引路光</td><td style="padding:8px 12px;">光=AI灵感</td><td style="padding:8px 12px;color:#F97316;">★★★★★</td><td style="padding:8px 12px;">★★★★</td><td style="padding:8px 12px;">★★★</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:700;">5. 纸飞机</td><td style="padding:8px 12px;">投送灵感</td><td style="padding:8px 12px;color:#F97316;">★★★★★</td><td style="padding:8px 12px;">★★★★★</td><td style="padding:8px 12px;">★★★★</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:700;">6. 灵感涟漪</td><td style="padding:8px 12px;">AI→扩散</td><td style="padding:8px 12px;color:#F97316;">★★★★</td><td style="padding:8px 12px;">★★★★</td><td style="padding:8px 12px;">★★★★</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:16px;color:var(--grey);font-size:.8rem;line-height:1.8;">
+    <strong>个人推荐：</strong>国内首选 <strong>1. 一笔画「带」</strong>（中文品牌最强差异）或 <strong>5. 纸飞机</strong>（最有故事感且全球通用）；国际版选 <strong>2. 指南星</strong>（最安全最通用的极简符号）或 <strong>3. dp 交织</strong>（字母标便于记忆）。
+  </p>
+</div>
+
+</div>
+</body>
+</html>

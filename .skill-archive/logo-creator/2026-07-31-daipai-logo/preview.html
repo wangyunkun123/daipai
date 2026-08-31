@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>带拍 Logo 设计方案 · 三方向全览</title>
+<style>
+  :root {
+    --orange: #F97316;
+    --orange-bright: #FB923C;
+    --orange-soft: #FED7AA;
+    --cream: #FFF7ED;
+    --dark: #1C1917;
+    --grey: #78716C;
+    --grey-light: #D6D3D1;
+    --bg: #FAFAF9;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:-apple-system,"SF Pro Text","PingFang SC","Noto Sans SC",sans-serif;color:var(--dark);padding:24px;}
+
+  .wrap{max-width:1100px;margin:0 auto;}
+
+  /* Header */
+  .hero{text-align:center;padding:48px 20px 32px;}
+  .hero h1{font-size:2.6rem;font-weight:800;letter-spacing:-0.5px;margin-bottom:8px;
+    background:linear-gradient(135deg,#EA580C,#F97316,#FB923C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero .sub{color:var(--grey);font-size:1.05rem;line-height:1.6;}
+  .hero .meta{margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  .hero .meta span{font-size:.75rem;padding:4px 14px;border-radius:20px;font-weight:600;background:var(--orange-soft);color:#C2410C;}
+
+  /* Section */
+  .section{margin:40px 0;}
+  .section-title{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+  .section-title h2{font-size:1.3rem;font-weight:700;}
+  .section-title .tag{font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:12px;}
+  .tag.geo{background:#E0E7FF;color:#3730A3;}
+  .tag.warm{background:#FEE2E2;color:#991B1B;}
+  .tag.pro{background:#E5E7EB;color:#374151;}
+  .tag.combo{background:#D1FAE5;color:#065F46;}
+  .tag.app{background:#FEF3C7;color:#92400E;}
+
+  /* Grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;}
+
+  /* Card */
+  .card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04);
+    transition:box-shadow .25s,transform .25s;cursor:pointer;}
+  .card:hover{box-shadow:0 2px 8px rgba(249,115,22,.15),0 8px 28px rgba(0,0,0,.08);transform:translateY(-2px);}
+
+  .card-stage{height:200px;display:flex;align-items:center;justify-content:center;position:relative;}
+  .card-stage.light{background:var(--cream);}
+  .card-stage.white{background:#fff;}
+  .card-stage.dark{background:#1C1917;}
+  .card-stage.grad-warm{background:linear-gradient(135deg,#FFF7ED,#FED7AA,#FED7AA);}
+  .card-stage.grad-cool{background:linear-gradient(135deg,#f8f8f8,#e8e8e8);}
+
+  .card-badge{position:absolute;top:10px;right:10px;font-size:.65rem;padding:3px 8px;border-radius:12px;font-weight:700;letter-spacing:.3px;}
+  .card-badge.best{background:var(--orange);color:#fff;}
+  .card-badge.icon{background:var(--dark);color:#fff;}
+  .card-badge.mark{background:#6366F1;color:#fff;}
+
+  .card-body{padding:16px 18px;}
+  .card-body h3{font-size:.95rem;font-weight:700;margin-bottom:4px;}
+  .card-body .no{font-size:.7rem;color:var(--orange);font-weight:700;margin-bottom:6px;}
+  .card-body p{font-size:.78rem;color:var(--grey);line-height:1.55;}
+
+  /* Footer */
+  .footer{text-align:center;padding:40px 20px 60px;color:var(--grey);font-size:.85rem;line-height:1.8;}
+  .footer strong{color:var(--orange);}
+
+  @media(max-width:640px){
+    .grid{grid-template-columns:1fr;}
+    .hero h1{font-size:2rem;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>带拍 Logo 设计方案</h1>
+  <p class="sub">三方向 × 多种变体 · 12 枚 Logo SVG 直接预览</p>
+  <div class="meta">
+    <span>暖橘 #F97316</span><span>奶油白 #FFF7ED</span><span>深灰 #1C1917</span>
+    <span>取景框母题</span><span>引导线叙事</span>
+  </div>
+</div>
+
+<!-- ═══════════ 方向一：极简几何抽象 ═══════════ -->
+<div class="section">
+  <div class="section-title"><h2>方向一：极简几何抽象</h2><span class="tag geo">Minimalist Geometric</span></div>
+  <p style="color:var(--grey);font-size:.85rem;margin-bottom:16px;">取景框 + 引导点/线 → 抽象化为品牌符号。无文字负担，国际化通用，像 Airbnb 或 Nike 那样只需一个符号就够。</p>
+  <div class="grid">
+
+    <!-- 1A: Viewfinder + Guide Dot -->
+    <div class="card">
+      <div class="card-stage white">
+        <span class="card-badge best">推荐</span>
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Outer viewfinder frame -->
+          <rect x="16" y="16" width="108" height="108" rx="26" fill="none" stroke="#F97316" stroke-width="5"/>
+          <!-- Corner accent: top-left bold -->
+          <path d="M16 42 L16 16 L42 16" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- Other corners light -->
+          <path d="M98 16 L124 16 L124 42" fill="none" stroke="#F97316" stroke-width="2.5" stroke-linecap="round" opacity="0.3"/>
+          <path d="M16 98 L16 124 L42 124" fill="none" stroke="#F97316" stroke-width="2.5" stroke-linecap="round" opacity="0.3"/>
+          <path d="M98 124 L124 124 L124 98" fill="none" stroke="#F97316" stroke-width="2.5" stroke-linecap="round" opacity="0.3"/>
+          <!-- Guide trail: dots from TL to BR -->
+          <circle cx="48" cy="48" r="5" fill="#F97316" opacity=".3"/>
+          <circle cx="58" cy="58" r="4.5" fill="#F97316" opacity=".45"/>
+          <circle cx="68" cy="68" r="4" fill="#F97316" opacity=".65"/>
+          <circle cx="78" cy="78" r="6.5" fill="#F97316"/>
+          <!-- Crosshair in target -->
+          <line x1="74" y1="78" x2="82" y2="78" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="78" y1="74" x2="78" y2="82" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>1A · Viewfinder + Guide Trail</h3>
+        <span class="no">App 图标 / 品牌图形标</span>
+        <p>取景框内渐变圆点从左上到右下，"带你从看到拍到"。单色暖橘，辨识度极高，缩到 32px 仍可读。</p>
+      </div>
+    </div>
+
+    <!-- 1B: Circle Lens + Orbit -->
+    <div class="card">
+      <div class="card-stage white">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Concentric rings = lens -->
+          <circle cx="70" cy="64" r="46" fill="none" stroke="#1C1917" stroke-width="1.5" opacity=".15"/>
+          <circle cx="70" cy="64" r="38" fill="none" stroke="#F97316" stroke-width="4"/>
+          <circle cx="70" cy="64" r="26" fill="none" stroke="#F97316" stroke-width="1.5" stroke-dasharray="6 8" opacity=".5"/>
+          <!-- Center dot -->
+          <circle cx="70" cy="64" r="5" fill="#F97316"/>
+          <!-- Orbit path + guide star -->
+          <path d="M40 40 Q80 10 105 45" fill="none" stroke="#F97316" stroke-width="2" stroke-dasharray="3 5" opacity=".5"/>
+          <circle cx="105" cy="45" r="4" fill="#F97316"/>
+          <!-- Small tagline -->
+          <text x="70" y="128" text-anchor="middle" fill="#1C1917" font-size="10" font-weight="600" font-family="PingFang SC, sans-serif" letter-spacing="3">带 拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>1B · Lens Ring + Orbit</h3>
+        <span class="no">品牌图形标</span>
+        <p>镜头环同心圆 + 外围轨道虚线 + 引导星。暗示"不止一个答案，带你去发现"。更抽象、更专业。</p>
+      </div>
+    </div>
+
+    <!-- 1C: Diamond Frame -->
+    <div class="card">
+      <div class="card-stage dark">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Diamond viewfinder -->
+          <rect x="22" y="22" width="96" height="96" rx="22" fill="none" stroke="#FB923C" stroke-width="3.5" transform="rotate(6 70 70)"/>
+          <!-- Inner guide -->
+          <circle cx="56" cy="56" r="3" fill="#FB923C" opacity=".5"/>
+          <circle cx="62" cy="62" r="2.5" fill="#FB923C" opacity=".7"/>
+          <circle cx="68" cy="68" r="6" fill="#FB923C"/>
+          <!-- Arrow hint -->
+          <path d="M72 72 L86 66" stroke="#FB923C" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>
+          <!-- dp mark -->
+          <text x="70" y="120" text-anchor="middle" fill="#D6D3D1" font-size="13" font-weight="800" font-family="SF Pro Display,sans-serif" letter-spacing="2">dp</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>1C · Tilted Frame + dp</h3>
+        <span class="no">国际版 GuidePic 标</span>
+        <p>微微倾斜的取景框增加动感，深色底暖橘色，配"dp"小字。海外科技感 + 东方温度。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ 方向二：温暖活泼 ═══════════ -->
+<div class="section">
+  <div class="section-title"><h2>方向二：温暖活泼</h2><span class="tag warm">Warm &amp; Playful</span></div>
+  <p style="color:var(--grey);font-size:.85rem;margin-bottom:16px;">像小红书和多邻国那样——暖色、圆润、友好、一眼就有好感。"一个会拍照的朋友"的人格可视化。</p>
+  <div class="grid">
+
+    <!-- 2A: 带 character with viewfinder -->
+    <div class="card">
+      <div class="card-stage grad-warm">
+        <span class="card-badge best">推荐</span>
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Warm bg circle -->
+          <circle cx="70" cy="60" r="52" fill="#F97316" opacity=".12"/>
+          <!-- 带 character -->
+          <text x="70" y="82" text-anchor="middle" fill="#F97316" font-size="56" font-weight="700" font-family="PingFang SC, Noto Sans SC, sans-serif" letter-spacing="-2">带</text>
+          <!-- Viewfinder replacing 口 radical -->
+          <rect x="46" y="21" width="16" height="16" rx="4" fill="none" stroke="#EA580C" stroke-width="2.2"/>
+          <circle cx="54" cy="29" r="2.2" fill="#EA580C"/>
+          <!-- 拍 -->
+          <text x="70" y="82" text-anchor="middle" fill="#1C1917" font-size="56" font-weight="700" font-family="PingFang SC, Noto Sans SC, sans-serif" letter-spacing="-2" dx="55">拍</text>
+          <!-- subtitle -->
+          <text x="70" y="126" text-anchor="middle" fill="#78716C" font-size="9" font-weight="600" font-family="PingFang SC,sans-serif" letter-spacing="2">AI 拍照灵感指南</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>2A · 取景框「带」字标</h3>
+        <span class="no">完整品牌组合标</span>
+        <p>「带」字的"口"部首替换为取景框方环+对焦点。"带"橘色、"拍"深灰，底部 slogan 一行。温暖专业兼具。</p>
+      </div>
+    </div>
+
+    <!-- 2B: Rounded App Icon -->
+    <div class="card">
+      <div class="card-stage light">
+        <span class="card-badge icon">App 图标</span>
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Rounded rect bg -->
+          <rect x="8" y="8" width="124" height="124" rx="32" fill="#F97316"/>
+          <!-- Viewfinder ring -->
+          <circle cx="70" cy="58" r="36" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Inner dash ring -->
+          <circle cx="70" cy="58" r="28" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="10 8" opacity=".55"/>
+          <!-- Guide dot -->
+          <circle cx="56" cy="48" r="4" fill="#fff" opacity=".5"/>
+          <circle cx="64" cy="55" r="5" fill="#fff" opacity=".8"/>
+          <circle cx="72" cy="62" r="6.5" fill="#fff"/>
+          <!-- 带 text -->
+          <text x="70" y="122" text-anchor="middle" fill="#fff" font-size="18" font-weight="700" font-family="PingFang SC, sans-serif" letter-spacing="1">带拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>2B · 橘底白标 App 图标</h3>
+        <span class="no">iOS / Android 图标</span>
+        <p>暖橘圆角方形底 + 白色取景框 + 引导点轨迹 + "带拍"两字。手机桌面辨识度拉满，温暖不刺眼。</p>
+      </div>
+    </div>
+
+    <!-- 2C: Walking Friend -->
+    <div class="card">
+      <div class="card-stage white">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Viewfinder outer -->
+          <rect x="22" y="14" width="100" height="80" rx="18" fill="none" stroke="#F97316" stroke-width="4"/>
+          <!-- Person -->
+          <circle cx="56" cy="38" r="9" fill="#F97316"/>
+          <line x1="56" y1="47" x2="56" y2="72" stroke="#F97316" stroke-width="3.5" stroke-linecap="round"/>
+          <!-- Arms - guiding -->
+          <line x1="56" y1="53" x2="44" y2="63" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+          <line x1="56" y1="53" x2="70" y2="46" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+          <!-- Legs - walking -->
+          <line x1="56" y1="72" x2="46" y2="88" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+          <line x1="56" y1="72" x2="68" y2="86" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+          <!-- Guide arrow -->
+          <path d="M78 42 Q95 36 108 30" fill="none" stroke="#F97316" stroke-width="2.2" stroke-dasharray="4 3" stroke-linecap="round"/>
+          <!-- Target marker -->
+          <circle cx="115" cy="26" r="7" fill="none" stroke="#F97316" stroke-width="2.5"/>
+          <circle cx="115" cy="26" r="2.5" fill="#F97316"/>
+          <!-- Label -->
+          <text x="72" y="128" text-anchor="middle" fill="#1C1917" font-size="11" font-weight="700" font-family="PingFang SC,sans-serif">带拍 · 带你拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>2C · 行走者向导标</h3>
+        <span class="no">品牌故事标</span>
+        <p>取景框内一个行走小人，伸手指引向对焦标记。完整叙事：「我带你去找最佳机位」。</p>
+      </div>
+    </div>
+
+    <!-- 2D: Daipai cute mascot hint -->
+    <div class="card">
+      <div class="card-stage grad-warm">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Camera body simplified -->
+          <rect x="30" y="40" width="80" height="56" rx="16" fill="#F97316"/>
+          <!-- Lens circle -->
+          <circle cx="70" cy="68" r="18" fill="#FFF7ED"/>
+          <circle cx="70" cy="68" r="12" fill="none" stroke="#F97316" stroke-width="2"/>
+          <circle cx="70" cy="68" r="4" fill="#F97316"/>
+          <!-- Smile arc on camera -->
+          <path d="M58 48 Q70 58 82 48" fill="none" stroke="#FFF7ED" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- Viewfinder popup -->
+          <rect x="90" y="28" width="24" height="18" rx="5" fill="#F97316" opacity=".85"/>
+          <!-- 带拍 text -->
+          <text x="70" y="125" text-anchor="middle" fill="#1C1917" font-size="14" font-weight="700" font-family="PingFang SC,sans-serif" letter-spacing="1">带拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>2D · 微笑相机标</h3>
+        <span class="no">吉祥物/趣味标</span>
+        <p>将相机机身做成笑脸，镜头是"眼睛"。温暖可爱，适合社区/公众号/贴纸，但不适合做 App 主图标。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ 方向三：专业克制 ═══════════ -->
+<div class="section">
+  <div class="section-title"><h2>方向三：专业克制</h2><span class="tag pro">Professional Clean</span></div>
+  <p style="color:var(--grey);font-size:.85rem;margin-bottom:16px;">像 VSCO / Lightroom / Halide——暗色、精致、克制的专业感。但用暖橘做点睛，保持"友好友善"的底线。</p>
+  <div class="grid">
+
+    <!-- 3A: dp Professional -->
+    <div class="card">
+      <div class="card-stage dark">
+        <span class="card-badge mark">GuidePic</span>
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Lens shutter -->
+          <circle cx="70" cy="60" r="38" fill="none" stroke="#FB923C" stroke-width="2.5"/>
+          <circle cx="70" cy="60" r="28" fill="none" stroke="#F97316" stroke-width="1.5" stroke-dasharray="6 12" opacity=".6"/>
+          <!-- dp text -->
+          <text x="70" y="78" text-anchor="middle" fill="#FB923C" font-size="44" font-weight="800" font-family="SF Pro Display, system-ui, sans-serif" letter-spacing="-3">dp</text>
+          <!-- Corner detail -->
+          <path d="M88 68 L108 68 L108 88" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" opacity=".5"/>
+          <circle cx="108" cy="88" r="3" fill="#FB923C"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>3A · dp 字母标 (暗色)</h3>
+        <span class="no">GuidePic 国际版</span>
+        <p>深色底暖橘 "dp" 字母 + 镜头环 + 取景框角标。简洁、好记、跨文化，一张图就是整个品牌。</p>
+      </div>
+    </div>
+
+    <!-- 3B: Clean Viewfinder -->
+    <div class="card">
+      <div class="card-stage grad-cool">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Minimal frame -->
+          <rect x="24" y="24" width="92" height="92" rx="6" fill="none" stroke="#1C1917" stroke-width="2" opacity=".2"/>
+          <!-- bold L shape -->
+          <path d="M18 36 L18 18 L36 18" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Subtle center cross -->
+          <line x1="70" y1="36" x2="70" y2="104" stroke="#1C1917" stroke-width="1" opacity=".1"/>
+          <line x1="36" y1="70" x2="104" y2="70" stroke="#1C1917" stroke-width="1" opacity=".1"/>
+          <!-- Position dot -->
+          <circle cx="88" cy="52" r="4" fill="#F97316"/>
+          <!-- Type -->
+          <text x="70" y="132" text-anchor="middle" fill="#1C1917" font-size="9" font-weight="600" font-family="PingFang SC,sans-serif" letter-spacing="4">DAIPAI</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>3B · Clean L-Frame + Dot</h3>
+        <span class="no">极简品牌标</span>
+        <p>仅一个暖橘L形取景框角 + 一个位置点 + 十字参考线。克制到极致，适合高端摄影品牌调性。</p>
+      </div>
+    </div>
+
+    <!-- 3C: Abstract Shutter -->
+    <div class="card">
+      <div class="card-stage white">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Shutter blades abstract -->
+          <polygon points="70,22 50,70 70,118 90,70" fill="none" stroke="#F97316" stroke-width="2.5" stroke-linejoin="round" opacity=".3"/>
+          <polygon points="70,32 56,70 70,108 84,70" fill="none" stroke="#F97316" stroke-width="2.5" stroke-linejoin="round" opacity=".6"/>
+          <polygon points="70,42 62,70 70,98 78,70" fill="#F97316" opacity=".15"/>
+          <!-- Center -->
+          <circle cx="70" cy="70" r="5" fill="#F97316"/>
+          <!-- Text -->
+          <text x="70" y="132" text-anchor="middle" fill="#1C1917" font-size="10" font-weight="700" font-family="PingFang SC,sans-serif" letter-spacing="2">带拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>3C · 快门叶片抽象标</h3>
+        <span class="no">专业摄影品牌</span>
+        <p>六边形快门叶片层层叠加，中心实心圆。摄影圈内人一眼认出，外行也觉得好看。</p>
+      </div>
+    </div>
+
+    <!-- 3D: Horizon Line -->
+    <div class="card">
+      <div class="card-stage dark">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- Horizon rule of thirds -->
+          <line x1="20" y1="70" x2="120" y2="70" stroke="#FB923C" stroke-width="1.5" opacity=".5"/>
+          <line x1="20" y1="46" x2="120" y2="46" stroke="#FB923C" stroke-width="1" opacity=".25"/>
+          <line x1="20" y1="94" x2="120" y2="94" stroke="#FB923C" stroke-width="1" opacity=".25"/>
+          <line x1="46" y1="20" x2="46" y2="120" stroke="#FB923C" stroke-width="1" opacity=".25"/>
+          <line x1="94" y1="20" x2="94" y2="120" stroke="#FB923C" stroke-width="1" opacity=".25"/>
+          <!-- Sun/guide -->
+          <circle cx="70" cy="70" r="10" fill="#F97316"/>
+          <circle cx="70" cy="70" r="16" fill="none" stroke="#FB923C" stroke-width="1.5" opacity=".6"/>
+          <!-- dp -->
+          <text x="70" y="128" text-anchor="middle" fill="#D6D3D1" font-size="11" font-weight="700" font-family="SF Pro Display,sans-serif" letter-spacing="3">DAIPAI</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>3D · 九宫格 + 引导日</h3>
+        <span class="no">摄影教育品牌</span>
+        <p>三分线九宫格 + 橙日位于交点——任何摄影师都能共鸣的视觉。暗示"构图规则 + 视觉引导"。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ 方向四：组合标 ═══════════ -->
+<div class="section">
+  <div class="section-title"><h2>方向四：图标 + 文字组合标</h2><span class="tag combo">Combination Mark</span></div>
+  <p style="color:var(--grey);font-size:.85rem;margin-bottom:16px;">新品牌需要名字被记住。图标 + "带拍"文字组合，适合网站 Header、公众号、宣传物料。</p>
+  <div class="grid">
+
+    <!-- 4A: Horizontal combo -->
+    <div class="card" style="grid-column:1/-1;">
+      <div class="card-stage white">
+        <svg width="400" height="100" viewBox="0 0 400 100">
+          <!-- Icon -->
+          <rect x="20" y="18" width="64" height="64" rx="16" fill="#F97316"/>
+          <circle cx="52" cy="46" r="18" fill="none" stroke="#fff" stroke-width="3.5"/>
+          <circle cx="52" cy="46" r="12" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="6 5" opacity=".6"/>
+          <circle cx="44" cy="39" r="3" fill="#fff" opacity=".6"/>
+          <circle cx="52" cy="46" r="4" fill="#fff"/>
+          <!-- Text -->
+          <text x="100" y="64" fill="#F97316" font-size="38" font-weight="700" font-family="PingFang SC,Noto Sans SC,sans-serif" letter-spacing="-1">带拍</text>
+          <text x="185" y="64" fill="#1C1917" font-size="38" font-weight="700" font-family="PingFang SC,Noto Sans SC,sans-serif" letter-spacing="-1">GuidePic</text>
+          <text x="100" y="82" fill="#78716C" font-size="11" font-weight="500" font-family="PingFang SC,sans-serif" letter-spacing="3">AI 拍照灵感指南</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>4A · 横向组合标</h3>
+        <span class="no">网站 Header / 公众号 / 名片</span>
+        <p>图标 + "带拍" + "GuidePic" + slogan 四层信息一字排开。中英文双语，国内外通吃。</p>
+      </div>
+    </div>
+
+    <!-- 4B: Vertical stack -->
+    <div class="card">
+      <div class="card-stage white">
+        <svg width="160" height="180" viewBox="0 0 160 180">
+          <!-- Icon -->
+          <rect x="30" y="10" width="100" height="100" rx="24" fill="#F97316"/>
+          <circle cx="80" cy="56" r="28" fill="none" stroke="#fff" stroke-width="4"/>
+          <circle cx="80" cy="56" r="20" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="8 6" opacity=".5"/>
+          <circle cx="68" cy="46" r="3.5" fill="#fff" opacity=".6"/>
+          <circle cx="76" cy="53" r="5" fill="#fff"/>
+          <circle cx="84" cy="60" r="3.5" fill="#fff" opacity=".6"/>
+          <!-- Text -->
+          <text x="80" y="144" text-anchor="middle" fill="#1C1917" font-size="22" font-weight="700" font-family="PingFang SC,sans-serif">带拍</text>
+          <text x="80" y="166" text-anchor="middle" fill="#78716C" font-size="10" font-weight="500" font-family="PingFang SC,sans-serif" letter-spacing="2">guidepic.com</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>4B · 纵向组合标</h3>
+        <span class="no">启动页 / 海报 / App Store</span>
+        <p>图标在上、文字在下，纵向布局。启动页或 App Store 截图的经典结构。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <h3 style="font-size:1.1rem;margin-bottom:12px;">📊 快速对比</h3>
+  <table style="margin:0 auto;border-collapse:collapse;font-size:.82rem;text-align:left;">
+    <thead><tr style="color:var(--grey);"><th style="padding:8px 16px;"></th><th style="padding:8px 16px;">极简几何</th><th style="padding:8px 16px;">温暖活泼</th><th style="padding:8px 16px;">专业克制</th><th style="padding:8px 16px;">组合标</th></tr></thead>
+    <tbody>
+      <tr><td style="padding:8px 16px;font-weight:600;">App图标</td><td style="padding:8px 16px;">⭐⭐⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐</td></tr>
+      <tr><td style="padding:8px 16px;font-weight:600;">品牌辨识</td><td style="padding:8px 16px;">⭐⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐⭐⭐</td></tr>
+      <tr><td style="padding:8px 16px;font-weight:600;">国际化</td><td style="padding:8px 16px;">⭐⭐⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐</td></tr>
+      <tr><td style="padding:8px 16px;font-weight:600;">温暖感</td><td style="padding:8px 16px;">⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐⭐⭐</td><td style="padding:8px 16px;">⭐⭐</td><td style="padding:8px 16px;">⭐⭐⭐⭐</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:24px;">
+    🏆 <strong>推荐组合策略：</strong><br>
+    <strong>App 图标</strong> → <span style="color:var(--orange);">2B 橘底白标</span>（中文用户一眼认出）<br>
+    <strong>品牌图形标</strong> → <span style="color:var(--orange);">1A 取景框引导线</span>（国际化通用符号）<br>
+    <strong>完整品牌标</strong> → <span style="color:var(--orange);">4A 横向组合标</span>（网站/公众号/名片）<br>
+    <strong>国际版</strong> → <span style="color:var(--orange);">3A dp 字母标</span>（GuidePic 海外独立品牌）
+  </p>
+</div>
+
+</div>
+</body>
+</html>

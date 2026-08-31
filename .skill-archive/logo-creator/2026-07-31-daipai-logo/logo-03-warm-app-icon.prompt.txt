@@ -1,0 +1,2 @@
+Prompt (1024x1024):
+App icon design: Warm orange (#F97316) rounded square background. In the center, a white circular viewfinder ring with a dashed inner ring. Inside, a trail of three small gradient dots leading to a larger white dot with a tiny crosshair. Below the viewfinder, the Chinese text '带拍' in small white rounded sans-serif font. Friendly, warm, modern. Like a photography app from a friend. Rounded corners on the outer square. No gradients, flat design.

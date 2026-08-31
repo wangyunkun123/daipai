@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>带拍 Logo 设计方案</title>
+<style>
+  :root {
+    --orange: #F97316;
+    --orange-light: #FB923C;
+    --orange-deep: #EA580C;
+    --cream: #FFF7ED;
+    --cream2: #FFEDD5;
+    --dark: #1C1917;
+    --grey: #78716C;
+    --grey-light: #D6D3D1;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--cream);
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+    color: var(--dark);
+    padding: 40px 20px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+  .header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--orange-deep), var(--orange-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: var(--grey);
+    font-size: 1.05rem;
+  }
+
+  .concepts {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .concept-card {
+    background: white;
+    border-radius: 24px;
+    padding: 48px 40px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04);
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 40px;
+    align-items: center;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  .concept-card:hover {
+    box-shadow: 0 2px 8px rgba(249,115,22,0.15), 0 8px 32px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+
+  .logo-preview {
+    width: 240px;
+    height: 240px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .logo-preview.light { background: var(--cream2); }
+  .logo-preview.dark  { background: var(--dark); }
+  .logo-preview.white { background: #fff; border: 1px solid #f0f0f0; }
+
+  .badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .badge.app-icon { background: var(--dark); color: #fff; }
+  .badge.wordmark { background: var(--orange-light); color: #fff; }
+
+  .info h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .info .tagline {
+    color: var(--orange);
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+  .info .desc {
+    color: var(--grey);
+    line-height: 1.7;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+  }
+  .info .use-case {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .info .use-case span {
+    font-size: 0.75rem;
+    background: var(--cream2);
+    color: var(--orange-deep);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+
+  .section-title {
+    text-align: center;
+    color: var(--grey);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 20px 0 10px;
+  }
+
+  .recommendation {
+    max-width: 900px;
+    margin: 60px auto 0;
+    background: white;
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04);
+  }
+  .recommendation h2 {
+    font-size: 1.3rem;
+    margin-bottom: 16px;
+  }
+  .recommendation table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .recommendation th, .recommendation td {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+  .recommendation th {
+    color: var(--grey);
+    font-weight: 500;
+    border-bottom: 1px solid var(--grey-light);
+  }
+  .recommendation td {
+    border-bottom: 1px solid #f5f5f4;
+  }
+  .star { color: var(--orange); }
+  .star-empty { color: var(--grey-light); }
+
+  @media (max-width: 640px) {
+    .concept-card {
+      grid-template-columns: 1fr;
+      padding: 32px 24px;
+      gap: 24px;
+    }
+    .logo-preview {
+      width: 180px;
+      height: 180px;
+      margin: 0 auto;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>带拍 Logo 设计方案</h1>
+  <p>5 套方案 · 暖橘色 × 取景框 × 友好引导</p>
+</div>
+
+<div class="concepts">
+
+  <!-- ====== 方案 A: 取景框「带」字标 ====== -->
+  <div class="concept-card">
+    <div class="logo-preview light">
+      <span class="badge app-icon">App 图标</span>
+      <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+        <!-- Rounded rect bg -->
+        <rect x="10" y="10" width="140" height="140" rx="36" fill="#F97316"/>
+        <!-- Viewfinder ring -->
+        <circle cx="80" cy="72" r="42" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="80" cy="72" r="36" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="12 8" opacity="0.6"/>
+        <!-- Center dot -->
+        <circle cx="80" cy="72" r="5" fill="#fff"/>
+        <!-- 带 character simplified -->
+        <text x="80" y="140" text-anchor="middle" fill="#fff" font-size="22" font-weight="700" font-family="PingFang SC, sans-serif">带拍</text>
+      </svg>
+    </div>
+    <div class="info">
+      <h2>方案 A · 取景框「带」字标</h2>
+      <div class="tagline">最直接 · App 图标首选</div>
+      <div class="desc">
+        暖橘色圆角底 + 白色取景框圆环 + 底部"带拍"文字。取景框内虚线暗示"引导/对焦"，中心实心点代表"我带你去的位置"。
+        一眼认出是拍照相关的产品，橘底白字在手机桌面辨识度极高。
+      </div>
+      <div class="use-case">
+        <span>App 图标</span><span>小程序图标</span><span>网站 favicon</span><span>社交媒体头像</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 方案 B: 引导线 + 取景框 ====== -->
+  <div class="concept-card">
+    <div class="logo-preview white">
+      <span class="badge app-icon">App 图标</span>
+      <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+        <!-- Rounded square viewfinder -->
+        <rect x="22" y="22" width="116" height="116" rx="28" fill="none" stroke="#F97316" stroke-width="5"/>
+        <!-- Corner accents -->
+        <path d="M22 50 L22 22 L50 22" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+        <path d="M110 22 L138 22 L138 50" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round" opacity="0.4"/>
+        <path d="M22 110 L22 138 L50 138" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round" opacity="0.4"/>
+        <path d="M110 138 L138 138 L138 110" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round" opacity="0.4"/>
+        <!-- Guide dot + trail -->
+        <circle cx="66" cy="66" r="7" fill="#F97316" opacity="0.3"/>
+        <circle cx="74" cy="74" r="6" fill="#F97316" opacity="0.45"/>
+        <circle cx="82" cy="82" r="5" fill="#F97316" opacity="0.7"/>
+        <circle cx="90" cy="90" r="8" fill="#F97316"/>
+        <!-- Tiny guiding hand gesture -->
+        <path d="M100 78 Q108 70 104 62" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="100" cy="78" r="2.5" fill="#F97316"/>
+      </svg>
+    </div>
+    <div class="info">
+      <h2>方案 B · 引导线 + 取景框</h2>
+      <div class="tagline">最优雅 · 品牌图形标</div>
+      <div class="desc">
+        圆角取景框为底，框内用渐变大小的圆点形成"从远到近"的引导轨迹，最终到达一个实心大圆点——「我带你去最佳机位」。
+        左上角重描边、其余三角淡化，暗示"我在关注这个角落"。极简、抽象、有叙事感。
+      </div>
+      <div class="use-case">
+        <span>App 图标</span><span>品牌图形标</span><span>启动页</span><span>水印</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 方案 C: 行走者 + 取景框 ====== -->
+  <div class="concept-card">
+    <div class="logo-preview light">
+      <span class="badge app-icon">App 图标</span>
+      <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+        <!-- Viewfinder outer -->
+        <rect x="16" y="24" width="128" height="100" rx="20" fill="none" stroke="#F97316" stroke-width="4.5"/>
+        <!-- Person walking (simple geometry) -->
+        <!-- Head -->
+        <circle cx="62" cy="50" r="10" fill="#F97316"/>
+        <!-- Body -->
+        <line x1="62" y1="60" x2="62" y2="88" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+        <!-- Arms (guiding gesture) -->
+        <line x1="62" y1="68" x2="48" y2="78" stroke="#F97316" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="62" y1="68" x2="78" y2="60" stroke="#F97316" stroke-width="3.5" stroke-linecap="round"/>
+        <!-- Legs (walking) -->
+        <line x1="62" y1="88" x2="50" y2="108" stroke="#F97316" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="62" y1="88" x2="76" y2="105" stroke="#F97316" stroke-width="3.5" stroke-linecap="round"/>
+        <!-- Dashed guide arrow -->
+        <line x1="88" y1="56" x2="120" y2="44" stroke="#F97316" stroke-width="2.5" stroke-dasharray="4 3" stroke-linecap="round"/>
+        <!-- Position marker -->
+        <circle cx="130" cy="40" r="8" fill="none" stroke="#F97316" stroke-width="3"/>
+        <circle cx="130" cy="40" r="3" fill="#F97316"/>
+      </svg>
+    </div>
+    <div class="info">
+      <h2>方案 C · 行走者 + 取景框</h2>
+      <div class="tagline">最叙事 · 品牌故事标</div>
+      <div class="desc">
+        取景框内一个行走的小人，一手向前指引，虚线箭头连接到一个对焦环标记——完整讲述「我带你去找最佳机位」的故事。
+        形象友好、有温度，APP 启动页或引导页展开动画效果极佳。
+      </div>
+      <div class="use-case">
+        <span>品牌故事标</span><span>启动页动画</span><span>宣传物料</span><span>公众号头像</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 方案 D: DP 字母标 (国际版) ====== -->
+  <div class="concept-card">
+    <div class="logo-preview dark">
+      <span class="badge wordmark">GuidePic 国际版</span>
+      <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+        <!-- Lens/shutter shape -->
+        <circle cx="80" cy="65" r="42" fill="none" stroke="#FB923C" stroke-width="3"/>
+        <!-- Inner ring segments -->
+        <circle cx="80" cy="65" r="30" fill="none" stroke="#F97316" stroke-width="2" stroke-dasharray="8 14" opacity="0.5"/>
+        <!-- dp letters merged with lens -->
+        <text x="63" y="85" fill="#FB923C" font-size="52" font-weight="800" font-family="SF Pro Display, system-ui, sans-serif" letter-spacing="-2">dp</text>
+        <!-- Viewfinder corner -->
+        <path d="M92 65 L118 65 L118 91" fill="none" stroke="#F97316" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+        <!-- Guide dot -->
+        <circle cx="118" cy="91" r="4" fill="#FB923C"/>
+      </svg>
+    </div>
+    <div class="info">
+      <h2>方案 D · DP 字母标 (GuidePic 国际版)</h2>
+      <div class="tagline">最国际化 · 海外品牌</div>
+      <div class="desc">
+        深色底上的"dp"字母标，融入镜头环和取景框角标元素。橙色渐变保持温暖感，深色底适配海外科技产品调性。
+        "dp"既是 Daipai 缩写，也是 GuidePic 的视觉锚点，简洁、好记、跨文化。
+      </div>
+      <div class="use-case">
+        <span>GuidePic App</span><span>海外官网</span><span>英文社交媒体</span><span>技术文档</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 方案 E: 暖橘「带拍」纯文字标 ====== -->
+  <div class="concept-card">
+    <div class="logo-preview white">
+      <span class="badge wordmark">文字标</span>
+      <svg width="220" height="100" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+        <!-- Viewfinder ring as the 'kou' radical -->
+        <rect x="67" y="20" width="18" height="18" rx="5" fill="none" stroke="#F97316" stroke-width="2.5"/>
+        <circle cx="76" cy="29" r="2.5" fill="#F97316"/>
+        <!-- 带 character (simplified: the kou is replaced by viewfinder above) -->
+        <text x="46" y="70" fill="#F97316" font-size="52" font-weight="700" font-family="PingFang SC, Noto Sans SC, sans-serif" letter-spacing="-1">带</text>
+        <text x="100" y="70" fill="#1C1917" font-size="52" font-weight="700" font-family="PingFang SC, Noto Sans SC, sans-serif" letter-spacing="-1">拍</text>
+        <!-- Subtle tagline -->
+        <text x="48" y="90" fill="#78716C" font-size="11" font-weight="500" font-family="PingFang SC, sans-serif" letter-spacing="2">AI 拍照灵感指南</text>
+      </svg>
+    </div>
+    <div class="info">
+      <h2>方案 E · 暖橘「带拍」纯文字标</h2>
+      <div class="tagline">最实用 · 日常品牌标</div>
+      <div class="desc">
+        圆润无衬线中文字体，"带"字用暖橘色突出品牌色，"拍"字深灰保持稳重。"带"的"口"部首替换为取景框方环+对焦点，
+        巧妙融合文字与图形。下方配"AI 拍照灵感指南"小字。适合页面 Header、公众号、宣传物料。
+      </div>
+      <div class="use-case">
+        <span>网站 Header</span><span>公众号</span><span>海报</span><span>名片</span><span>PPT</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Comparison table -->
+<div class="recommendation">
+  <h2>📊 方案对比</h2>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>A 取景框字标</th>
+        <th>B 引导线标</th>
+        <th>C 行走者标</th>
+        <th>D DP 字母标</th>
+        <th>E 纯文字标</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>App 图标辨识度</td>
+        <td><span class="star">★★★★★</span></td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★★</span><span class="star-empty">★★</span></td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★</span><span class="star-empty">★★★</span></td>
+      </tr>
+      <tr>
+        <td>品牌故事传达</td>
+        <td><span class="star">★★★</span><span class="star-empty">★★</span></td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★★★★</span></td>
+        <td><span class="star">★★</span><span class="star-empty">★★★</span></td>
+        <td><span class="star">★★★</span><span class="star-empty">★★</span></td>
+      </tr>
+      <tr>
+        <td>国际化适用</td>
+        <td><span class="star">★★</span><span class="star-empty">★★★</span></td>
+        <td><span class="star">★★★★★</span></td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★★★★</span></td>
+        <td><span class="star">★</span><span class="star-empty">★★★★</span></td>
+      </tr>
+      <tr>
+        <td>多场景适配</td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★★★★</span></td>
+        <td><span class="star">★★★</span><span class="star-empty">★★</span></td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+      </tr>
+      <tr>
+        <td>记忆度</td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★★★★</span></td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★★★</span><span class="star-empty">★</span></td>
+        <td><span class="star">★★★</span><span class="star-empty">★★</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin-top: 20px; color: var(--grey); font-size: 0.9rem; line-height: 1.7;">
+    🏆 <strong>推荐首选：方案 B（引导线 + 取景框）</strong>—— 抽象但有叙事，App 图标、品牌标、国际化三端通吃。<br>
+    🥈 <strong>推荐搭配：方案 A（取景框字标）</strong>—— 作为 App 图标，中文用户一眼识别"带拍"品牌。<br>
+    💡 <strong>建议策略：A 做国内 App 图标 / B 做品牌图形标 / D 做国际版 GuidePic 图标。</strong>
+  </p>
+</div>
+
+</body>
+</html>

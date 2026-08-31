@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>带拍 GuidePic · Logo v5 — dp 双眼 · 丰富层次</title>
+<style>
+  :root {
+    --orange: #F97316;
+    --orange-light: #FB923C;
+    --orange-soft: #FED7AA;
+    --cream: #FFF7ED;
+    --dark: #1C1917;
+    --grey: #78716C;
+    --bg: #FAFAF9;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:-apple-system,"SF Pro Text","PingFang SC","Noto Sans SC",sans-serif;color:var(--dark);}
+
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 24px 80px;}
+
+  .hero{text-align:center;margin-bottom:48px;}
+  .hero h1{font-size:2.4rem;font-weight:800;letter-spacing:-0.5px;
+    background:linear-gradient(135deg,#EA580C,#F97316,#FB923C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero .lead{color:var(--grey);font-size:1rem;margin-top:8px;max-width:600px;margin-inline:auto;line-height:1.6;}
+  .hero .tags{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+  .hero .tags span{font-size:.7rem;padding:4px 12px;border-radius:16px;font-weight:600;background:var(--orange-soft);color:#C2410C;}
+
+  .section{margin-bottom:72px;}
+  .section h2{font-size:1.2rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px;}
+  .section .sub{color:var(--grey);font-size:.82rem;margin-bottom:24px;line-height:1.6;max-width:700px;}
+
+  .showcase{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:24px;}
+
+  .card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.03);transition:all .25s;}
+  .card:hover{box-shadow:0 2px 8px rgba(249,115,22,.12),0 8px 28px rgba(0,0,0,.06);transform:translateY(-2px);}
+
+  .stage{min-height:260px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:20px;}
+
+  .card-body{padding:16px 20px 20px;}
+  .card-body .num{font-size:.65rem;font-weight:800;color:var(--orange);margin-bottom:4px;letter-spacing:1px;}
+  .card-body h3{font-size:.95rem;font-weight:700;margin-bottom:6px;}
+  .card-body .meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+  .card-body .meta span{font-size:.64rem;font-weight:700;padding:3px 8px;border-radius:8px;}
+  .meta.a{background:#FEF3C7;color:#92400E;}
+  .meta.b{background:#E0E7FF;color:#3730A3;}
+  .meta.c{background:#D1FAE5;color:#065F46;}
+  .meta.d{background:#FEE2E2;color:#991B1B;}
+  .meta.e{background:#EDE9FE;color:#5B21B6;}
+  .card-body p{font-size:.76rem;color:var(--grey);line-height:1.55;}
+
+  .wide{grid-column:1/-1;}
+
+  .compare{overflow-x:auto;}
+  .compare table{width:100%;border-collapse:collapse;font-size:.8rem;}
+  .compare th{text-align:left;padding:10px 14px;font-size:.7rem;color:var(--grey);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #E7E5E4;}
+  .compare td{padding:10px 14px;border-bottom:1px solid #F5F5F4;}
+  .star{color:var(--orange);}
+  .half{color:#D4A574;}
+
+  .rec{background:linear-gradient(135deg,#FFF7ED,#FED7AA);border-radius:20px;padding:28px 32px;margin-top:48px;}
+  .rec h3{font-size:1rem;font-weight:700;margin-bottom:8px;}
+  .rec p{font-size:.82rem;color:var(--grey);line-height:1.7;}
+
+  @media(max-width:640px){
+    .showcase{grid-template-columns:1fr;}
+    .hero h1{font-size:1.8rem;}
+  }
+
+  /* SVG eye animation hint */
+  @keyframes gentlePulse {
+    0%,100%{opacity:1;}
+    50%{opacity:.85;}
+  }
+
+  /* Gradient definitions */
+  .grad-orange{background:linear-gradient(135deg,#EA580C,#F97316,#FB923C);}
+  .grad-sunset{background:linear-gradient(135deg,#F97316,#F59E0B,#FCD34D);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>带拍 GuidePic · Logo v5</h1>
+  <p class="lead">核心概念不变：<strong>dp = 一双眼睛</strong><br>但不再极简——走向丰富、层次、质感、故事感</p>
+  <div class="tags">
+    <span>暖橘 #F97316</span>
+    <span>dp 双眼</span>
+    <span>丰富层次</span>
+    <span>拒绝极简</span>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 1：光影眼眸 ═══════════ -->
+<div class="section">
+  <h2>1. 光影眼眸 <span style="font-size:.68rem;background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:10px;">主打</span></h2>
+  <p class="sub">眼睛不只是轮廓——瞳孔有层次、有高光、有虹膜纹理。d 和 p 的圆不是简单线条，而是有光影深度的"真眼睛"。渐变色+多层圆环+高光点，让 Logo 有「摄影的光影感」。</p>
+  <div class="showcase">
+    <!-- 1A: 多层虹膜 dp 眼 -->
+    <div class="card">
+      <div class="stage" style="background:var(--cream);">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <defs>
+            <radialGradient id="iris1" cx="45%" cy="45%">
+              <stop offset="0%" stop-color="#1C1917"/>
+              <stop offset="40%" stop-color="#2D2520"/>
+              <stop offset="70%" stop-color="#5C3A1E"/>
+              <stop offset="100%" stop-color="#F97316"/>
+            </radialGradient>
+            <radialGradient id="iris2" cx="45%" cy="45%">
+              <stop offset="0%" stop-color="#1C1917"/>
+              <stop offset="40%" stop-color="#2D2520"/>
+              <stop offset="70%" stop-color="#5C3A1E"/>
+              <stop offset="100%" stop-color="#F97316"/>
+            </radialGradient>
+          </defs>
+          <!-- Left eye = d -->
+          <ellipse cx="90" cy="120" rx="38" ry="34" fill="#FFF7ED" stroke="#F97316" stroke-width="5"/>
+          <!-- Iris -->
+          <circle cx="90" cy="120" r="18" fill="url(#iris1)"/>
+          <!-- Pupil -->
+          <circle cx="90" cy="120" r="7" fill="#1C1917"/>
+          <!-- Inner iris ring -->
+          <circle cx="90" cy="120" r="12" fill="none" stroke="rgba(249,115,22,.25)" stroke-width="2"/>
+          <!-- Highlight -->
+          <ellipse cx="82" cy="112" rx="5" ry="4" fill="white" opacity=".9"/>
+          <circle cx="96" cy="126" r="2.5" fill="white" opacity=".4"/>
+          <!-- d stem = brow/eyelid fold -->
+          <path d="M62 80 Q90 64, 128 78" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <line x1="128" y1="78" x2="128" y2="118" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+
+          <!-- Right eye = p -->
+          <ellipse cx="170" cy="120" rx="38" ry="34" fill="#FFF7ED" stroke="#F97316" stroke-width="5"/>
+          <circle cx="170" cy="120" r="18" fill="url(#iris2)"/>
+          <circle cx="170" cy="120" r="7" fill="#1C1917"/>
+          <circle cx="170" cy="120" r="12" fill="none" stroke="rgba(249,115,22,.25)" stroke-width="2"/>
+          <ellipse cx="162" cy="112" rx="5" ry="4" fill="white" opacity=".9"/>
+          <circle cx="176" cy="126" r="2.5" fill="white" opacity=".4"/>
+          <!-- p stem = brow + descender -->
+          <path d="M142 78 Q170 64, 198 82" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <line x1="132" y1="78" x2="132" y2="170" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+
+          <!-- Bridge hint between eyes -->
+          <path d="M128 120 Q150 112, 132 120" fill="none" stroke="#F97316" stroke-width="2" opacity=".3"/>
+
+          <!-- Tiny catchlight variations make eyes feel alive -->
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">1A</div>
+        <h3>多层虹膜 dp 眼</h3>
+        <div class="meta"><span class="meta a">光影层次</span><span class="meta b">虹膜纹理</span><span class="meta d">主打</span></div>
+        <p>瞳孔从深黑→棕褐→暖橘渐变。高光点+第二反光让眼睛「活」起来。d的竖笔是眉弓，p的竖笔自然垂降。眼睛里有内容，不是两个空圈。</p>
+      </div>
+    </div>
+
+    <!-- 1B: 暗色虹膜版 -->
+    <div class="card">
+      <div class="stage" style="background:var(--dark);">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <defs>
+            <radialGradient id="iris1b" cx="45%" cy="45%">
+              <stop offset="0%" stop-color="#FB923C"/>
+              <stop offset="35%" stop-color="#F97316"/>
+              <stop offset="70%" stop-color="#B45309"/>
+              <stop offset="100%" stop-color="#1C1917"/>
+            </radialGradient>
+          </defs>
+          <!-- Left eye -->
+          <ellipse cx="90" cy="120" rx="38" ry="34" fill="none" stroke="#FB923C" stroke-width="5"/>
+          <ellipse cx="90" cy="120" rx="36" ry="32" fill="#1C1917"/>
+          <circle cx="90" cy="120" r="18" fill="url(#iris1b)"/>
+          <circle cx="90" cy="120" r="7" fill="#1C1917"/>
+          <circle cx="90" cy="120" r="12" fill="none" stroke="rgba(251,146,60,.35)" stroke-width="2"/>
+          <ellipse cx="82" cy="112" rx="5" ry="4" fill="white" opacity=".85"/>
+          <circle cx="96" cy="126" r="2" fill="white" opacity=".35"/>
+          <path d="M62 80 Q90 64, 128 78" fill="none" stroke="#FB923C" stroke-width="4.5" stroke-linecap="round"/>
+          <line x1="128" y1="78" x2="128" y2="118" stroke="#FB923C" stroke-width="4.5" stroke-linecap="round"/>
+
+          <!-- Right eye -->
+          <ellipse cx="170" cy="120" rx="38" ry="34" fill="none" stroke="#FB923C" stroke-width="5"/>
+          <ellipse cx="170" cy="120" rx="36" ry="32" fill="#1C1917"/>
+          <circle cx="170" cy="120" r="18" fill="url(#iris1b)"/>
+          <circle cx="170" cy="120" r="7" fill="#1C1917"/>
+          <circle cx="170" cy="120" r="12" fill="none" stroke="rgba(251,146,60,.35)" stroke-width="2"/>
+          <ellipse cx="162" cy="112" rx="5" ry="4" fill="white" opacity=".85"/>
+          <circle cx="176" cy="126" r="2" fill="white" opacity=".35"/>
+          <path d="M142 78 Q170 64, 198 82" fill="none" stroke="#FB923C" stroke-width="4.5" stroke-linecap="round"/>
+          <line x1="132" y1="78" x2="132" y2="170" stroke="#FB923C" stroke-width="4.5" stroke-linecap="round"/>
+
+          <!-- Catchlights in eye whites -->
+          <ellipse cx="86" cy="130" rx="4" ry="2" fill="white" opacity=".1"/>
+          <ellipse cx="166" cy="130" rx="4" ry="2" fill="white" opacity=".1"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">1B</div>
+        <h3>暗色逆虹膜</h3>
+        <div class="meta"><span class="meta d">暗底</span><span class="meta a">逆光感</span><span class="meta b">高端</span></div>
+        <p>深灰底+暖橘虹膜逆光。虹膜从亮橘渐变到深棕再融入黑底。摄影暗房或逆光人像的通感。</p>
+      </div>
+    </div>
+
+    <!-- 1C: 金橘光晕版 -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <defs>
+            <radialGradient id="glow1" cx="50%" cy="50%">
+              <stop offset="0%" stop-color="white"/>
+              <stop offset="30%" stop-color="#FED7AA"/>
+              <stop offset="60%" stop-color="#F97316"/>
+              <stop offset="100%" stop-color="#EA580C" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="softGlow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Ambient glow behind eyes -->
+          <ellipse cx="95" cy="120" rx="60" ry="55" fill="url(#glow1)" opacity=".15"/>
+          <ellipse cx="170" cy="120" rx="60" ry="55" fill="url(#glow1)" opacity=".15"/>
+
+          <!-- Left eye -->
+          <ellipse cx="90" cy="120" rx="36" ry="32" fill="white" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="90" cy="120" r="16" fill="#F97316"/>
+          <circle cx="90" cy="120" r="6" fill="#1C1917"/>
+          <ellipse cx="84" cy="112" rx="4.5" ry="3.5" fill="white" opacity=".9"/>
+          <!-- Eyelash hints -->
+          <path d="M56 112 Q62 108, 66 112" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+          <path d="M58 122 Q64 118, 68 122" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+          <!-- d stem -->
+          <path d="M74 74 Q96 64, 126 76" fill="none" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+          <line x1="126" y1="76" x2="126" y2="114" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Right eye -->
+          <ellipse cx="170" cy="120" rx="36" ry="32" fill="white" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="170" cy="120" r="16" fill="#F97316"/>
+          <circle cx="170" cy="120" r="6" fill="#1C1917"/>
+          <ellipse cx="164" cy="112" rx="4.5" ry="3.5" fill="white" opacity=".9"/>
+          <path d="M136 112 Q142 108, 146 112" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+          <path d="M138 122 Q144 118, 148 122" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+          <!-- p stem -->
+          <path d="M134 74 Q156 64, 180 76" fill="none" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+          <line x1="134" y1="76" x2="134" y2="168" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">1C</div>
+        <h3>金橘光晕 dp 眼</h3>
+        <div class="meta"><span class="meta a">暖光</span><span class="meta b">睫毛细节</span><span class="meta c">柔焦</span></div>
+        <p>每只眼加了上下睫毛暗示+橘色柔光外晕。白底上像阳光透过眼皮的温暖。细节多但不乱。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 2：徽章叙事 ═══════════ -->
+<div class="section">
+  <h2>2. 徽章叙事 <span style="font-size:.68rem;background:#E0E7FF;color:#3730A3;padding:3px 10px;border-radius:10px;">故事感</span></h2>
+  <p class="sub">dp 双眼不只是两个圈——把它嵌入一个有故事的结构里。圆形徽章、环绕文字、背景纹理。像一枚「摄影发现者」的勋章。有仪式感，有分量。</p>
+  <div class="showcase">
+    <!-- 2A: 徽章 dp -->
+    <div class="card">
+      <div class="stage" style="background:var(--cream);">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <!-- Outer ring -->
+          <circle cx="130" cy="130" r="100" fill="none" stroke="#F97316" stroke-width="3"/>
+          <circle cx="130" cy="130" r="94" fill="none" stroke="#FED7AA" stroke-width="1.5"/>
+          <!-- Inner ring -->
+          <circle cx="130" cy="130" r="82" fill="none" stroke="#F97316" stroke-width="1.5" opacity=".4"/>
+
+          <!-- dp eyes centered -->
+          <ellipse cx="98" cy="120" rx="30" ry="27" fill="white" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="98" cy="120" r="14" fill="none" stroke="#F97316" stroke-width="2.5"/>
+          <circle cx="98" cy="120" r="5.5" fill="#1C1917"/>
+          <ellipse cx="93" cy="114" rx="3.5" ry="2.5" fill="white"/>
+          <line x1="128" y1="82" x2="128" y2="118" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <ellipse cx="162" cy="120" rx="30" ry="27" fill="white" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="162" cy="120" r="14" fill="none" stroke="#F97316" stroke-width="2.5"/>
+          <circle cx="162" cy="120" r="5.5" fill="#1C1917"/>
+          <ellipse cx="157" cy="114" rx="3.5" ry="2.5" fill="white"/>
+          <line x1="132" y1="84" x2="132" y2="160" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Bridge -->
+          <path d="M128 120 Q145 112, 132 120" fill="none" stroke="#F97316" stroke-width="1.5" opacity=".4"/>
+
+          <!-- Arc text top -->
+          <text font-family="system-ui,sans-serif" font-size="13" fill="#1C1917" font-weight="700" letter-spacing="3">
+            <textPath href="#topArc">带拍 · GUIDEPIC</textPath>
+          </text>
+          <path id="topArc" d="M50 82 A80 80 0 0 1 210 82" fill="none"/>
+
+          <!-- Arc text bottom -->
+          <text font-family="system-ui,sans-serif" font-size="9" fill="#78716C" font-weight="600" letter-spacing="2">
+            <textPath href="#bottomArc">DISCOVER · CAPTURE</textPath>
+          </text>
+          <path id="bottomArc" d="M55 178 A80 80 0 0 0 205 178" fill="none"/>
+
+          <!-- Small stars/dots on ring -->
+          <circle cx="130" cy="32" r="3" fill="#F97316"/>
+          <circle cx="130" cy="228" r="3" fill="#F97316"/>
+          <circle cx="32" cy="130" r="2" fill="#FED7AA"/>
+          <circle cx="228" cy="130" r="2" fill="#FED7AA"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">2A</div>
+        <h3>徽章式 dp 眼</h3>
+        <div class="meta"><span class="meta a">仪式感</span><span class="meta b">环绕文字</span><span class="meta e">勋章风</span></div>
+        <p>双圆环围绕 dp 双眼，上下弧形文字「带拍·GUIDEPIC」「DISCOVER·CAPTURE」。像一枚授予摄影发现者的徽章，有仪式重量。</p>
+      </div>
+    </div>
+
+    <!-- 2B: 窗中眼 -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <!-- A window/porthole looking into the eyes -->
+          <!-- Outer architectural frame -->
+          <circle cx="130" cy="130" r="105" fill="#FFF7ED" stroke="#1C1917" stroke-width="3"/>
+          <circle cx="130" cy="130" r="98" fill="none" stroke="#F97316" stroke-width="1" opacity=".5"/>
+
+          <!-- Inner shadow rim -->
+          <circle cx="130" cy="130" r="90" fill="none" stroke="#1C1917" stroke-width="1.5" opacity=".15"/>
+
+          <!-- Division line through center - like looking through binoculars -->
+          <line x1="130" y1="50" x2="130" y2="210" stroke="#E7E5E4" stroke-width="1.5"/>
+
+          <!-- Left eye through left lens -->
+          <ellipse cx="98" cy="122" rx="26" ry="24" fill="white" stroke="#F97316" stroke-width="4"/>
+          <circle cx="98" cy="122" r="12" fill="none" stroke="#F97316" stroke-width="2"/>
+          <circle cx="98" cy="122" r="4.5" fill="#1C1917"/>
+          <ellipse cx="93" cy="116" rx="3" ry="2" fill="white"/>
+          <!-- d stem -->
+          <line x1="124" y1="90" x2="124" y2="120" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Right eye through right lens -->
+          <ellipse cx="162" cy="122" rx="26" ry="24" fill="white" stroke="#F97316" stroke-width="4"/>
+          <circle cx="162" cy="122" r="12" fill="none" stroke="#F97316" stroke-width="2"/>
+          <circle cx="162" cy="122" r="4.5" fill="#1C1917"/>
+          <ellipse cx="157" cy="116" rx="3" ry="2" fill="white"/>
+          <!-- p stem -->
+          <line x1="136" y1="92" x2="136" y2="156" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Decorative screws/rivets on frame -->
+          <circle cx="130" cy="28" r="3" fill="#1C1917"/>
+          <circle cx="130" cy="232" r="3" fill="#1C1917"/>
+          <circle cx="28" cy="130" r="3" fill="#1C1917"/>
+          <circle cx="232" cy="130" r="3" fill="#1C1917"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">2B</div>
+        <h3>双筒窗眼</h3>
+        <div class="meta"><span class="meta a">舷窗隐喻</span><span class="meta b">探索感</span><span class="meta d">工业风</span></div>
+        <p>一个圆形舷窗，左右两半各一只眼。像通过望远镜/取景器观察世界——但你看到的不是镜头，是一双回望你的眼睛。铆钉细节增加工艺感。</p>
+      </div>
+    </div>
+
+    <!-- 2C: 中式印章 -->
+    <div class="card">
+      <div class="stage" style="background:var(--cream);">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <!-- Chinese seal / stamp aesthetic -->
+          <!-- Rounded square outer frame with textured edge -->
+          <rect x="30" y="30" width="200" height="200" rx="16" fill="white" stroke="#C2410C" stroke-width="5"/>
+          <rect x="38" y="38" width="184" height="184" rx="10" fill="none" stroke="#C2410C" stroke-width="1.5" opacity=".5"/>
+
+          <!-- dp eyes as the seal's core -->
+          <ellipse cx="92" cy="118" rx="34" ry="30" fill="none" stroke="#C2410C" stroke-width="5"/>
+          <circle cx="92" cy="118" r="14" fill="none" stroke="#C2410C" stroke-width="2.5"/>
+          <circle cx="92" cy="118" r="5.5" fill="#C2410C"/>
+          <ellipse cx="87" cy="112" rx="3" ry="2" fill="white"/>
+          <line x1="126" y1="74" x2="126" y2="116" stroke="#C2410C" stroke-width="4.5" stroke-linecap="round"/>
+
+          <ellipse cx="168" cy="118" rx="34" ry="30" fill="none" stroke="#C2410C" stroke-width="5"/>
+          <circle cx="168" cy="118" r="14" fill="none" stroke="#C2410C" stroke-width="2.5"/>
+          <circle cx="168" cy="118" r="5.5" fill="#C2410C"/>
+          <ellipse cx="163" cy="112" rx="3" ry="2" fill="white"/>
+          <line x1="134" y1="76" x2="134" y2="168" stroke="#C2410C" stroke-width="4.5" stroke-linecap="round"/>
+
+          <!-- Bridge -->
+          <path d="M126 118 Q147 110, 134 118" fill="none" stroke="#C2410C" stroke-width="1.5" opacity=".4"/>
+
+          <!-- 「带拍」 in seal script style at bottom -->
+          <text x="130" y="195" font-family="system-ui,serif" font-size="26" font-weight="900" fill="#C2410C" text-anchor="middle" letter-spacing="8">带拍</text>
+          <text x="130" y="215" font-family="system-ui,sans-serif" font-size="9" font-weight="600" fill="#B45309" text-anchor="middle" letter-spacing="4">GUIDEPIC</text>
+
+          <!-- Subtle corner decorations -->
+          <circle cx="44" cy="44" r="3" fill="#C2410C"/>
+          <circle cx="216" cy="44" r="3" fill="#C2410C"/>
+          <circle cx="44" cy="216" r="3" fill="#C2410C"/>
+          <circle cx="216" cy="216" r="3" fill="#C2410C"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">2C</div>
+        <h3>中式印章 dp</h3>
+        <div class="meta"><span class="meta a">中国风</span><span class="meta d">朱砂色</span><span class="meta e">品牌感</span></div>
+        <p>圆角方框+朱砂橘红+四角点饰=中国传统印章的现代表达。dp 双眼在印心，下方「带拍」楷体。东方品牌的气质浓度拉满。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 3：构图叙事 ═══════════ -->
+<div class="section">
+  <h2>3. 构图叙事 <span style="font-size:.68rem;background:#D1FAE5;color:#065F46;padding:3px 10px;border-radius:10px;">场景化</span></h2>
+  <p class="sub">把 dp 眼睛放进一个场景里，不只是 Logo，是一个小世界。有前景、中景、背景的纵深关系。</p>
+  <div class="showcase">
+    <!-- 3A: 日出之眼 -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <!-- Scene: sunrise landscape, the eyes are in the sky -->
+          <!-- Sky gradient -->
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FED7AA"/>
+              <stop offset="40%" stop-color="#FFF7ED"/>
+              <stop offset="100%" stop-color="#FFFFFF"/>
+            </linearGradient>
+            <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#F97316"/>
+              <stop offset="100%" stop-color="#FCD34D"/>
+            </linearGradient>
+          </defs>
+          <rect width="260" height="260" fill="url(#sky)"/>
+
+          <!-- Sun/horizon -->
+          <ellipse cx="130" cy="180" rx="100" ry="30" fill="url(#sun)" opacity=".2"/>
+
+          <!-- Ground line -->
+          <path d="M0 185 Q65 175, 130 180 Q195 185, 260 178 L260 260 L0 260 Z" fill="#F97316" opacity=".08"/>
+
+          <!-- The dp eyes floating as the "sun/light source" -->
+          <!-- Left eye -->
+          <ellipse cx="90" cy="100" rx="36" ry="32" fill="white" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="90" cy="100" r="14" fill="none" stroke="#F97316" stroke-width="2"/>
+          <circle cx="90" cy="100" r="5" fill="#1C1917"/>
+          <ellipse cx="85" cy="94" rx="3.5" ry="2.5" fill="white"/>
+          <!-- d stem curves like a sun ray -->
+          <path d="M126 68 Q120 86, 126 98" fill="none" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Right eye -->
+          <ellipse cx="170" cy="100" rx="36" ry="32" fill="white" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="170" cy="100" r="14" fill="none" stroke="#F97316" stroke-width="2"/>
+          <circle cx="170" cy="100" r="5" fill="#1C1917"/>
+          <ellipse cx="165" cy="94" rx="3.5" ry="2.5" fill="white"/>
+          <!-- p stem curves down like a light beam -->
+          <path d="M134 70 Q130 88, 134 142" fill="none" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Light rays from the eyes downward - AI inspiration beaming to earth -->
+          <line x1="90" y1="130" x2="60" y2="195" stroke="#F97316" stroke-width="1" opacity=".2"/>
+          <line x1="90" y1="130" x2="80" y2="195" stroke="#F97316" stroke-width="1" opacity=".25"/>
+          <line x1="90" y1="130" x2="100" y2="195" stroke="#F97316" stroke-width="1" opacity=".15"/>
+          <line x1="170" y1="130" x2="150" y2="195" stroke="#F97316" stroke-width="1" opacity=".2"/>
+          <line x1="170" y1="130" x2="170" y2="195" stroke="#F97316" stroke-width="1" opacity=".25"/>
+          <line x1="170" y1="130" x2="190" y2="195" stroke="#F97316" stroke-width="1" opacity=".15"/>
+
+          <!-- Tiny figure silhouette on ground looking up -->
+          <ellipse cx="130" cy="192" rx="8" ry="3" fill="#1C1917" opacity=".2"/>
+          <circle cx="130" cy="182" r="3" fill="#1C1917" opacity=".2"/>
+
+          <!-- 带拍 text on ground -->
+          <text x="130" y="228" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="#1C1917" text-anchor="middle" letter-spacing="4" opacity=".5">带拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">3A</div>
+        <h3>日出 dp 眼</h3>
+        <div class="meta"><span class="meta a">场景叙事</span><span class="meta b">光影诗</span><span class="meta e">景观风</span></div>
+        <p>dp 双眼化作天边的光源，光芒洒向大地。地平线上有小小的人影抬头仰望。AI 灵感从天而降照亮拍照的人。有电影感。</p>
+      </div>
+    </div>
+
+    <!-- 3B: 深夜取景 -->
+    <div class="card">
+      <div class="stage" style="background:var(--dark);">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <rect width="260" height="260" fill="#1C1917"/>
+
+          <!-- Star dots scattered -->
+          <circle cx="40" cy="50" r="1" fill="white" opacity=".3"/>
+          <circle cx="200" cy="35" r="1" fill="white" opacity=".2"/>
+          <circle cx="230" cy="80" r="1" fill="white" opacity=".25"/>
+          <circle cx="20" cy="150" r="1" fill="white" opacity=".15"/>
+          <circle cx="245" cy="180" r="1" fill="white" opacity=".2"/>
+
+          <!-- dp eyes glowing in the dark -->
+          <!-- Glow -->
+          <ellipse cx="90" cy="115" rx="45" ry="40" fill="#F97316" opacity=".08"/>
+          <ellipse cx="170" cy="115" rx="45" ry="40" fill="#F97316" opacity=".08"/>
+
+          <!-- Left eye -->
+          <ellipse cx="90" cy="115" rx="34" ry="30" fill="#1C1917" stroke="#FB923C" stroke-width="4.5"/>
+          <circle cx="90" cy="115" r="14" fill="none" stroke="#FB923C" stroke-width="2"/>
+          <circle cx="90" cy="115" r="5.5" fill="#FB923C"/>
+          <ellipse cx="85" cy="109" rx="3" ry="2" fill="white" opacity=".7"/>
+          <!-- d stem -->
+          <line x1="124" y1="78" x2="124" y2="113" stroke="#FB923C" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Right eye -->
+          <ellipse cx="170" cy="115" rx="34" ry="30" fill="#1C1917" stroke="#FB923C" stroke-width="4.5"/>
+          <circle cx="170" cy="115" r="14" fill="none" stroke="#FB923C" stroke-width="2"/>
+          <circle cx="170" cy="115" r="5.5" fill="#FB923C"/>
+          <ellipse cx="165" cy="109" rx="3" ry="2" fill="white" opacity=".7"/>
+          <!-- p stem -->
+          <line x1="136" y1="80" x2="136" y2="158" stroke="#FB923C" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- 带拍 text below -->
+          <text x="130" y="210" font-family="system-ui,sans-serif" font-size="16" font-weight="700" fill="#FB923C" text-anchor="middle" letter-spacing="6" opacity=".8">带拍</text>
+          <text x="130" y="230" font-family="system-ui,sans-serif" font-size="9" font-weight="500" fill="#A8A29E" text-anchor="middle" letter-spacing="4">GUIDEPIC</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">3B</div>
+        <h3>暗夜 dp 眼</h3>
+        <div class="meta"><span class="meta d">暗色主题</span><span class="meta a">夜拍</span><span class="meta b">神秘感</span></div>
+        <p>深黑底色+暖橘眼睛在黑暗中发光。散落的星点制造夜空氛围。摄影是光的艺术——这双眼睛在黑暗中为你找到光。</p>
+      </div>
+    </div>
+
+    <!-- 3C: 园林窗格 -->
+    <div class="card">
+      <div class="stage" style="background:var(--cream);">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <!-- Chinese garden window lattice -->
+          <!-- Peach-shaped / stylized window frame -->
+          <defs>
+            <radialGradient id="windowGlow" cx="50%" cy="40%">
+              <stop offset="0%" stop-color="#FFF7ED"/>
+              <stop offset="100%" stop-color="#FED7AA"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Outer wall -->
+          <rect width="260" height="260" fill="#FFF7ED"/>
+
+          <!-- Stylized circular window/gate -->
+          <circle cx="130" cy="120" r="80" fill="#FFFFFF" stroke="#EA580C" stroke-width="5"/>
+          <circle cx="130" cy="120" r="72" fill="none" stroke="#F97316" stroke-width="1" opacity=".3"/>
+
+          <!-- dp eyes inside the window -->
+          <ellipse cx="95" cy="112" rx="28" ry="25" fill="none" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="95" cy="112" r="12" fill="none" stroke="#F97316" stroke-width="2"/>
+          <circle cx="95" cy="112" r="4.5" fill="#1C1917"/>
+          <ellipse cx="90" cy="106" rx="3" ry="2" fill="white"/>
+          <line x1="123" y1="78" x2="123" y2="110" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <ellipse cx="165" cy="112" rx="28" ry="25" fill="none" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="165" cy="112" r="12" fill="none" stroke="#F97316" stroke-width="2"/>
+          <circle cx="165" cy="112" r="4.5" fill="#1C1917"/>
+          <ellipse cx="160" cy="106" rx="3" ry="2" fill="white"/>
+          <line x1="137" y1="80" x2="137" y2="148" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <path d="M123 112 Q144 105, 137 112" fill="none" stroke="#F97316" stroke-width="1.5" opacity=".3"/>
+
+          <!-- Chinese lattice elements at top of window -->
+          <path d="M90 45 L130 60 L170 45" fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M60 65 L90 45" fill="none" stroke="#EA580C" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+          <path d="M200 65 L170 45" fill="none" stroke="#EA580C" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+
+          <!-- Bottom sill -->
+          <path d="M55 185 Q130 195, 205 185" fill="none" stroke="#EA580C" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- 带拍 on the sill -->
+          <text x="130" y="175" font-family="system-ui,serif" font-size="16" font-weight="800" fill="#C2410C" text-anchor="middle" letter-spacing="4">带·拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">3C</div>
+        <h3>园林漏窗眼</h3>
+        <div class="meta"><span class="meta a">东方意境</span><span class="meta e">漏窗</span><span class="meta b">框景</span></div>
+        <p>中国园林的漏窗（框景）+ dp 双眼。透过花窗看到一双眼睛在看你——你也在看它。框景就是摄影的东方源头。屋顶+窗台线条丰富场景。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 4：抽象表现 ═══════════ -->
+<div class="section">
+  <h2>4. 抽象表现 <span style="font-size:.68rem;background:#FEE2E2;color:#991B1B;padding:3px 10px;border-radius:10px;">艺术感</span></h2>
+  <p class="sub">不追求还原「眼睛」的生理结构，而是抓取「观察者目光」的抽象感受。色块、笔触、负空间构成。</p>
+  <div class="showcase">
+    <!-- 4A: 水性笔触 -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <defs>
+            <linearGradient id="wash1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#F97316" stop-opacity=".9"/>
+              <stop offset="50%" stop-color="#FB923C" stop-opacity=".6"/>
+              <stop offset="100%" stop-color="#FED7AA" stop-opacity=".2"/>
+            </linearGradient>
+            <linearGradient id="wash2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#F97316" stop-opacity=".9"/>
+              <stop offset="50%" stop-color="#FB923C" stop-opacity=".6"/>
+              <stop offset="100%" stop-color="#FED7AA" stop-opacity=".2"/>
+            </linearGradient>
+          </defs>
+          <!-- Watercolor-ish brush strokes -->
+          <!-- Left eye area - irregular oval -->
+          <ellipse cx="88" cy="110" rx="42" ry="38" fill="url(#wash1)" opacity=".25"/>
+          <ellipse cx="88" cy="110" rx="28" ry="24" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- Brush texture - slightly irregular -->
+          <path d="M62 102 Q70 92, 82 90 Q94 88, 102 96" fill="none" stroke="#EA580C" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+          <circle cx="88" cy="110" r="6" fill="#1C1917"/>
+          <!-- d stroke -->
+          <path d="M116 74 C114 86, 110 100, 116 110" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+
+          <!-- Right eye area -->
+          <ellipse cx="172" cy="110" rx="42" ry="38" fill="url(#wash2)" opacity=".25"/>
+          <ellipse cx="172" cy="110" rx="28" ry="24" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <path d="M146 102 Q154 92, 166 90 Q178 88, 186 96" fill="none" stroke="#EA580C" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+          <circle cx="172" cy="110" r="6" fill="#1C1917"/>
+          <!-- p stroke -->
+          <path d="M144 76 C142 88, 140 104, 144 148" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+
+          <!-- Splatter dots -->
+          <circle cx="56" cy="140" r="2.5" fill="#FB923C" opacity=".4"/>
+          <circle cx="200" cy="68" r="1.5" fill="#FB923C" opacity=".3"/>
+          <circle cx="210" cy="145" r="2" fill="#FB923C" opacity=".35"/>
+          <circle cx="48" cy="78" r="1.5" fill="#FB923C" opacity=".25"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">4A</div>
+        <h3>水彩笔触 dp 眼</h3>
+        <div class="meta"><span class="meta d">水彩</span><span class="meta e">艺术感</span><span class="meta a">有机</span></div>
+        <p>不规则椭圆眼眶+淡彩晕染+飞溅墨点。像一幅小型水彩画。手工感、艺术性、不可复制。品牌调性：有审美的摄影工具。</p>
+      </div>
+    </div>
+
+    <!-- 4B: 负空间构成 -->
+    <div class="card">
+      <div class="stage" style="background:var(--dark);">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <!-- Negative space construction -->
+          <!-- Large orange mass, eyes cut out as negative space -->
+          <defs>
+            <mask id="eyeCutout">
+              <rect width="260" height="260" fill="white"/>
+              <!-- Left eye cutout -->
+              <ellipse cx="88" cy="115" rx="32" ry="28" fill="black"/>
+              <!-- Right eye cutout -->
+              <ellipse cx="172" cy="115" rx="32" ry="28" fill="black"/>
+            </mask>
+          </defs>
+
+          <!-- Main color block -->
+          <rect width="260" height="260" fill="#1C1917"/>
+
+          <!-- The orange form with eye-shaped cutouts -->
+          <circle cx="130" cy="130" r="95" fill="#FB923C" mask="url(#eyeCutout)"/>
+
+          <!-- Subtle d and p strokes in negative space -->
+          <line x1="120" y1="72" x2="120" y2="112" stroke="#1C1917" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+          <line x1="140" y1="74" x2="140" y2="156" stroke="#1C1917" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+
+          <!-- Pupils as dark dots in negative space -->
+          <circle cx="88" cy="115" r="5" fill="#1C1917"/>
+          <circle cx="172" cy="115" r="5" fill="#1C1917"/>
+
+          <!-- Second smaller orange ring -->
+          <circle cx="130" cy="130" r="72" fill="none" stroke="#F97316" stroke-width="2" opacity=".3"/>
+
+          <!-- Label -->
+          <text x="130" y="210" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#FB923C" text-anchor="middle" letter-spacing="6">带拍</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">4B</div>
+        <h3>负空间 dp</h3>
+        <div class="meta"><span class="meta d">负空间</span><span class="meta b">构成主义</span><span class="meta e">强辨识</span></div>
+        <p>一个大块暖橘圆，挖空出两只眼睛。眼睛是「负形」，但你第一眼看到的就是眼睛。构成主义手法，像现代艺术海报。</p>
+      </div>
+    </div>
+
+    <!-- 4C: 日蚀之眼 -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <!-- Eclipse-style: overlapping partial circles creating an eye shape -->
+          <!-- Big left partial circle (sun) overlapping right partial circle to form eye -->
+          <!-- Actually: two overlapping circular forms, each with an inner eye cutout -->
+
+          <!-- Left form -->
+          <circle cx="92" cy="120" r="55" fill="#FED7AA" stroke="#F97316" stroke-width="3"/>
+          <circle cx="92" cy="120" r="42" fill="white" stroke="#F97316" stroke-width="2" opacity=".7"/>
+
+          <!-- Left eye inside -->
+          <ellipse cx="88" cy="114" rx="22" ry="20" fill="none" stroke="#F97316" stroke-width="4"/>
+          <circle cx="88" cy="114" r="8" fill="#F97316"/>
+          <circle cx="88" cy="114" r="3" fill="white"/>
+          <!-- d stem -->
+          <line x1="110" y1="78" x2="110" y2="112" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Right form -->
+          <circle cx="168" cy="120" r="55" fill="#FED7AA" stroke="#F97316" stroke-width="3"/>
+          <circle cx="168" cy="120" r="42" fill="white" stroke="#F97316" stroke-width="2" opacity=".7"/>
+
+          <!-- Right eye inside -->
+          <ellipse cx="172" cy="114" rx="22" ry="20" fill="none" stroke="#F97316" stroke-width="4"/>
+          <circle cx="172" cy="114" r="8" fill="#F97316"/>
+          <circle cx="172" cy="114" r="3" fill="white"/>
+          <!-- p stem -->
+          <line x1="150" y1="80" x2="150" y2="152" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- Overlap highlight -->
+          <path d="M140 100 Q145 90, 140 80" fill="none" stroke="#EA580C" stroke-width="2" opacity=".3"/>
+
+          <!-- Small orbit dots -->
+          <circle cx="50" cy="90" r="3" fill="none" stroke="#F97316" stroke-width="2" opacity=".3"/>
+          <circle cx="210" cy="90" r="3" fill="none" stroke="#F97316" stroke-width="2" opacity=".3"/>
+          <circle cx="52" cy="150" r="2.5" fill="none" stroke="#F97316" stroke-width="1.5" opacity=".2"/>
+          <circle cx="208" cy="150" r="2.5" fill="none" stroke="#F97316" stroke-width="1.5" opacity=".2"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">4C</div>
+        <h3>双环套眼</h3>
+        <div class="meta"><span class="meta a">日蚀/行星</span><span class="meta b">重叠层次</span><span class="meta c">天文感</span></div>
+        <p>两个大圆环部分重叠，每个环内套一只眼。像双星系统/日蚀。重叠处形成微妙的第三空间。空间感、层次感拉满。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 对比 ═══════════ -->
+<div class="section">
+  <h2>📊 方向对比（丰富度维度）</h2>
+  <div class="card" style="padding:24px;">
+    <div class="compare">
+      <table>
+        <tr>
+          <th>方向</th>
+          <th>视觉层次</th>
+          <th>故事感</th>
+          <th>记忆度</th>
+          <th>独特性</th>
+          <th>App图标</th>
+          <th>品牌质感</th>
+          <th>一句话</th>
+        </tr>
+        <tr>
+          <td><strong>1 · 光影眼眸</strong></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td style="font-size:.7rem;">「这眼睛里有光」</td>
+        </tr>
+        <tr>
+          <td><strong>2 · 徽章叙事</strong></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td style="font-size:.7rem;">「戴这枚徽章去拍照」</td>
+        </tr>
+        <tr>
+          <td><strong>3 · 构图叙事</strong></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td style="font-size:.7rem;">「一个小世界」</td>
+        </tr>
+        <tr>
+          <td><strong>4 · 抽象表现</strong></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td style="font-size:.7rem;">「美术展级别的Logo」</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="rec">
+  <h3>🎯 这次推荐</h3>
+  <p>
+    <strong>方向 1（光影眼眸）A1「多层虹膜」</strong>是 dp 双眼概念最扎实的落地——<br>
+    瞳孔不是空圈，有虹膜渐变、有两层反光、有睫毛暗示。丰富但不杂乱，缩小后眼睛结构依然清晰。<br><br>
+    <strong>如果你想要更叙事性、更像一个「世界」</strong>，看方向 3（构图叙事）里的 3A「日出眼」或 3C「园林漏窗」。它们作为品牌插图/启动屏效果会很惊艳，但作为纯 App 图标会有点复杂。<br><br>
+    你看哪个方向更接近你心里的感觉？
+  </p>
+</div>
+
+</div>
+</body>
+</html>

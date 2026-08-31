@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>带拍 Logo 设计 v2</title>
+<style>
+  :root {
+    --orange: #F97316;
+    --orange-light: #FB923C;
+    --orange-soft: #FED7AA;
+    --cream: #FFF7ED;
+    --dark: #1C1917;
+    --grey: #78716C;
+    --bg: #FAFAF9;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:-apple-system,"SF Pro Text","PingFang SC","Noto Sans SC",sans-serif;color:var(--dark);}
+
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 24px 80px;}
+
+  .hero{text-align:center;margin-bottom:48px;}
+  .hero h1{font-size:2.4rem;font-weight:800;letter-spacing:-0.5px;
+    background:linear-gradient(135deg,#EA580C,#F97316,#FB923C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero p{color:var(--grey);font-size:1rem;margin-top:8px;}
+  .hero .pills{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+  .hero .pills span{font-size:.7rem;padding:4px 12px;border-radius:16px;font-weight:600;background:var(--orange-soft);color:#C2410C;}
+
+  .section{margin-bottom:56px;}
+  .section h2{font-size:1.2rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px;}
+  .section>p{color:var(--grey);font-size:.85rem;margin-bottom:20px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;}
+
+  .card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.03);transition:all .25s;}
+  .card:hover{box-shadow:0 2px 8px rgba(249,115,22,.12),0 8px 28px rgba(0,0,0,.06);transform:translateY(-2px);}
+
+  .stage{height:220px;display:flex;align-items:center;justify-content:center;position:relative;}
+  .stage.light{background:var(--cream);}
+  .stage.white{background:#fff;}
+  .stage.dark{background:#1C1917;}
+  .stage.grad{background:linear-gradient(135deg,#FFF7ED,#FED7AA);}
+
+  .card-body{padding:18px 20px;}
+  .card-body h3{font-size:.95rem;font-weight:700;margin-bottom:4px;}
+  .card-body .tag{font-size:.7rem;font-weight:700;color:var(--orange);margin-bottom:8px;display:block;}
+  .card-body p{font-size:.78rem;color:var(--grey);line-height:1.55;}
+
+  .badge{position:absolute;top:12px;right:12px;font-size:.62rem;padding:3px 10px;border-radius:12px;font-weight:700;letter-spacing:.3px;}
+  .badge.rec{background:var(--orange);color:#fff;}
+  .badge.app{background:var(--dark);color:#fff;}
+  .badge.intl{background:#6366F1;color:#fff;}
+
+  .compare{margin-top:48px;background:#fff;border-radius:20px;padding:32px 36px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .compare h3{font-size:1.1rem;margin-bottom:16px;}
+  .compare table{width:100%;border-collapse:collapse;font-size:.82rem;}
+  .compare th,.compare td{padding:10px 14px;text-align:left;border-bottom:1px solid #f5f5f4;}
+  .compare th{color:var(--grey);font-weight:500;}
+  .star{color:var(--orange);}
+  .star-o{color:#d6d3d1;}
+
+  @media(max-width:640px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>带拍 Logo 设计 v2</h1>
+  <p>抛开取景框套路 · 5 个真正不同的概念方向</p>
+  <div class="pills">
+    <span>暖橘 #F97316</span><span>奶油白 #FFF7ED</span><span>深灰 #1C1917</span>
+  </div>
+</div>
+
+<!-- ═══════════════ 概念 A：指南针 + 取景框 ═══════════════ -->
+<div class="section">
+  <h2>A. 指南针取景标 <span style="font-size:.7rem;background:#E0E7FF;color:#3730A3;padding:3px 10px;border-radius:12px;">Navigation + Frame</span></h2>
+  <p>核心隐喻：「带你去」= 导航。指南针（方向引导）与取景框（拍照）合二为一。菱形指针指向右上——「带你找到好角度」。</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="stage white">
+        <span class="badge rec">推荐</span>
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Compass outer ring -->
+          <circle cx="80" cy="80" r="54" fill="none" stroke="#F97316" stroke-width="3.5"/>
+          <!-- Viewfinder inner frame -->
+          <rect x="48" y="48" width="64" height="64" rx="8" fill="none" stroke="#F97316" stroke-width="2" opacity=".5"/>
+          <!-- Compass needle pointing upper-right -->
+          <polygon points="80,80 118,42 80,62" fill="#F97316"/>
+          <polygon points="80,80 42,118 80,98" fill="#F97316" opacity=".25"/>
+          <!-- Center dot -->
+          <circle cx="80" cy="80" r="5" fill="#1C1917"/>
+          <!-- Cardinal marks -->
+          <text x="80" y="20" text-anchor="middle" fill="#F97316" font-size="9" font-weight="700">N</text>
+          <circle cx="80" cy="134" r="2" fill="#D6D3D1"/>
+          <circle cx="134" cy="80" r="2" fill="#D6D3D1"/>
+          <circle cx="26" cy="80" r="2" fill="#D6D3D1"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>A1 · 指南针取景标</h3>
+        <span class="tag">App 图标 / 品牌图形</span>
+        <p>指南针圆环 + 内嵌取景框 + 菱形指针指右上。导航+拍照双重语义，中西方都能秒懂。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stage dark">
+        <span class="badge intl">国际版</span>
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="52" fill="none" stroke="#FB923C" stroke-width="2.5"/>
+          <circle cx="80" cy="80" r="42" fill="none" stroke="#FB923C" stroke-width="1" stroke-dasharray="4 8" opacity=".4"/>
+          <polygon points="80,80 112,48 80,64" fill="#FB923C"/>
+          <polygon points="80,80 48,112 80,96" fill="#FB923C" opacity=".2"/>
+          <circle cx="80" cy="80" r="4" fill="#FB923C"/>
+          <text x="80" y="19" text-anchor="middle" fill="#FB923C" font-size="9" font-weight="700">N</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>A2 · 暗色国际版</h3>
+        <span class="tag">GuidePic 海外品牌</span>
+        <p>同样概念，暗色底暖橘色。专业感更强，适合海外科技产品调性。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ 概念 B：一笔画路径 ═══════════════ -->
+<div class="section">
+  <h2>B. 一笔画路径标 <span style="font-size:.7rem;background:#FEE2E2;color:#991B1B;padding:3px 10px;border-radius:12px;">One-line Journey</span></h2>
+  <p>核心隐喻：一条连续的线，从起点走到取景框，再变成一颗星——「带你走一遍，拍出好照片」。像 Nike Swoosh 一样的超级符号。</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="stage white">
+        <span class="badge rec">推荐</span>
+        <svg width="200" height="140" viewBox="0 0 200 140">
+          <!-- Continuous flowing line -->
+          <path d="M20 110 Q30 100 40 105 Q60 100 75 80 Q90 60 105 50 Q115 42 120 45"
+                fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Line curves into a viewfinder square -->
+          <rect x="115" y="24" width="30" height="30" rx="6" fill="none" stroke="#F97316" stroke-width="4"/>
+          <!-- Line continues to a star -->
+          <path d="M148 26 Q152 20 155 12" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+          <!-- Star -->
+          <polygon points="155,4 157,10 163,11 158,15 159,21 155,18 151,21 152,15 147,11 153,10"
+                   fill="#F97316"/>
+          <!-- Start dot -->
+          <circle cx="20" cy="110" r="4" fill="#F97316"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>B1 · 一笔画路径</h3>
+        <span class="tag">品牌超级符号</span>
+        <p>一条橙色线条：起点圆 → 蜿蜒路径 → 穿过取景框 → 定格为星。讲完整故事，极其独特，不会跟任何 App 撞。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stage dark">
+        <svg width="200" height="140" viewBox="0 0 200 140">
+          <path d="M20 110 Q35 95 50 100 Q65 85 80 72 Q95 58 105 48 Q112 42 118 44"
+                fill="none" stroke="#FB923C" stroke-width="4" stroke-linecap="round"/>
+          <rect x="113" y="26" width="26" height="26" rx="5" fill="none" stroke="#FB923C" stroke-width="3.5"/>
+          <path d="M142 28 Q148 22 152 14" fill="none" stroke="#FB923C" stroke-width="2.5" stroke-linecap="round"/>
+          <polygon points="152,6 154,12 160,13 155,17 156,23 152,20 148,23 149,17 144,13 150,12"
+                   fill="#FB923C"/>
+          <circle cx="20" cy="110" r="3.5" fill="#FB923C"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>B2 · 一笔画 (暗底)</h3>
+        <span class="tag">技术文档 / 官网</span>
+        <p>暗色底的同一概念，更有高级感。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ 概念 C：重叠圆 ═══════════════ -->
+<div class="section">
+  <h2>C. 重叠圆标 <span style="font-size:.7rem;background:#D1FAE5;color:#065F46;padding:3px 10px;border-radius:12px;">Intersection</span></h2>
+  <p>核心隐喻：两个圆重叠——一个是"你"（拍摄者），一个是"场景"。重叠处暖橘色高亮 = 「带拍帮你找到你和场景之间的最佳交点」。</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="stage white">
+        <span class="badge rec">推荐</span>
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Two overlapping circles -->
+          <circle cx="55" cy="75" r="38" fill="#F97316" opacity=".12"/>
+          <circle cx="95" cy="65" r="38" fill="#1C1917" opacity=".06"/>
+          <!-- Overlap zone highlighted -->
+          <clipPath id="c1">
+            <circle cx="55" cy="75" r="38"/>
+          </clipPath>
+          <circle cx="95" cy="65" r="38" fill="#F97316" opacity=".45" clip-path="url(#c1)"/>
+          <!-- Outlines -->
+          <circle cx="55" cy="75" r="38" fill="none" stroke="#F97316" stroke-width="2.5"/>
+          <circle cx="95" cy="65" r="38" fill="none" stroke="#1C1917" stroke-width="2.5" opacity=".5"/>
+          <!-- Center marker in overlap -->
+          <circle cx="72" cy="67" r="5" fill="#F97316"/>
+          <circle cx="72" cy="67" r="10" fill="none" stroke="#F97316" stroke-width="2" opacity=".6"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>C1 · 重叠交点标</h3>
+        <span class="tag">品牌图形 / 抽象符号</span>
+        <p>两个圆=拍摄者+场景，交叠处用暖橘高亮=最佳机位。像 Mastercard 一样经典耐看。极简、数学美。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stage dark">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle cx="52" cy="75" r="40" fill="#FB923C" opacity=".25"/>
+          <circle cx="98" cy="65" r="40" fill="#D6D3D1" opacity=".08"/>
+          <clipPath id="c2"><circle cx="52" cy="75" r="40"/></clipPath>
+          <circle cx="98" cy="65" r="40" fill="#FB923C" opacity=".5" clip-path="url(#c2)"/>
+          <circle cx="52" cy="75" r="40" fill="none" stroke="#FB923C" stroke-width="2"/>
+          <circle cx="98" cy="65" r="40" fill="none" stroke="#D6D3D1" stroke-width="1.5" opacity=".3"/>
+          <circle cx="72" cy="67" r="6" fill="#FB923C"/>
+          <circle cx="72" cy="67" r="12" fill="none" stroke="#FB923C" stroke-width="2" opacity=".5"/>
+          <text x="80" y="140" text-anchor="middle" fill="#78716C" font-size="10" font-weight="600" font-family="SF Pro Display,sans-serif" letter-spacing="4">DAIPAI</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>C2 · 重叠圆 (暗底)</h3>
+        <span class="tag">官网 / 专业场景</span>
+        <p>暗色底 + 暖橘交叠，更克制更高级。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ 概念 D：手势引导 ═══════════════ -->
+<div class="section">
+  <h2>D. 手势引导标 <span style="font-size:.7rem;background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:12px;">Hand Guide</span></h2>
+  <p>核心隐喻：「我带你去」的最直白表达——一只抽象的引导手，指向一个对焦标记。动作感强，互动暗示明确。</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="stage grad">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Abstract guiding hand -->
+          <path d="M40 100 Q48 80 62 72 Q68 68 72 58"
+                fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- Finger pointing -->
+          <path d="M72 58 L88 38" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- Palm hint -->
+          <circle cx="48" cy="96" r="14" fill="#F97316" opacity=".12"/>
+          <circle cx="48" cy="96" r="14" fill="none" stroke="#F97316" stroke-width="1.5" opacity=".4"/>
+          <!-- Target crosshair -->
+          <circle cx="100" cy="26" r="10" fill="none" stroke="#F97316" stroke-width="3"/>
+          <circle cx="100" cy="26" r="3.5" fill="#F97316"/>
+          <!-- Motion lines -->
+          <line x1="62" y1="54" x2="66" y2="46" stroke="#F97316" stroke-width="2" stroke-linecap="round" opacity=".4"/>
+          <line x1="54" y1="58" x2="56" y2="48" stroke="#F97316" stroke-width="1.5" stroke-linecap="round" opacity=".3"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>D1 · 引导手标</h3>
+        <span class="tag">品牌故事 / 启动页</span>
+        <p>一只手从圆中伸出，食指指向对焦标记。温暖、人性、直接。启动页做动画展开效果极好。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stage white">
+        <span class="badge app">App 极简版</span>
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Ultra-minimal version -->
+          <circle cx="80" cy="80" r="56" fill="#F97316" opacity=".08"/>
+          <!-- Simplified hand: just the index finger pointing + arc -->
+          <path d="M55 90 Q62 76 72 66" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M72 66 L88 46" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Target simplified -->
+          <circle cx="98" cy="36" r="8" fill="none" stroke="#F97316" stroke-width="2.5"/>
+          <circle cx="98" cy="36" r="2.5" fill="#F97316"/>
+          <!-- Trailing dot -->
+          <circle cx="52" cy="96" r="3" fill="#F97316" opacity=".4"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>D2 · 极简手势</h3>
+        <span class="tag">抽象版 / 图标</span>
+        <p>手势的极简抽象版——只用手指线条和弧线暗示手掌。更精致克制。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ 概念 E：带字超级符号 ═══════════════ -->
+<div class="section">
+  <h2>E. 「带」字超级符号 <span style="font-size:.7rem;background:#E5E7EB;color:#374151;padding:3px 10px;border-radius:12px;">Kanji Mark</span></h2>
+  <p>核心隐喻：把「带」字解构重组——上方"巾"变成相机带子，下方变成一条引导路径。中文品牌最强的差异化。</p>
+  <div class="grid">
+
+    <div class="card" style="grid-column:1/-1;">
+      <div class="stage grad">
+        <span class="badge rec">最独特</span>
+        <svg width="400" height="160" viewBox="0 0 400 160">
+          <!-- 带字超级符号 —— 上方"巾"变形成镜头/取景框 + 下方变形成引导路径 -->
+          <!-- Top: Simplified into a rounded square viewfinder + strap -->
+          <rect x="55" y="18" width="36" height="36" rx="8" fill="none" stroke="#F97316" stroke-width="5"/>
+          <circle cx="73" cy="36" r="7" fill="#F97316"/>
+          <!-- Strap curving from viewfinder -->
+          <path d="M55 36 Q30 36 22 52 Q18 62 30 68" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Middle: horizontal belt/path -->
+          <path d="M30 68 L110 68" fill="none" stroke="#1C1917" stroke-width="5" stroke-linecap="round"/>
+          <!-- Bottom: guide path curving down + "巾" suggestion -->
+          <path d="M95 68 Q100 78 92 100 Q84 118 62 118" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Guide dot at destination -->
+          <circle cx="58" cy="118" r="6" fill="#F97316"/>
+          <circle cx="58" cy="118" r="10" fill="none" stroke="#F97316" stroke-width="2" opacity=".4"/>
+          <!-- Text companion -->
+          <text x="160" y="80" fill="#1C1917" font-size="44" font-weight="700" font-family="PingFang SC,Noto Sans SC,sans-serif">带拍</text>
+          <text x="160" y="102" fill="#78716C" font-size="12" font-weight="500" font-family="PingFang SC,sans-serif" letter-spacing="3">AI 拍照灵感指南</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>E1 · 「带」字超级符号 + 文字</h3>
+        <span class="tag">完整品牌标 · 最独特不可替代</span>
+        <p>「带」字解构成三个部分：上方巾部→取景框+相机带/下方→引导路径指向对焦点。没有任何其他品牌能做到这样的中文+摄影双重语义。搭配"带拍"文字和 slogan，完整的品牌标识系统。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stage white">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <!-- Simplified standalone mark -->
+          <rect x="44" y="22" width="32" height="32" rx="7" fill="none" stroke="#F97316" stroke-width="4.5"/>
+          <circle cx="60" cy="38" r="6" fill="#F97316"/>
+          <path d="M44 38 Q22 38 18 54 Q16 64 28 70" fill="none" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+          <path d="M28 70 L96 70" fill="none" stroke="#1C1917" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M82 70 Q88 80 80 100 Q72 116 52 116" fill="none" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="48" cy="116" r="6" fill="#F97316"/>
+          <circle cx="48" cy="116" r="11" fill="none" stroke="#F97316" stroke-width="2" opacity=".35"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>E2 · 纯图形标</h3>
+        <span class="tag">独立图形符号</span>
+        <p>去掉文字，仅保留"带"字变形图形。可以单独用作 favicon 或 App 图标。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stage dark">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <rect x="46" y="24" width="28" height="28" rx="6" fill="none" stroke="#FB923C" stroke-width="4"/>
+          <circle cx="60" cy="38" r="5" fill="#FB923C"/>
+          <path d="M46 38 Q26 38 22 52 Q20 62 30 66" fill="none" stroke="#FB923C" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M30 66 L90 66" fill="none" stroke="#D6D3D1" stroke-width="4" stroke-linecap="round"/>
+          <path d="M78 66 Q83 75 76 92 Q68 108 54 108" fill="none" stroke="#FB923C" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="50" cy="108" r="5" fill="#FB923C"/>
+          <circle cx="50" cy="108" r="10" fill="none" stroke="#FB923C" stroke-width="1.5" opacity=".3"/>
+          <text x="80" y="146" text-anchor="middle" fill="#78716C" font-size="10" font-weight="600" font-family="SF Pro Display,sans-serif" letter-spacing="3">DAIPAI</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h3>E3 · 暗色国际版</h3>
+        <span class="tag">GuidePic 海外</span>
+        <p>同一超级符号在暗底上的表现，附 "DAIPAI" 字母。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Comparison -->
+<div class="compare">
+  <h3>📊 五方向对比</h3>
+  <p style="color:var(--grey);font-size:.82rem;margin-bottom:16px;">这次 5 个方向真正做到了概念层面的差异化，各有各的叙事逻辑。</p>
+  <table>
+    <thead><tr><th>维度</th><th>A 指南针</th><th>B 一笔画</th><th>C 重叠圆</th><th>D 手势</th><th>E 带字符号</th></tr></thead>
+    <tbody>
+      <tr><td>核心隐喻</td><td>导航引导</td><td>旅途路径</td><td>交点连接</td><td>直接带领</td><td>品牌名本身</td></tr>
+      <tr><td>独特性</td><td><span class="star">★★★★</span><span class="star-o">★</span></td><td><span class="star">★★★★★</span></td><td><span class="star">★★★★</span><span class="star-o">★</span></td><td><span class="star">★★★</span><span class="star-o">★★</span></td><td><span class="star">★★★★★</span></td></tr>
+      <tr><td>App图标适配</td><td><span class="star">★★★★★</span></td><td><span class="star">★★★</span><span class="star-o">★★</span></td><td><span class="star">★★★★★</span></td><td><span class="star">★★★★</span><span class="star-o">★</span></td><td><span class="star">★★★★</span><span class="star-o">★</span></td></tr>
+      <tr><td>国际化</td><td><span class="star">★★★★★</span></td><td><span class="star">★★★★★</span></td><td><span class="star">★★★★★</span></td><td><span class="star">★★★★</span><span class="star-o">★</span></td><td><span class="star">★★</span><span class="star-o">★★★</span></td></tr>
+      <tr><td>中文品牌力</td><td><span class="star">★★★</span><span class="star-o">★★</span></td><td><span class="star">★★★</span><span class="star-o">★★</span></td><td><span class="star">★★</span><span class="star-o">★★★</span></td><td><span class="star">★★★</span><span class="star-o">★★</span></td><td><span class="star">★★★★★</span></td></tr>
+      <tr><td>记忆度</td><td><span class="star">★★★★</span><span class="star-o">★</span></td><td><span class="star">★★★★★</span></td><td><span class="star">★★★★</span><span class="star-o">★</span></td><td><span class="star">★★★</span><span class="star-o">★★</span></td><td><span class="star">★★★★</span><span class="star-o">★</span></td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:20px;color:var(--grey);font-size:.82rem;line-height:1.8;">
+    🏆 <strong>综合推荐：</strong><br>
+    <strong>E 「带」字超级符号</strong>——没有任何品牌能做到"中文字本身变成标识"这件事。带=引导+拍照，双关无敌。<br>
+    <strong>B 一笔画路径</strong>——如果做国际品牌，这是最独特的视觉符号，像 Nike Swoosh 一样简单但有故事。<br>
+    <strong>C 重叠圆</strong>——最安全的极简选择，Mastercard 级别的经典结构。
+  </p>
+</div>
+
+</div>
+</body>
+</html>

@@ -18,10 +18,14 @@ interface Props {
  */
 export function SketchAnnotation({ width, height, annotations = [] }: Props) {
   const norm = (v: number, bound: number) => (v > 1 ? v / bound : v);
+  // 坐标非法（NaN/非数字/负值/字符串）时跳过该项，避免画到画布外
+  const hasPos = (a: PlanAnnotation) =>
+    typeof a.x === 'number' && isFinite(a.x) && typeof a.y === 'number' && isFinite(a.y);
 
   return (
     <Canvas style={[StyleSheet.absoluteFill, { width, height }]} pointerEvents="none">
       {annotations.map((a, i) => {
+        if (!hasPos(a)) return null;
         const cx = norm(a.x, width) * width;
         const cy = norm(a.y, height) * height;
         if (a.type === 'subject') {

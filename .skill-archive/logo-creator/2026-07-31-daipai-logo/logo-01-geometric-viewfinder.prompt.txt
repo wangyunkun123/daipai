@@ -1,0 +1,2 @@
+Prompt (1024x1024):
+Minimalist flat design logo for a photography guide app called 'Daipai'. A rounded square viewfinder frame with a trail of dots leading from top-left to bottom-right, the final dot being a larger circle with a crosshair inside. Only the top-left corner of the frame is bold, other corners are thin and subtle. Warm orange (#F97316) on cream white (#FFF7ED) background. Clean vector style, simple geometric shapes, modern, no text, no gradients, no shadows. Suitable for an app icon. Negative space, ultra simple.

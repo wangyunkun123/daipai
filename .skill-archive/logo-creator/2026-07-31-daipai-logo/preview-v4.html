@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>带拍 GuidePic · Logo v4 — dp 双眼概念</title>
+<style>
+  :root {
+    --orange: #F97316;
+    --orange-light: #FB923C;
+    --orange-soft: #FED7AA;
+    --cream: #FFF7ED;
+    --dark: #1C1917;
+    --grey: #78716C;
+    --bg: #FAFAF9;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:-apple-system,"SF Pro Text","PingFang SC","Noto Sans SC",sans-serif;color:var(--dark);}
+
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 24px 80px;}
+
+  .hero{text-align:center;margin-bottom:48px;}
+  .hero h1{font-size:2.4rem;font-weight:800;letter-spacing:-0.5px;
+    background:linear-gradient(135deg,#EA580C,#F97316,#FB923C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero .lead{color:var(--grey);font-size:1rem;margin-top:8px;max-width:600px;margin-inline:auto;line-height:1.6;}
+  .hero .tags{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+  .hero .tags span{font-size:.7rem;padding:4px 12px;border-radius:16px;font-weight:600;background:var(--orange-soft);color:#C2410C;}
+  .hero .tags span.highlight{background:#FEF3C7;color:#92400E;}
+
+  .idea-box{background:linear-gradient(135deg,#1C1917,#2D2825);border-radius:24px;padding:28px 32px;margin-bottom:48px;color:#fff;text-align:center;}
+  .idea-box h2{font-size:1.05rem;font-weight:700;margin-bottom:8px;color:var(--orange-light);}
+  .idea-box .big-idea{font-size:1.8rem;font-weight:800;letter-spacing:-0.5px;margin-bottom:8px;}
+  .idea-box .idea-desc{font-size:.85rem;color:#A8A29E;line-height:1.7;max-width:620px;margin:0 auto;}
+
+  .section{margin-bottom:64px;}
+  .section h2{font-size:1.15rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px;}
+  .section .sub{color:var(--grey);font-size:.82rem;margin-bottom:24px;line-height:1.6;}
+
+  .showcase{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;}
+
+  .card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.03);transition:all .25s;}
+  .card:hover{box-shadow:0 2px 8px rgba(249,115,22,.12),0 8px 28px rgba(0,0,0,.06);transform:translateY(-2px);}
+
+  .stage{height:220px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+
+  .card-body{padding:16px 20px 20px;}
+  .card-body .num{font-size:.65rem;font-weight:800;color:var(--orange);margin-bottom:4px;letter-spacing:1px;}
+  .card-body h3{font-size:.95rem;font-weight:700;margin-bottom:6px;}
+  .card-body .meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+  .card-body .meta span{font-size:.64rem;font-weight:700;padding:3px 8px;border-radius:8px;}
+  .meta.a{background:#FEF3C7;color:#92400E;}
+  .meta.b{background:#E0E7FF;color:#3730A3;}
+  .meta.c{background:#D1FAE5;color:#065F46;}
+  .meta.d{background:#FEE2E2;color:#991B1B;}
+  .card-body p{font-size:.76rem;color:var(--grey);line-height:1.55;}
+
+  .combo-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:16px;}
+  .combo{background:#fff;border-radius:14px;padding:15px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .combo .label{font-size:.68rem;color:var(--grey);margin-top:6px;}
+
+  .wide{grid-column:1/-1;}
+
+  /* Comparison table */
+  .compare{overflow-x:auto;}
+  .compare table{width:100%;border-collapse:collapse;font-size:.8rem;}
+  .compare th{text-align:left;padding:10px 14px;font-size:.7rem;color:var(--grey);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #E7E5E4;}
+  .compare td{padding:10px 14px;border-bottom:1px solid #F5F5F4;}
+  .compare .star{color:var(--orange);}
+  .compare .half{color:#D4A574;}
+
+  .rec{background:linear-gradient(135deg,#FFF7ED,#FED7AA);border-radius:20px;padding:28px 32px;margin-top:48px;}
+  .rec h3{font-size:1rem;font-weight:700;margin-bottom:8px;}
+  .rec p{font-size:.82rem;color:var(--grey);line-height:1.7;}
+
+  .stage .bg-cream{background:var(--cream);position:absolute;inset:0;}
+  .stage .bg-white{background:#fff;position:absolute;inset:0;}
+  .stage .bg-dark{background:var(--dark);position:absolute;inset:0;}
+  .stage .bg-warm{background:linear-gradient(135deg,#FFF7ED,#FED7AA);position:absolute;inset:0;}
+  .stage svg{position:relative;z-index:1;}
+
+  @media(max-width:640px){
+    .showcase{grid-template-columns:1fr;}
+    .combo-row{grid-template-columns:1fr 1fr;}
+    .hero h1{font-size:1.8rem;}
+    .idea-box .big-idea{font-size:1.3rem;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>带拍 GuidePic · Logo v4</h1>
+  <p class="lead">核心概念：<strong>dp = 一双发现美的眼睛</strong><br>d 和 p 的圆形部分天然是一对眼睛——用摄影师的眼光，带你去拍好照片</p>
+  <div class="tags">
+    <span>暖橘 #F97316</span>
+    <span class="highlight">dp 双眼</span>
+    <span>相机元素全禁</span>
+  </div>
+</div>
+
+<div class="idea-box">
+  <h2>🎯 核心创意</h2>
+  <div class="big-idea">d · p = 👀</div>
+  <div class="idea-desc">
+    「带拍」的拼音首字母 d 和 p，各有一个圆形结构。<br>
+    把它们并置，就是<strong>一双正在观察世界的眼睛</strong>——<br>
+    这不是相机，这是摄影师的直觉、品味和眼光。
+  </div>
+</div>
+
+<!-- ═══════════ 方向 A：经典 dp 双眼 ═══════════ -->
+<div class="section">
+  <h2>A · 经典 dp 双眼 <span style="font-size:.68rem;background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:10px;">主力推荐</span></h2>
+  <p class="sub">d 和 p 的圆形碗部放大为双眼，竖笔自然演化为眉骨。两个字母既是眼睛结构本身，又保留了完整的可读性。一眼看出是 dp，细看发现是眼睛——双重阅读快感。</p>
+  <div class="showcase">
+    <!-- A1: 标准 dp 双眼 -->
+    <div class="card">
+      <div class="stage" style="background:var(--cream);">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Left eye = d's bowl -->
+          <ellipse cx="72" cy="98" rx="24" ry="22" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- d's stem = right eyebrow/bridge -->
+          <line x1="96" y1="52" x2="96" y2="98" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- Right eye = p's bowl -->
+          <ellipse cx="128" cy="98" rx="24" ry="22" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- p's stem = left eyebrow + descender -->
+          <line x1="104" y1="56" x2="104" y2="130" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- Iris dots (pupils) -->
+          <circle cx="72" cy="98" r="5" fill="#F97316"/>
+          <circle cx="128" cy="98" r="5" fill="#F97316"/>
+          <!-- Eye glints -->
+          <circle cx="69" cy="94" r="2" fill="#fff"/>
+          <circle cx="125" cy="94" r="2" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">A1</div>
+        <h3>标准 dp 双眼</h3>
+        <div class="meta"><span class="meta a">双重阅读</span><span class="meta b">清晰可辨</span></div>
+        <p>最忠实的字母-眼睛映射。d的眼在左、p的眼在右，竖笔自然成眉。看第一眼是字母，再看是眼睛。</p>
+      </div>
+    </div>
+
+    <!-- A2: 连贯一笔 dp 双眼 -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Single continuous line forming dp as eyes -->
+          <!-- Start from d's stem top, down, curve into left eye, up to bridge, curve into right eye, down p's descender -->
+          <path d="M98 48 L98 76
+                   C98 66, 88 56, 78 56 C66 56, 56 66, 56 78 C56 90, 66 100, 78 100 C88 100, 98 90, 98 80
+                   L98 84
+                   C98 94, 108 100, 118 98 C130 96, 140 84, 138 72 C136 60, 126 56, 116 58
+                   C110 59, 105 63, 104 70
+                   L104 134"
+                fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Inner pupil for left eye -->
+          <circle cx="71" cy="78" r="5" fill="#F97316"/>
+          <!-- Inner pupil for right eye -->
+          <circle cx="127" cy="76" r="5" fill="#F97316"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">A2</div>
+        <h3>一笔画 dp 双眼</h3>
+        <div class="meta"><span class="meta a">一气呵成</span><span class="meta c">签名感</span></div>
+        <p>单根线条从d的竖笔起笔，绕成左眼，过桥，绕成右眼，收于p的降笔。像签名一样不可复制。</p>
+      </div>
+    </div>
+
+    <!-- A3: 填充式 dp 双眼 -->
+    <div class="card">
+      <div class="stage" style="background:var(--dark);">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Left eye filled -->
+          <ellipse cx="70" cy="90" rx="26" ry="24" fill="#FB923C" opacity="0.15"/>
+          <ellipse cx="70" cy="90" rx="26" ry="24" fill="none" stroke="#FB923C" stroke-width="4"/>
+          <!-- d stem -->
+          <line x1="96" y1="46" x2="96" y2="90" stroke="#FB923C" stroke-width="4" stroke-linecap="round"/>
+          <!-- Right eye filled -->
+          <ellipse cx="130" cy="90" rx="26" ry="24" fill="#FB923C" opacity="0.15"/>
+          <ellipse cx="130" cy="90" rx="26" ry="24" fill="none" stroke="#FB923C" stroke-width="4"/>
+          <!-- p stem + descender -->
+          <line x1="104" y1="50" x2="104" y2="126" stroke="#FB923C" stroke-width="4" stroke-linecap="round"/>
+          <!-- Pupils filled -->
+          <circle cx="70" cy="90" r="6" fill="#FB923C"/>
+          <circle cx="130" cy="90" r="6" fill="#FB923C"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">A3</div>
+        <h3>暗色填充版</h3>
+        <div class="meta"><span class="meta d">暗色背景</span><span class="meta b">呼吸感</span></div>
+        <p>深灰底+暖橘线条+半透明填充。眼睛更「有神」，适合深色模式或高端品牌场景。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 B：阿童木大眼睛 ═══════════ -->
+<div class="section">
+  <h2>B · 阿童木大眼睛 <span style="font-size:.68rem;background:#E0E7FF;color:#3730A3;padding:3px 10px;border-radius:10px;">可爱灵动</span></h2>
+  <p class="sub">放大眼睛的比例，让 d 和 p 的圆形成为画面的绝对主角，竖笔缩小为点缀。大眼睛=更强的观察力隐喻，同时自带可爱、友善的品牌温度。</p>
+  <div class="showcase">
+    <!-- B1: 大眼萌 -->
+    <div class="card">
+      <div class="stage" style="background:var(--cream);">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Big left eye (d) -->
+          <ellipse cx="68" cy="90" rx="32" ry="30" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- d's tiny stem = subtle marking -->
+          <line x1="100" y1="58" x2="100" y2="84" stroke="#F97316" stroke-width="3.5" stroke-linecap="round"/>
+          <!-- Big right eye (p) -->
+          <ellipse cx="132" cy="90" rx="32" ry="30" fill="none" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- p's tiny stem + descender hint -->
+          <line x1="100" y1="62" x2="100" y2="118" stroke="#F97316" stroke-width="3.5" stroke-linecap="round"/>
+          <!-- Big pupils -->
+          <circle cx="68" cy="90" r="8" fill="#F97316"/>
+          <circle cx="132" cy="90" r="8" fill="#F97316"/>
+          <!-- Glints -->
+          <circle cx="63" cy="84" r="3" fill="#fff"/>
+          <circle cx="127" cy="84" r="3" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">B1</div>
+        <h3>大眼睛 dp</h3>
+        <div class="meta"><span class="meta a">亲和力拉满</span><span class="meta b">可爱</span></div>
+        <p>眼圆很大、竖笔很小。比例上眼睛占了70%——强调「发现」这个动作本身的温度。</p>
+      </div>
+    </div>
+
+    <!-- B2: 眨眼版（不对称趣感） -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Left eye (d) - open -->
+          <ellipse cx="68" cy="88" rx="24" ry="22" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="68" cy="88" r="5" fill="#F97316"/>
+          <line x1="92" y1="52" x2="92" y2="82" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Right eye (p) - winking! -->
+          <path d="M112 84 Q124 76 136 84" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- p's descender -->
+          <line x1="104" y1="56" x2="104" y2="122" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Tiny wink star -->
+          <path d="M148 68 L150 74 L156 76 L150 78 L148 84 L146 78 L140 76 L146 74 Z" fill="#FB923C" transform="scale(0.6) translate(70,20)"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">B2</div>
+        <h3>眨眼 dp</h3>
+        <div class="meta"><span class="meta a">俏皮</span><span class="meta d">不对称</span></div>
+        <p>一只眼睁、一只眼眨。不对称增加趣味性和记忆点。眨眼的 p 传递「发现惊喜」的瞬间感。</p>
+      </div>
+    </div>
+
+    <!-- B3: 瞳中dp -->
+    <div class="card">
+      <div class="stage" style="background:var(--dark);">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Left eye -->
+          <ellipse cx="68" cy="90" rx="30" ry="28" fill="none" stroke="#FB923C" stroke-width="4"/>
+          <!-- Left pupil = tiny 'd' -->
+          <text x="62" y="97" font-family="Georgia,serif" font-size="16" font-weight="700" fill="#FB923C" font-style="italic">d</text>
+          <!-- d stem hint -->
+          <line x1="98" y1="54" x2="98" y2="84" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+          <!-- Right eye -->
+          <ellipse cx="132" cy="90" rx="30" ry="28" fill="none" stroke="#FB923C" stroke-width="4"/>
+          <!-- Right pupil = tiny 'p' -->
+          <text x="125" y="97" font-family="Georgia,serif" font-size="16" font-weight="700" fill="#FB923C" font-style="italic">p</text>
+          <!-- p stem + descender -->
+          <line x1="102" y1="58" x2="102" y2="120" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">B3</div>
+        <h3>瞳中藏字</h3>
+        <div class="meta"><span class="meta c">彩蛋设计</span><span class="meta b">暗色</span></div>
+        <p>两只大眼睛的瞳孔里，分别藏着 d 和 p。远看是一双眼睛，近看才发现字母。两层阅读深度。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 C：几何极简 ═══════════ -->
+<div class="section">
+  <h2>C · 几何极简眼 <span style="font-size:.68rem;background:#D1FAE5;color:#065F46;padding:3px 10px;border-radius:10px;">App 图标首选</span></h2>
+  <p class="sub">把 dp 双眼提炼到最纯粹——几何圆形、对称构图、超强辨识度。缩小到 64px 依然清晰，适合 App 图标和 favicon。</p>
+  <div class="showcase">
+    <!-- C1: 对称几何眼 -->
+    <div class="card">
+      <div class="stage" style="background:var(--cream);">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Perfectly symmetrical eyes -->
+          <!-- Left -->
+          <circle cx="72" cy="90" r="20" fill="none" stroke="#F97316" stroke-width="5"/>
+          <circle cx="72" cy="90" r="6" fill="#F97316"/>
+          <!-- Right -->
+          <circle cx="128" cy="90" r="20" fill="none" stroke="#F97316" stroke-width="5"/>
+          <circle cx="128" cy="90" r="6" fill="#F97316"/>
+          <!-- Subtle d stem (right side of left circle) -->
+          <line x1="92" y1="56" x2="92" y2="90" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- Subtle p stem (left of right circle, goes below) -->
+          <line x1="108" y1="60" x2="108" y2="120" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">C1</div>
+        <h3>极简几何双瞳</h3>
+        <div class="meta"><span class="meta c">App图标</span><span class="meta b">高辨识</span></div>
+        <p>两个等大的正圆+等大的瞳孔，视觉上几乎对称。只有竖笔的微妙差异区分 d 和 p。</p>
+      </div>
+    </div>
+
+    <!-- C2: 方形眼眸 -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Rounded square eyes - more modern/tech -->
+          <rect x="46" y="66" width="44" height="44" rx="10" fill="none" stroke="#F97316" stroke-width="5"/>
+          <circle cx="68" cy="88" r="7" fill="#F97316"/>
+          <!-- d stem -->
+          <line x1="90" y1="38" x2="90" y2="80" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+          <!-- Right rounded square -->
+          <rect x="110" y="66" width="44" height="44" rx="10" fill="none" stroke="#F97316" stroke-width="5"/>
+          <circle cx="132" cy="88" r="7" fill="#F97316"/>
+          <!-- p stem + descender -->
+          <line x1="110" y1="42" x2="110" y2="118" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">C2</div>
+        <h3>圆角方瞳</h3>
+        <div class="meta"><span class="meta b">现代科技感</span><span class="meta a">独特</span></div>
+        <p>用圆角方形替代椭圆，增加几何感和现代性。方瞳=摄影取景的方形画幅暗示（但没有取景框！）。</p>
+      </div>
+    </div>
+
+    <!-- C3: 重叠 dp 极简 -->
+    <div class="card">
+      <div class="stage" style="background:var(--dark);">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Minimal to the extreme: two circles + two lines -->
+          <circle cx="72" cy="88" r="18" fill="none" stroke="#FB923C" stroke-width="4.5"/>
+          <circle cx="72" cy="88" r="5" fill="#FB923C"/>
+          <line x1="90" y1="54" x2="90" y2="88" stroke="#FB923C" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="128" cy="88" r="18" fill="none" stroke="#FB923C" stroke-width="4.5"/>
+          <circle cx="128" cy="88" r="5" fill="#FB923C"/>
+          <line x1="110" y1="58" x2="110" y2="118" stroke="#FB923C" stroke-width="4.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">C3</div>
+        <h3>超极简双点</h3>
+        <div class="meta"><span class="meta c">最小表达</span><span class="meta d">暗底</span></div>
+        <p>去掉一切多余元素。两个圆、两个点、两条线。这个 Logo 可以在 16px favicon 里辨认。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 D：一笔画 + 眉眼融合 ═══════════ -->
+<div class="section">
+  <h2>D · 眉眼书法眼 <span style="font-size:.68rem;background:#FEE2E2;color:#991B1B;padding:3px 10px;border-radius:10px;">品牌气质</span></h2>
+  <p class="sub">把 dp 双眼的概念用更具书法感的线条表达。眉眼一体——既是一双眼睛，又是手写体的 dp。更有「人的温度」和品牌气质。</p>
+  <div class="showcase">
+    <!-- D1: 毛笔笔触 dp 眼 -->
+    <div class="card">
+      <div class="stage" style="background:var(--cream);">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Brush-stroke style dp eyes -->
+          <defs>
+            <linearGradient id="brush1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#EA580C"/>
+              <stop offset="100%" stop-color="#F97316"/>
+            </linearGradient>
+          </defs>
+          <!-- d's eye - more organic shape -->
+          <path d="M48 88 C48 70, 64 56, 84 56 C96 56, 100 68, 102 78 C104 88, 100 100, 90 100 C74 100, 60 96, 48 88"
+                fill="none" stroke="url(#brush1)" stroke-width="5" stroke-linecap="round"/>
+          <!-- d's stem - calligraphic -->
+          <path d="M100 50 C96 62, 90 74, 92 86" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- p's eye -->
+          <path d="M96 82 C98 64, 112 54, 130 54 C142 54, 148 66, 148 78 C148 90, 142 100, 130 100 C114 100, 100 94, 96 82"
+                fill="none" stroke="url(#brush1)" stroke-width="5" stroke-linecap="round"/>
+          <!-- p's stem + descender -->
+          <path d="M102 50 C98 62, 96 74, 96 88 C96 100, 94 112, 96 128" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- Pupils as calligraphic dots -->
+          <circle cx="72" cy="82" r="5" fill="#EA580C"/>
+          <circle cx="128" cy="82" r="5" fill="#EA580C"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">D1</div>
+        <h3>笔触 dp 眼</h3>
+        <div class="meta"><span class="meta d">有机线条</span><span class="meta a">温暖</span></div>
+        <p>模拟毛笔/秀丽笔的自然笔触。d和p的眼形不对称不规则，有手写的温度和人的气息。</p>
+      </div>
+    </div>
+
+    <!-- D2: 一笔连眉 dp -->
+    <div class="card">
+      <div class="stage" style="background:#fff;">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- Single line: eyebrow -> d's eye -> bridge -> p's eye -> eyebrow -> descender -->
+          <path d="M46 54 Q60 46, 74 48 Q84 50, 88 56
+                   C86 68, 76 80, 66 82 C56 84, 48 76, 48 66 C48 58, 56 54, 66 56
+                   Q78 58, 88 60
+                   C98 62, 106 56, 108 48
+                   C110 40, 118 44, 122 50 C126 56, 130 64, 130 74
+                   C130 86, 120 96, 108 98 C96 100, 88 92, 88 82
+                   Q88 74, 92 66
+                   C94 74, 96 88, 96 100 C96 112, 94 122, 92 134"
+                fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Pupil dots -->
+          <circle cx="66" cy="72" r="4.5" fill="#F97316"/>
+          <circle cx="122" cy="78" r="4.5" fill="#F97316"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">D2</div>
+        <h3>一笔连眉</h3>
+        <div class="meta"><span class="meta a">签名风</span><span class="meta c">不可复制</span></div>
+        <p>一整条线从左眉→左眼→鼻梁→右眼→右眉→p的降笔，一气连成。眼睛和字母完全融为一体。</p>
+      </div>
+    </div>
+
+    <!-- D3: 眉眼含字 -->
+    <div class="card">
+      <div class="stage" style="background:var(--dark);">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <!-- The eyes ARE the d and p, rendered as typography -->
+          <text x="58" y="108" font-family="Georgia,serif" font-size="72" font-weight="700" fill="#FB923C" font-style="italic" letter-spacing="4">dp</text>
+          <!-- Add subtle eye pupils inside the bowls -->
+          <circle cx="72" cy="82" r="5" fill="#1C1917"/>
+          <circle cx="130" cy="82" r="5" fill="#1C1917"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="num">D3</div>
+        <h3>字体即眼睛</h3>
+        <div class="meta"><span class="meta d">简单粗暴</span><span class="meta c">字体选择是关键</span></div>
+        <p>直接选用一款圆形碗部饱满的衬线体，让 d 和 p 的碗部天然读作眼睛。在瞳孔位置加上小黑点点睛。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 方向 E：组合标（dp 眼 + 文字） ═══════════ -->
+<div class="section">
+  <h2>E · 组合标 <span style="font-size:.68rem;background:#E0E7FF;color:#3730A3;padding:3px 10px;border-radius:10px;">实际应用</span></h2>
+  <p class="sub">dp 双眼符号 + 带拍 / GuidePic 文字的组合方式，覆盖 App 图标、网站 header、启动屏等场景。</p>
+
+  <!-- E1: 横向组合 -->
+  <div class="card wide" style="margin-bottom:16px;">
+    <div class="stage" style="height:120px;background:#fff;">
+      <svg width="600" height="100" viewBox="0 0 600 100">
+        <!-- dp eyes icon -->
+        <circle cx="36" cy="42" r="16" fill="none" stroke="#F97316" stroke-width="4"/>
+        <circle cx="36" cy="42" r="4.5" fill="#F97316"/>
+        <line x1="52" y1="18" x2="52" y2="42" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="80" cy="42" r="16" fill="none" stroke="#F97316" stroke-width="4"/>
+        <circle cx="80" cy="42" r="4.5" fill="#F97316"/>
+        <line x1="64" y1="22" x2="64" y2="64" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+        <!-- Text -->
+        <text x="112" y="40" font-family="system-ui,sans-serif" font-size="26" font-weight="800" fill="#F97316" letter-spacing="2">带拍</text>
+        <text x="112" y="68" font-family="system-ui,sans-serif" font-size="15" font-weight="500" fill="#1C1917" letter-spacing="3">GuidePic</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <div class="num">E1</div>
+      <h3>横向组合 · 网站 Header</h3>
+      <p>图标在左，中文名+英文名在右。标准品牌横向组合，适合网站 Nav、名片、文档。</p>
+    </div>
+  </div>
+
+  <!-- E2: 纵向组合 -->
+  <div class="card wide" style="margin-bottom:16px;">
+    <div class="stage" style="height:160px;background:var(--cream);">
+      <svg width="200" height="150" viewBox="0 0 200 150">
+        <circle cx="76" cy="40" r="18" fill="none" stroke="#F97316" stroke-width="4.5"/>
+        <circle cx="76" cy="40" r="5" fill="#F97316"/>
+        <line x1="94" y1="16" x2="94" y2="40" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+        <circle cx="124" cy="40" r="18" fill="none" stroke="#F97316" stroke-width="4.5"/>
+        <circle cx="124" cy="40" r="5" fill="#F97316"/>
+        <line x1="106" y1="20" x2="106" y2="68" stroke="#F97316" stroke-width="4.5" stroke-linecap="round"/>
+        <text x="100" y="98" font-family="system-ui,sans-serif" font-size="24" font-weight="800" fill="#1C1917" text-anchor="middle" letter-spacing="4">带拍</text>
+        <text x="100" y="122" font-family="system-ui,sans-serif" font-size="13" font-weight="500" fill="#78716C" text-anchor="middle" letter-spacing="3">GUIDEPIC</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <div class="num">E2</div>
+      <h3>纵向组合 · App 启动屏</h3>
+      <p>图标在上、文字在下，垂直居中布局。适合 App 启动屏、关于页面、海报。</p>
+    </div>
+  </div>
+
+  <!-- E3: 圆角方形 App 图标 -->
+  <div class="card wide" style="margin-bottom:16px;">
+    <div class="stage" style="height:180px;background:#fff;">
+      <div style="display:flex;gap:24px;align-items:center;">
+        <!-- Small icon -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <rect width="80" height="80" rx="18" fill="#F97316"/>
+            <circle cx="32" cy="38" r="10" fill="none" stroke="#fff" stroke-width="3"/>
+            <circle cx="32" cy="38" r="3" fill="#fff"/>
+            <line x1="42" y1="22" x2="42" y2="38" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="56" cy="38" r="10" fill="none" stroke="#fff" stroke-width="3"/>
+            <circle cx="56" cy="38" r="3" fill="#fff"/>
+            <line x1="46" y1="24" x2="46" y2="52" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <span style="font-size:.6rem;color:#78716C;">App Icon</span>
+        </div>
+        <!-- Medium icon -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <rect width="120" height="120" rx="28" fill="#F97316"/>
+            <circle cx="48" cy="56" r="16" fill="none" stroke="#fff" stroke-width="4.5"/>
+            <circle cx="48" cy="56" r="4.5" fill="#fff"/>
+            <line x1="64" y1="32" x2="64" y2="56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+            <circle cx="84" cy="56" r="16" fill="none" stroke="#fff" stroke-width="4.5"/>
+            <circle cx="84" cy="56" r="4.5" fill="#fff"/>
+            <line x1="68" y1="34" x2="68" y2="78" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+            <text x="66" y="106" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">带拍</text>
+          </svg>
+          <span style="font-size:.6rem;color:#78716C;">带字版</span>
+        </div>
+        <!-- Large icon -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <rect width="120" height="120" rx="28" fill="#1C1917"/>
+            <circle cx="50" cy="52" r="15" fill="none" stroke="#FB923C" stroke-width="4"/>
+            <circle cx="50" cy="52" r="4" fill="#FB923C"/>
+            <line x1="65" y1="30" x2="65" y2="52" stroke="#FB923C" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="82" cy="52" r="15" fill="none" stroke="#FB923C" stroke-width="4"/>
+            <circle cx="82" cy="52" r="4" fill="#FB923C"/>
+            <line x1="67" y1="32" x2="67" y2="74" stroke="#FB923C" stroke-width="4" stroke-linecap="round"/>
+            <text x="66" y="100" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#A8A29E" text-anchor="middle">GuidePic</text>
+          </svg>
+          <span style="font-size:.6rem;color:#78716C;">暗色版</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="num">E3</div>
+      <h3>App 图标变体</h3>
+      <p>三个版本：橘底白标（App Store 标准）、带字版（品牌强化）、暗色版（Pro 感）。圆角方形 + dp 双眼，在桌面上能一眼认出。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 对比表 ═══════════ -->
+<div class="section">
+  <h2>📊 方向对比</h2>
+  <div class="card" style="padding:24px;">
+    <div class="compare">
+      <table>
+        <tr>
+          <th>方向</th>
+          <th>中文辨识</th>
+          <th>国际化</th>
+          <th>App图标</th>
+          <th>独特性</th>
+          <th>故事力</th>
+          <th>记忆度</th>
+          <th>一句话</th>
+        </tr>
+        <tr>
+          <td><strong>A · 经典dp双眼</strong></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td style="font-size:.72rem;">「看我的眼睛，是dp」</td>
+        </tr>
+        <tr>
+          <td><strong>B · 阿童木大眼</strong></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td style="font-size:.72rem;">「可爱但有洞察力」</td>
+        </tr>
+        <tr>
+          <td><strong>C · 几何极简</strong></td>
+          <td><span class="star">★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td style="font-size:.72rem;">「两个圆两条线，够了」</td>
+        </tr>
+        <tr>
+          <td><strong>D · 眉眼书法</strong></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td style="font-size:.72rem;">「用毛笔的温度画眼睛」</td>
+        </tr>
+        <tr>
+          <td><strong>E · 组合标</strong></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td><span class="star">★★★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★</span></td>
+          <td><span class="star">★★★★</span></td>
+          <td style="font-size:.72rem;">「完整品牌表达的最后一公里」</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 推荐 ═══════════ -->
+<div class="rec">
+  <h3>🎯 个人强烈推荐：方向 A</h3>
+  <p>
+    <strong>经典 dp 双眼</strong> 是这个创意的「正解」。它同时做到了：<br><br>
+    ① <strong>字母可读：</strong>一眼看出 d 和 p，品牌名直接编码进符号<br>
+    ② <strong>眼睛可感：</strong>两个圆形=一双眼睛，不需要任何解释<br>
+    ③ <strong>隐喻三层：</strong>dp（品牌名）→ 眼睛（观察）→ 发现好照片（产品价值）<br>
+    ④ <strong>没有对手：</strong>市场上没有一个Logo是用字母的双圆做眼睛的<br>
+    ⑤ <strong>跨文化：</strong>眼睛是全球通识符号，dp 是拉丁字母，120+ 国家理解无障碍<br><br>
+    如果只选一个方向深入打磨，就是 <strong>A1（标准dp双眼）</strong>。在这个基础上可以微调线条粗细、瞳孔比例、竖笔长度，直到完美。
+  </p>
+</div>
+
+</div>
+</body>
+</html>

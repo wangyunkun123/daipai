@@ -1,7 +1,7 @@
 # Claude Code 技能清单
 
-> 📅 更新日期: 2026-07-21
-> 📦 已安装技能: 26 个 | 内置技能: 13 个 | 合计: 39 个
+> 📅 更新日期: 2026-07-31
+> 📦 已安装技能: 30 个（含 designer-skills 95子集） | 内置技能: 13 个 | 合计: 43 个
 
 ---
 
@@ -247,6 +247,80 @@
 
 ---
 
+### 18. 🎯 Logo Creator
+
+| 项目 | 详情 |
+|------|------|
+| **包名** | `resciencelab/opc-skills@logo-creator` |
+| **安装量** | 2.7K+ |
+| **安全评级** | ⚠️ Gen High Risk / Socket 0 alerts / Snyk Low Risk |
+
+**用途**: AI 图片生成驱动 Logo 设计——风格讨论 → 批量生成 → HTML 预览 → 用户反馈迭代 → 裁剪/去背景/矢量导出。
+
+**调用方式**: 说 "帮我设计一个 logo" / "设计图标" / "品牌标" / "favicon"
+
+**流程**: Discovery（确认品牌/风格/颜色）→ Generate（20 变体）→ Preview（HTML）→ Iterate → Finalize（crop/去背景/SVG）
+
+**前置依赖**: 需 Gemini API Key + nanobanana skill（或替换为豆包 Seedream）
+
+---
+
+### 19. 🎨 UI UX Pro Max
+
+| 项目 | 详情 |
+|------|------|
+| **包名** | `nextlevelbuilder/ui-ux-pro-max-skill@ui-ux-pro-max` |
+| **安装量** | 293.5K+ |
+| **安全评级** | 🟢 Gen Safe / Socket 0 alerts / Snyk Low Risk |
+
+**用途**: 完整 UI/UX 设计工作流——设计系统、品牌系统、UI 样式、Banner 设计、设计规范等一整套设计工具链。
+
+**调用方式**: `/ui-ux-pro-max` 或在 UI/UX 设计需求时自动触发
+
+**子模块**: `ckm:design-system` (32.8K) / `ckm:design` (32.5K) / `ckm:ui-styling` (32.4K) / `ckm:brand` (32K) / `ckm:banner-design` (32K)
+
+---
+
+### 20. 👅 Design Taste Frontend
+
+| 项目 | 详情 |
+|------|------|
+| **包名** | `leonxlnx/taste-skill@design-taste-frontend` |
+| **安装量** | 308.3K+ |
+| **安全评级** | 🟢 Gen Safe / Socket 0 alerts / Snyk Low Risk |
+
+**用途**: 前端设计品味提升——高端视觉设计、极简 UI、已有项目重设计、工业粗野风等。聚焦"设计品味"而非单纯实现。
+
+**调用方式**: 说 "设计品味" / "taste" / "重设计" / "提升设计感"
+
+**关联子技能**: `high-end-visual-design` (236.6K) / `redesign-existing-projects` (233K) / `minimalist-ui` (216.2K) / `full-output-enforcement` (206.2K)
+
+---
+
+### 21. 🎭 Designer Skills（设计技能集）
+
+| 项目 | 详情 |
+|------|------|
+| **包名** | `Owl-Listener/designer-skills` |
+| **安装量** | GitHub 开源 |
+| **安全评级** | 🟢 社区维护 |
+
+**用途**: 95 个设计子技能，覆盖设计全流程——从研究到交付。分五大类：
+
+**🎨 视觉设计**（15个）: `color-system` `typography-scale` `icon-system` `spacing-system` `layout-grid` `dark-mode-design` `responsive-design` `design-token` `design-token-audit` `theming-system` `motion-system` `animation-principles` `illustration-style` `data-visualization` `visual-hierarchy`
+
+**🔍 设计评审**（8个）: `design-critique` `critique-color` `critique-typography` `critique-composition` `critique-visual-hierarchy` `critique-information-density` `critique-affordance` `critique-brand-consistency`
+
+**📐 设计方法**（12个）: `design-brief` `design-principles` `design-rationale` `design-qa-checklist` `design-review-process` `design-sprint-plan` `heuristic-evaluation` `design-debt-audit` `design-system-adoption` `design-system-governance` `design-impact-reporting` `design-negotiation`
+
+**🧠 UX研究**（20个）: `user-persona` `journey-map` `empathy-map` `experience-map` `user-flow-diagram` `jobs-to-be-done` `opportunity-framework` `interview-script` `summarize-interview` `survey-design` `usability-test-plan` `diary-study-plan` `card-sort-analysis` `competitive-analysis` `stakeholder-alignment` `research-repository` `a-b-test-design` `click-test-plan` `test-scenario` `accessibility-test-plan`
+
+**⚙️ 交互与系统**（40个）: `component-spec` `wireframe-spec` `prototype-strategy` `information-architecture` `navigation-patterns` `search-ux` `form-design` `loading-states` `error-handling-ux` `feedback-patterns` `gesture-patterns` `micro-interaction-spec` `onboarding-design` `content-strategy` `ux-writing` `localization-design` `accessibility-audit` `pattern-library` `handoff-spec` `documentation-template` `business-design` `metrics-definition` `north-star-vision` `presentation-deck` `case-study` `state-machine` `naming-convention` `team-workflow` `version-control-strategy` `interfaces-that-feel` `fitts-law` `hicks-law` `millers-law` `doherty-threshold` `aesthetic-usability` `von-restorff-effect` `law-of-common-region` `law-of-proximity` `readable-measure` `service-blueprint`
+
+**调用方式**: 说具体需求关键词，会自动匹配对应子技能。例如说 "设计评审" → `design-critique` / "配色" → `color-system` / "用户旅程" → `journey-map`
+
+---
+
 ## 二、内置技能（13 个）
 
 | # | 技能 | 调用方式 | 用途 |
@@ -288,19 +362,23 @@
 | 15 | 🧩 Best Minds | 已安装 | 说 "最强大脑/best minds" | 顶级专家模拟 |
 | 16 | 🔥 Grill Me | 已安装 | 说 "grill me/烤问我" | 方案质询 |
 | 17 | 🏗️ 极简创业十件套 | 已安装 | 10 个命令（find-community 等）| 创业全流程 |
-| 18 | 🔬 Deep Research | 内置 | `/deep-research` | 深度调研 |
-| 19 | ⚙️ Update Config | 内置 | `/update-config` | 配置权限 |
-| 20 | ⌨️ Keybindings | 内置 | `/keybindings-help` | 快捷键定制 |
-| 21 | ✅ Verify | 内置 | `/verify` | 验证修改 |
-| 22 | 📋 Code Review | 内置 | `/code-review` | 代码审查 |
-| 23 | ✂️ Simplify | 内置 | `/simplify` | 代码简化 |
-| 24 | 🔓 Fewer Prompts | 内置 | `/fewer-permission-prompts` | 减少弹窗 |
-| 25 | 🔁 Loop | 内置 | `/loop` | 定时任务 |
-| 26 | 🔧 Claude API | 内置 | 自动触发 | API 开发 |
-| 27 | 🚀 Run | 内置 | `/run` | 启动应用 |
-| 28 | 📝 Init | 内置 | `/init` | 初始化 |
-| 29 | 👀 Review | 内置 | `/review` | PR Review |
-| 30 | 🔒 Security | 内置 | `/security-review` | 安全审计 |
+| 18 | 🎯 Logo Creator | 已安装 | 说 "设计 logo/图标" | AI 生图 Logo 设计 |
+| 19 | 🎨 UI UX Pro Max | 已安装 | `/ui-ux-pro-max` | 完整 UI/UX 工具链 |
+| 20 | 👅 Design Taste | 已安装 | 说 "设计品味/taste" | 高端前端设计品味 |
+| 21 | 🎭 Designer Skills | 已安装 | 95 子技能自动匹配 | 设计全流程（研究→交付）|
+| 22 | 🔬 Deep Research | 内置 | `/deep-research` | 深度调研 |
+| 23 | ⚙️ Update Config | 内置 | `/update-config` | 配置权限 |
+| 24 | ⌨️ Keybindings | 内置 | `/keybindings-help` | 快捷键定制 |
+| 25 | ✅ Verify | 内置 | `/verify` | 验证修改 |
+| 26 | 📋 Code Review | 内置 | `/code-review` | 代码审查 |
+| 27 | ✂️ Simplify | 内置 | `/simplify` | 代码简化 |
+| 28 | 🔓 Fewer Prompts | 内置 | `/fewer-permission-prompts` | 减少弹窗 |
+| 29 | 🔁 Loop | 内置 | `/loop` | 定时任务 |
+| 30 | 🔧 Claude API | 内置 | 自动触发 | API 开发 |
+| 31 | 🚀 Run | 内置 | `/run` | 启动应用 |
+| 32 | 📝 Init | 内置 | `/init` | 初始化 |
+| 33 | 👀 Review | 内置 | `/review` | PR Review |
+| 34 | 🔒 Security | 内置 | `/security-review` | 安全审计 |
 
 ---
 
@@ -338,4 +416,4 @@ npx skills update
 
 ---
 
-> 💡 **提示**: 当前已安装 16 个 skill（含 8 个 Superpowers 体系技能 + Best Minds + Grill Me），删除了 4 个付费/不需要的 skill。Agent Reach 和 Superpowers 是主力工具链。
+> 💡 **提示**: 当前已安装 21 个 skill（含 8 个 Superpowers 体系技能 + Best Minds + Grill Me + 4 设计技能集），删除了 4 个付费/不需要的 skill。**设计四件套**（logo-creator + ui-ux-pro-max + design-taste-frontend + designer-skills 95子集）覆盖从品牌标识到完整 UX 交付的全链路设计能力。

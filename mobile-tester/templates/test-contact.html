@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>组图预览原型 — 带拍</title>
+<style>
+:root {
+  --bg: #0a0a0a; --card: #141414; --card2: #1a1a1a; --text: #e8e8e8;
+  --dim: #8a8a8a; --dimmer: #555; --green: #4ade80; --fire: #f59e0b;
+  --purple: #a78bfa; --cyan: #22d3ee; --red: #ef4444; --border: #262626;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+.header { padding: 14px 16px 10px; display: flex; align-items: center; gap: 8px; }
+.header .back { font-size: 18px; color: var(--dim); cursor: pointer; text-decoration: none; }
+.header h1 { font-size: 16px; font-weight: 600; flex: 1; }
+
+.pill-bar { display: flex; gap: 6px; padding: 8px 16px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.pill-bar::-webkit-scrollbar { display: none; }
+.pill { flex-shrink: 0; padding: 6px 13px; border-radius: 16px; font-size: 11px; background: var(--card2); color: var(--dim); border: none; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+.pill.active { background: var(--fire); color: #000; font-weight: 600; }
+.pill.contact-pill { font-weight: 700; background: rgba(245,158,11,0.15); color: var(--fire); }
+
+.carousel { flex: 1; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; display: flex; scrollbar-width: none; }
+.carousel::-webkit-scrollbar { display: none; }
+.card { flex: 0 0 88%; scroll-snap-align: center; margin: 0 6%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 20px; }
+
+/* ── 组图预览卡片 ── */
+.contact-card { text-align: center; }
+.contact-card .ct-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.contact-card .ct-hint { font-size: 11px; color: var(--dimmer); margin-bottom: 14px; }
+
+/* 网格：简约线框 */
+.contact-grid { display: grid; gap: 3px; width: 100%; aspect-ratio: 3/4; margin-bottom: 10px; }
+.contact-grid .gcell {
+  position: relative;
+  border: 1px solid #2a2a2a; border-radius: 4px;
+  background: #0f0f0f;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 6px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.contact-grid .gcell:active { background: #1a1a1a; border-color: #444; }
+.contact-grid .gcell .num { font-size: 10px; font-weight: 600; color: var(--dimmer); margin-bottom: 2px; }
+.contact-grid .gcell .lbl { font-size: 10px; font-weight: 500; color: #aaa; line-height: 1.3; }
+.contact-grid .gcell .mt { font-size: 8px; color: #555; margin-top: 2px; }
+
+/* 提示词框 */
+.v5-gen { border-top: 1px solid rgba(34,211,238,0.10); padding: 10px 12px; text-align: left; }
+.v5-lb { font-size: 11px; color: var(--dimmer); letter-spacing: 0.3px; margin-bottom: 6px; }
+.v5-pt { font-size: 11px; color: var(--dim); line-height: 1.6; max-height: 120px; overflow-y: auto; word-break: break-all; background: var(--card2); border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+.v5-pact { display: flex; gap: 8px; }
+.v5-btn { padding: 8px 12px; border-radius: 8px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; min-height: 40px; white-space: nowrap; }
+.v5-btn:active { transform: scale(0.96); }
+.v5-btn.copy { background: rgba(138,138,138,0.15); color: var(--dim); flex:1; justify-content:center; }
+.v5-btn.gen  { background: rgba(34,211,238,0.08); color: var(--cyan); opacity: 0.7; flex:1; justify-content:center; }
+
+/* ── 方案卡片：保持现有 v3.7 样式 ── */
+.v5-post-item { margin-bottom: 11px; }
+.v5-pcat { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; margin-right: 6px; letter-spacing: 0.5px; vertical-align: middle; }
+.v5-pcat.comp { background: rgba(245,158,11,0.12); color: var(--fire); }
+.v5-dhead { font-size: 13px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+.v5-post-text { font-size: 13px; color: #bbb; line-height: 1.7; }
+.v5-label { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--dim); margin-bottom: 4px; text-transform: uppercase; }
+.v5-result { background: var(--card2); border-radius: 8px; padding: 10px 12px; margin-top: 6px; font-size: 13px; color: #bbb; line-height: 1.6; }
+.why-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 10px 22px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 9999; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="back" onclick="history.back()">←</span>
+  <h1>组图预览</h1>
+</div>
+
+<div class="pill-bar" id="pillBar"></div>
+<div class="carousel" id="carousel" onscroll="onCarouselScroll()"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const PLANS = [
+  { name:'深蓝标线远景', size:'远景', angle:'平视',
+    subject:'站在白色标线延伸处，保持击球预备姿态，看向场地左侧远方',
+    shooter:'蹲在场边，手机举到齐眼高度，前景白色标线从左下角延伸到人物脚下，天空留白2/5',
+    gear:'1× 主摄，点按人物对焦，下拉曝光-0.3让深蓝场地更沉',
+    enhance:'利用侧软光打亮人物左肩，让白色标线做视觉引导',
+    result:'深蓝场地像一片安静的湖，人物在标线尽头成了画面里唯一的动态',
+    why:'三分法构图，白色标线形成强有力的引导线把眼睛推向主体',
+    why_tags:'三分法 引导线',
+    img_gen_prompt:'参考上传的照片，保持人物面部特征和场景环境不变。修改如下：景别为远景，平视角度，人物站在网球网左侧白色标线延长处，保持击球预备姿态看向场地左侧，前景白色纵向标线从左下角延伸到人物脚下，画面留白充足，侧软光均匀铺陈，低饱和冷调，自然肤质，真实摄影感，无文字水印。' },
+  { name:'网球网侧45°', size:'中景', angle:'侧45°',
+    subject:'侧身靠在网球网中柱上，左手搭在网带顶部，右手握粉色球拍自然垂在身侧，头转左侧放空',
+    shooter:'站人物右侧2米，平视高度，网球网中柱在画面左侧，人物在右半部',
+    gear:'1× 主摄，对焦人物侧脸，锁AE',
+    enhance:'让球网网带在人物前方形成若隐若现的半透明前景',
+    result:'网带和围网竖杆自然框住人物，侧光在运动背心上切出微妙阴影，松弛而不松垮',
+    why:'网带前景增加空间层次，侧脸放空的表情让运动场景有了柔和的呼吸感',
+    why_tags:'前景层次 侧光',
+    img_gen_prompt:'参考上传的照片，保持人物面部特征和场景环境不变。修改如下：景别为中景，侧45°平视角度，人物侧身靠在网球网中柱上，左手搭网带，右手握粉色网球拍垂身侧，头转左侧放空，侧软光打亮人物左肩，低饱和冷调，自然肤质，真实摄影感，无文字水印。' },
+  { name:'帽檐阴影近景', size:'近景', angle:'略俯30°',
+    subject:'保持侧身，左手扶着空顶帽的帽檐，右手把粉色球拍举到肩侧露出边框，戴墨镜看向左下方',
+    shooter:'站人物正前方半步，手机举到略高过她头顶，30°俯拍',
+    gear:'1× 主摄，对焦墨镜镜片',
+    enhance:'利用帽檐的天然阴影遮住半脸，半透明的柔和过渡',
+    result:'墨镜反射出对面的绿围网和天空，粉色球拍是画面里唯一的亮色',
+    why:'帽檐阴影制造神秘感，墨镜反射增加画面里的画面，粉拍是色彩锚点',
+    why_tags:'框架构图 景深',
+    img_gen_prompt:'参考上传的照片，保持人物面部特征和场景环境不变。修改如下：景别为近景，略俯30°角度，人物侧身扶着黑色空顶帽檐，右手举粉色网球拍到肩侧，戴深色墨镜看向左下方，帽檐投下柔和半阴影遮半脸，侧软光，低饱和冷调，自然肤质，真实摄影感，无文字水印。' },
+  { name:'低机位仰拍全景', size:'全景', angle:'仰拍45°',
+    subject:'站在白色交叉标线处，保持击球预备的微屈腿姿态，左手抬起往前伸，头转向左侧',
+    shooter:'蹲到最低，手机贴近地面，45°仰拍。天空占画面2/3，白色标线在脚下交叉',
+    gear:'0.5× 超广角，对焦人物，锁AE',
+    enhance:'超广角天然拉长腿部比例，白色标线的交叉点正好在人物脚下',
+    result:'天空是淡蓝色的巨大画布，人物从底边生长出来，白色标线像为她画的起跑线',
+    why:'超广角仰拍拉长比例是运动摄影的经典语言，交叉标线形成天然视觉锚点',
+    why_tags:'引导线 仰拍',
+    img_gen_prompt:'参考上传的照片，保持人物面部特征和场景环境不变。修改如下：景别为全景，仰拍45°角度，人物站在白色交叉标线处呈击球预备姿态，天空占画面上三分之二，前景白色标线框住人物脚部，超广角拉长腿部比例，侧软光，低饱和冷调，自然肤质，真实摄影感，无文字水印。' },
+  { name:'握拍手部特写', size:'特写', angle:'平视',
+    subject:'右手握粉色球拍拍柄，手指自然弯曲，拍面靠在黑色运动背心下摆，左手搭在右手腕上',
+    shooter:'手机距手部约15cm，平视高度，背景完全虚化',
+    gear:'1× 主摄最近对焦距离，点按粉色拍柄对焦',
+    enhance:'让黑背心成为纯黑背景，粉色拍柄和肤色手指在黑色上像一组静物画',
+    result:'看不到脸，但看得到专注。手指关节的弧度、拍柄上细微的防滑纹路都清晰可见',
+    why:'不拍脸的特写是组图节奏的呼吸点，七张人像之后需要一张停顿',
+    why_tags:'景深 主体分离',
+    img_gen_prompt:'参考上传的照片，保持人物和场景特征不变。修改如下：景别为特写，平视角度，画面仅拍人物握粉色网球拍的手部，手指自然弯曲，左手搭在右手手腕，拍面靠在黑色运动背心下摆，背景虚化深绿色围网，侧软光，低饱和冷调，真实摄影感，无文字水印。' },
+  { name:'球网背影中景', size:'中景', angle:'背面平视',
+    subject:'背对镜头站在网球网前，双脚分开与肩同宽，右手把粉色球拍扛在右肩上，左手抬起来整理空顶帽的后带',
+    shooter:'站人物正后方3米，平视，球网在人物前方，围网竖杆在背景',
+    gear:'1× 主摄，对焦人物后背',
+    enhance:'球网的白色网带横穿画面中部，围网竖杆在后方形成等间距的竖线节奏',
+    result:'一个正在准备上场的背影，球拍扛在肩上，手指在整理帽子，下一秒就要转身挥拍',
+    why:'背面视角制造叙事悬念，观众只能从姿态中猜测她的状态',
+    why_tags:'框架构图 影调',
+    img_gen_prompt:'参考上传的照片，保持人物和场景特征不变。修改如下：景别为中景，背面平视角度，人物背身站在网球网前，右手扛粉色网球拍在右肩，左手整理空顶帽后带，围网竖杆和球网形成矩形框架框住人物，左下角有米色行李箱，侧软光，低饱和冷调，真实摄影感，无文字水印。' },
+  { name:'红柱标识远景收尾', size:'远景', angle:'平视',
+    subject:'站在红色标识柱右侧，双手握着粉色球拍自然垂在身前，侧身看场地另一端',
+    shooter:'退到场地对角，平视，把红色标识柱和粉色收纳筐都框进画面，人物在右1/3',
+    gear:'1× 主摄，对焦人物',
+    enhance:'红色标识柱+粉色收纳筐+粉色球拍，三个红/粉元素形成三角形色彩呼应',
+    result:'深蓝场地像幕布，白线像乐谱线，人物是最后一个音符',
+    why:'收尾的远景让组图有进场→运动→离场的完整叙事弧线',
+    why_tags:'三分法 色彩呼应',
+    img_gen_prompt:'参考上传的照片，保持人物和场景特征不变。修改如下：景别为远景，平视角度，人物站在红色标识柱右侧，握粉色网球拍看向场地远端，前景深蓝色场地带白色横向标线，人物在右三分之一处，左侧标识柱旁有粉色收纳筐，侧软光，低饱和冷调，真实摄影感，无文字水印。' }
+];
+
+const CONTACT_PROMPT = `参考上传的照片，保持人物面部特征和网球场场景不变。生成一张组图预览：上排3格等大横向排列 + 中排1格宽幅居中（宽度约为单格2倍）+ 下排3格等大横向排列，共7格。整体低饱和冷色调，软侧光均匀铺陈无硬阴影，白线分隔。
+
+上排 [1] 远景平视：人物站白色标线延伸处，击球预备姿态，前景标线从左下延伸到脚下
+上排 [2] 中景侧45°：人物靠网球网中柱，左手搭网带，右手垂握粉色球拍，头转左放空
+上排 [3] 近景略俯：人物侧身扶黑色帽檐，右手举粉色球拍到肩侧，帽檐阴影遮半脸
+中排 [4] 宽幅·全景仰拍：人物站交叉标线处击球预备，天空占2/3，白线框脚，超广角拉长比例
+下排 [5] 特写平视：仅手部特写，握粉色球拍拍柄，左手搭右手腕，拍面靠黑色背心下摆
+下排 [6] 中景背面：人物背身站网球网前，右手扛球拍在肩，左手整理帽后带
+下排 [7] 远景平视：人物站红色标识柱右侧，握球拍看场地远端，左侧有粉色收纳筐
+
+自然肤质，真实摄影感，无文字水印。`;
+
+let activeIdx = 0;
+let carouselEl, pillBarEl;
+
+/* 把 why 文本转成术语标签 */
+function parseWhyTags(txt) {
+  const TERMS = [
+    {re:/三分法|九宫格|黄金分割/,cat:'comp'},{re:/引导线|对角线|S型|汇聚线/,cat:'comp'},
+    {re:/框架构图|框中框|天然画框/,cat:'comp'},{re:/负空间|留白/,cat:'comp'},
+    {re:/侧光|逆光|顺光|顶光|漫射光|边缘光|轮廓光/,cat:'light'},
+    {re:/冷暖对比|互补色|邻近色|单色|色彩呼应/,cat:'color'},
+    {re:/主体分离|景深|虚实|背景虚化|前景虚化/,cat:'dof'},
+    {re:/前景层次|空间深度|纵深感/,cat:'space'},
+    {re:/决定性瞬间|动态捕捉|静态|抓拍/,cat:'time'},
+    {re:/明暗对比|影调|高调|低调/,cat:'tone'},
+  ];
+  const cats = {comp:'构图',light:'光线',color:'色彩',dof:'景深',space:'空间',time:'时机',tone:'影调'};
+  const found = [];
+  TERMS.forEach(t => { if (t.re.test(txt)) found.push(`<span class="v5-pcat comp">${cats[t.cat]}</span>`); });
+  return found.length ? found.join(' ') : '';
+}
+
+function renderPlanCard(p, i) {
+  const whyTagsHtml = parseWhyTags(p.why);
+  let c = '';
+  // 方案名
+  c += `<div style="font-size:17px;font-weight:700;margin-bottom:4px">${p.name}</div>`;
+  c += `<div style="font-size:11px;color:var(--dimmer);margin-bottom:14px">${p.size} · ${p.angle}</div>`;
+  // 拍摄对象
+  c += `<div class="v5-label">拍摄对象</div>`;
+  c += `<div class="v5-post-text">${p.subject}</div>`;
+  // 摄影师
+  c += `<div class="v5-label" style="margin-top:14px">摄影师</div>`;
+  c += `<div class="v5-post-item"><span class="v5-pcat comp">位置</span><span class="v5-post-text">${p.shooter}</span></div>`;
+  c += `<div class="v5-post-item"><span class="v5-pcat comp">设置</span><span class="v5-post-text">${p.gear}</span></div>`;
+  // 现场增色
+  c += `<div class="v5-label" style="margin-top:14px">现场增色</div>`;
+  c += `<div class="v5-post-text">${p.enhance}</div>`;
+  // 场景观察
+  c += `<div class="v5-label" style="margin-top:14px">场景观察</div>`;
+  c += `<div class="v5-result">${p.result}</div>`;
+  if (whyTagsHtml) c += `<div class="why-tags">${whyTagsHtml}</div>`;
+  // 生图提示词
+  c += `<div class="v5-gen" style="margin-top:16px">`;
+  c += `<div class="v5-lb">🖼️ AI 生图提示词 <span style="color:var(--cyan);font-weight:400">（豆包 · 图生图模式）</span></div>`;
+  c += `<div class="v5-pt" id="pt${i}">${p.img_gen_prompt}</div>`;
+  c += `<div class="v5-pact"><button class="v5-btn copy" onclick="copyPlanPrompt(${i})">📋 复制提示词</button><button class="v5-btn gen" onclick="genPlan(${i})">🖼️ 生图</button></div>`;
+  c += `</div>`;
+  return c;
+}
+
+function buildAll() {
+  carouselEl = document.getElementById('carousel');
+  pillBarEl = document.getElementById('pillBar');
+
+  // Pill bar
+  let pills = '<button class="pill contact-pill active" onclick="scrollToCard(0)">组图预览</button>';
+  PLANS.forEach((p,i) => {
+    pills += `<button class="pill" onclick="scrollToCard(${i+1})">${p.name}</button>`;
+  });
+  pillBarEl.innerHTML = pills;
+
+  // Card 0: 组图预览
+  let html = '<div class="card contact-card" id="card0">';
+  html += '<div class="ct-title">组图预览</div>';
+  html += '<div class="ct-hint">点击任意格子跳转到对应方案</div>';
+
+  // 网格
+  html += '<div class="contact-grid" style="grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 0.85fr 1fr;">';
+  for (let i=0;i<3;i++) {
+    const p = PLANS[i];
+    html += `<div class="gcell" onclick="scrollToCard(${i+1})"><span class="num">${i+1}</span><span class="lbl">${p.name}</span><span class="mt">${p.size} · ${p.angle}</span></div>`;
+  }
+  html += `<div class="gcell" style="grid-column:span 3" onclick="scrollToCard(4)"><span class="num">4</span><span class="lbl">${PLANS[3].name}</span><span class="mt">${PLANS[3].size} · ${PLANS[3].angle}</span></div>`;
+  for (let i=4;i<7;i++) {
+    const p = PLANS[i];
+    html += `<div class="gcell" onclick="scrollToCard(${i+1})"><span class="num">${i+1}</span><span class="lbl">${p.name}</span><span class="mt">${p.size} · ${p.angle}</span></div>`;
+  }
+  html += '</div>';
+
+  // 组图提示词
+  html += '<div class="v5-gen">';
+  html += '<div class="v5-lb">🖼️ 组图生成提示词 <span style="color:var(--cyan);font-weight:400">（豆包 · 图生图模式）</span></div>';
+  html += `<div class="v5-pt" id="contactPrompt">${CONTACT_PROMPT}</div>`;
+  html += '<div class="v5-pact"><button class="v5-btn copy" onclick="copyContactPrompt()">📋 复制提示词</button><button class="v5-btn gen" onclick="genContact()">🖼️ 生成组图</button></div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Cards 1-7: 方案详情（与 index.html 同款结构）
+  PLANS.forEach((p,i) => {
+    html += `<div class="card plan-card" id="card${i+1}">${renderPlanCard(p,i)}</div>`;
+  });
+
+  carouselEl.innerHTML = html;
+}
+
+function scrollToCard(idx) {
+  const card = document.getElementById('card'+idx);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+function onCarouselScroll() {
+  const cards = carouselEl.querySelectorAll('.card');
+  if (!cards.length) return;
+  const cx = carouselEl.getBoundingClientRect().left + carouselEl.offsetWidth / 2;
+  let best = 0, bestDist = Infinity;
+  cards.forEach((c,i) => {
+    const rect = c.getBoundingClientRect();
+    const dist = Math.abs(rect.left + rect.width/2 - cx);
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  });
+  if (best !== activeIdx) { activeIdx = best; updatePills(); }
+}
+
+function updatePills() {
+  pillBarEl.querySelectorAll('.pill').forEach((p,i) => p.classList.toggle('active', i===activeIdx));
+  const ap = pillBarEl.querySelectorAll('.pill')[activeIdx];
+  if (ap) ap.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+function copyContactPrompt() { navigator.clipboard.writeText(CONTACT_PROMPT).then(() => showToast('✅ 组图提示词已复制，打开豆包粘贴即可生图')); }
+function genContact() { navigator.clipboard.writeText(CONTACT_PROMPT).then(() => showToast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成')); }
+function copyPlanPrompt(i) { navigator.clipboard.writeText(PLANS[i].img_gen_prompt).then(() => showToast('✅ 提示词已复制，打开豆包粘贴即可生图')); }
+function genPlan(i) { navigator.clipboard.writeText(PLANS[i].img_gen_prompt).then(() => showToast('🛠️ 在线生图开发中，提示词已复制，可打开豆包粘贴生成')); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show'); t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+buildAll();
+</script>
+</body>
+</html>
