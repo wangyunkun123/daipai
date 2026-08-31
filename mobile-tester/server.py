@@ -3693,7 +3693,7 @@ def analyze_plans():
 def deploy_webhook():
     """
     GitHub Webhook 端点——代码 push 后自动部署。
-    在 GitHub 仓库 Settings → Webhooks → Payload URL = https://guidepic.cn/deploy
+    在 GitHub 仓库 Settings → Webhooks → Payload URL = https://guidepic.com/deploy
     Content type: application/json
     Secret: 与 .env 中的 DEPLOY_SECRET 匹配
     """
@@ -4290,7 +4290,7 @@ domain: cross-media-styles
 tags: [{style_name}, AI发现, 待验证]
 level: basic
 status: ai_discovered
-source: [AI 自由探索发现, guidepic.cn session={session_id}]
+source: [AI 自由探索发现, guidepic.com session={session_id}]
 ---
 
 # {style_name}
@@ -4324,7 +4324,7 @@ source: [AI 自由探索发现, guidepic.cn session={session_id}]
 {style_brief.get('mood', '（待补充）')}
 
 ---
-> 采集日期：{today} | via AI 自由探索 · guidepic.cn
+> 采集日期：{today} | via AI 自由探索 · guidepic.com
 > 状态：待验证——管理员审核后可提升为 mvp
 """
 

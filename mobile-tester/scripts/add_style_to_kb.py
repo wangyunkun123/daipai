@@ -154,7 +154,7 @@ domain: cross-media-styles
 tags: [{style_name}, AI发现, 待验证]
 level: basic
 status: ai_discovered
-source: [AI 自由探索发现, guidepic.cn]
+source: [AI 自由探索发现, guidepic.com]
 ---
 
 # {style_name}
@@ -196,7 +196,7 @@ source: [AI 自由探索发现, guidepic.cn]
 {forbid_section}
 
 ---
-> 采集日期：{today} | via AI 自由探索 · guidepic.cn
+> 采集日期：{today} | via AI 自由探索 · guidepic.com
 > 状态：待验证——管理员审核后可提升为 mvp
 """
     return md, slug

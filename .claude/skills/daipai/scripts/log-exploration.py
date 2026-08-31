@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 带拍 - 风格探索日志脚本 v4.0
-从 1C 阶段输出的 JSON 中提取风格探索记录，批量写入 guidepic.cn
+从 1C 阶段输出的 JSON 中提取风格探索记录，批量写入 guidepic.com
 
 用法：
   python3 log-exploration.py <1c_output.json> [session_id]
@@ -16,7 +16,7 @@
 """
 import json, sys, os, urllib.request
 
-API = os.environ.get("GUIDEPIC_API", "https://guidepic.cn/api/log-style-exploration")
+API = os.environ.get("GUIDEPIC_API", "https://guidepic.com/api/log-style-exploration")
 
 
 def main():
